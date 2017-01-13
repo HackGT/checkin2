@@ -1,16 +1,26 @@
 {
-  "name": "checkin",
+  "name": "check-in",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Check in for HackGT events",
+  "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "express": "^4.14.0",
     "mongoose": "^4.7.6",
     "q": "^1.4.1"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HackGT/Ultimate-Checkin.git"
+  },
+  "bugs": {
+    "url": "https://github.com/HackGT/Ultimate-Checkin/issues"
+  },
+  "homepage": "https://github.com/HackGT/Ultimate-Checkin#readme",
+  "private": true
 }
