@@ -86,7 +86,7 @@ const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Sche
 	name: {
 		type: String,
 		required: true,
-		unique: true
+		//unique: true
 	},
 	communication_email: {
 		type: String,
@@ -254,6 +254,10 @@ app.route("/data/import").post(authenticateMiddleware, uploadHandler.single("imp
 			}
 			else {
 				// Content rows
+				if (!record[nameIndex] || !record[emailIndex] || !record[gatechEmailIndex]) {
+					console.warn("Skipping due to missing required parameters", record);
+					continue;
+				}
 				// Capitalize names
 				let name: string = record[nameIndex];
 				name = name.split(" ").map(s => {
