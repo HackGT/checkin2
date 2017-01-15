@@ -314,19 +314,60 @@ app.route("/data/import").post(authenticateMiddleware, uploadHandler.single("imp
 	fs.createReadStream(request.file.path).pipe(parser);
 });
 
-/*
-app.post("/checkin", function (req, res) {
-	Attendee.
-	findOne({ email: req.param("email") }).
-	select("name email").
-	exec().then(function(err, hacker) {
-		// TODO: handle error better
-		if (err) return res.sendStatus(404);
-		return res.send(JSON.stringify(hacker))
-	}).catch(function(err) {
-		return res.sendStatus(500);
+app.route("/search").get(async (request, response) => {
+	let query: string = request.query.q || "";
+	let queryRegExp = new RegExp(query, "i");
+	let checkinStatus: string = request.query.checkedin || "";
+	// Search through name and both emails
+	let filteredAttendees: IAttendeeMongoose[];
+	try {
+		filteredAttendees = await Attendee.find().or([
+			{
+				"name": { $regex: queryRegExp }
+			},
+			{
+				"communication_email": { $regex: queryRegExp }
+			},
+			{
+				"gatech_email": { $regex: queryRegExp }
+			}
+		]).exec();
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": "An error occurred while getting attendee data"
+		});
+		return;
+	}
+	// Sort by last name
+	filteredAttendees = filteredAttendees.sort((a, b) => {
+		var aName = a.name.split(" ");
+		var bName = b.name.split(" ");
+		var aLastName = aName[aName.length - 1];
+		var bLastName = bName[bName.length - 1];
+		if (aLastName < bLastName) return -1;
+		if (aLastName > bLastName) return 1;
+		return 0;
 	});
-})*/
+	// Filter by check in status if specified
+	if (checkinStatus) {
+		let checkedIn: boolean = checkinStatus === "true";
+		filteredAttendees = filteredAttendees.filter(attendee => {
+			return attendee.checked_in === checkedIn;
+		});
+	}
+	// Map to remove mongoose attributes
+	response.json(filteredAttendees.map((attendee): IAttendee => {
+		return {
+			name: attendee.name,
+			communication_email: attendee.communication_email,
+			gatech_email: attendee.gatech_email,
+			checked_in: attendee.checked_in,
+			checked_in_date: attendee.checked_in_date
+		};
+	}));
+});
 
 app.get("/", (request, response) => {
 	// TODO: implement UI
