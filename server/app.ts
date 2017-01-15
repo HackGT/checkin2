@@ -295,6 +295,12 @@ app.route("/data/import").post(authenticateMiddleware, uploadHandler.single("imp
 			});
 		}
 		catch (err) {
+			if (err.code === 11000) {
+				response.status(400).json({
+					"error": "Name duplication detected. Please clear the current attendee list before importing this new list."
+				});
+				return;
+			}
 			console.error(err);
 			response.status(500).json({
 				"error": "An error occurred while saving users to the database"
