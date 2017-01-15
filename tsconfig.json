@@ -10,6 +10,7 @@
          "strictNullChecks": true,
          "lib": [
              "es2015.promise", "es5", "dom"
-         ]
+         ],
+         "sourceMap": true
     }
 }
