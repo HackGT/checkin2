@@ -75,14 +75,20 @@ const User = mongoose.model<IUserMongoose>("User", new mongoose.Schema({
 	auth_keys: [String]
 }));
 interface IAttendee {
+	tag: string;
 	name: string;
 	communication_email: string;
 	gatech_email: string;
 	checked_in: boolean;
 	checked_in_date?: Date;
+	checked_in_by?: string;
 }
 interface IAttendeeMongoose extends IAttendee, mongoose.Document {}
 const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Schema({
+	tag: {
+		type: String,
+		required: true
+	},
 	name: {
 		type: String,
 		required: true,
@@ -102,6 +108,9 @@ const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Sche
 	},
 	checked_in_date: {
 		type: Date
+	},
+	checked_in_by: {
+		type: String
 	}
 }));
 
@@ -225,13 +234,14 @@ app.route("/user/login").post(postParser, async (request, response) => {
 
 // User importing from CSV files
 // `import` is the fieldname that should be used to upload the CSV file
-app.route("/data/import").post(authenticateMiddleware, uploadHandler.single("import"), (request, response) => {
+app.route("/data/import/:tag").post(authenticateMiddleware, uploadHandler.single("import"), (request, response) => {
 	let parser = csvParse({ trim: true });
 	let attendeeData: IAttendee[] = [];
 	let headerParsed: boolean = false;
 	let nameIndex: number = 0;
 	let emailIndex: number = 0;
 	let gatechEmailIndex: number = 0;
+	let tag: string = request.params.tag.toLowerCase();
 
 	parser.on("readable", () => {
 		let record: any;
@@ -264,6 +274,7 @@ app.route("/data/import").post(authenticateMiddleware, uploadHandler.single("imp
 					return s.charAt(0).toUpperCase() + s.slice(1)
 				}).join(" ");
 				attendeeData.push({
+					tag: tag,
 					name: name,
 					communication_email: record[emailIndex].toLowerCase(),
 					gatech_email: record[gatechEmailIndex].toLowerCase(),
@@ -314,10 +325,12 @@ app.route("/data/import").post(authenticateMiddleware, uploadHandler.single("imp
 	fs.createReadStream(request.file.path).pipe(parser);
 });
 
-app.route("/search").get(async (request, response) => {
+app.route("/search").get(authenticateMiddleware, async (request, response) => {
 	let query: string = request.query.q || "";
 	let queryRegExp = new RegExp(query, "i");
 	let checkinStatus: string = request.query.checkedin || "";
+	let tag: string = request.query.tag || "";
+	tag = tag.toLowerCase();
 	// Search through name and both emails
 	let filteredAttendees: IAttendeeMongoose[];
 	try {
@@ -357,9 +370,16 @@ app.route("/search").get(async (request, response) => {
 			return attendee.checked_in === checkedIn;
 		});
 	}
+	// Filter by tag if specified
+	if (tag) {
+		filteredAttendees = filteredAttendees.filter(attendee => {
+			return attendee.tag === tag;
+		});
+	}
 	// Map to remove mongoose attributes
 	response.json(filteredAttendees.map((attendee): IAttendee => {
 		return {
+			tag: attendee.tag,
 			name: attendee.name,
 			communication_email: attendee.communication_email,
 			gatech_email: attendee.gatech_email,
