@@ -4,14 +4,59 @@
 		<title>HackGT Check In</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+		<meta name="theme-color" content="#242424"/>
 
 		<link rel="stylesheet" href="/node_modules/material-components-web/dist/material-components-web.css" />
 		<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,700" />
 		<link rel="stylesheet" href="/default.css" />
 		<script async src="https://cdnjs.cloudflare.com/ajax/libs/qwest/4.4.5/qwest.min.js"></script>
 	</head>
-	<body>
-		<h1>Hello world</h1>
+	<body class="mdc-typography">
+		<nav class="toolbar">
+			<img src="https://hackgt.com/img/logo.png" alt="" />
+			<h1 class="mdc-typography--title">HackGT Check In</h1>
+		</nav>
+		<main>
+			<div class="card">
+				<div class="card-content">
+					<section class="center">
+						<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+							<input class="mdc-textfield__input" type="text" id="query">
+							<label class="mdc-textfield__label" for="query">Search for names and emails</label>
+						</div>
+						<select class="mdc-select" style="max-width: 300px;">
+							<option value="" default selected>All attendees</option>
+							<option value="true">Checked in attendees</option>
+							<option value="false">Non checked in attendees</option>
+						</select>
+					</section>
+
+					<ul class="mdc-list mdc-list--two-line">
+						<li class="mdc-list-item">
+							<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_circle</i>
+							<span class="mdc-list-item__text">
+								<span class="mdc-list-item__text__primary mdc-typography--title">Ryan Petschek</span>
+								<span class="mdc-list-item__text__primary mdc-typography--body1">petschekr@gmail.com, petschekr@gatech.edu</span>
+							</span>
+							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised mdc-list-item__end-detail" data-mdc-auto-init="MDCRipple">
+								Check in
+							</button>
+						</li>
+						<li class="mdc-list-item">
+							<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_circle</i>
+							<span class="mdc-list-item__text">
+								<span class="mdc-list-item__text__primary mdc-typography--title">Two-line item</span>
+								<span class="mdc-list-item__text__primary mdc-typography--body1">Secondary text</span>
+							</span>
+							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised mdc-list-item__end-detail" data-mdc-auto-init="MDCRipple">
+								Check in
+							</button>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</main>
 
 		<script src="/node_modules/material-components-web/dist/material-components-web.js"></script>
 		<script src="/js/login.js"></script>

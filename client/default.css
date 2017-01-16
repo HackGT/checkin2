@@ -1,7 +1,8 @@
 html, body {
 	height: 100%;
 	width: 100%;
-	/*background-color: #21252b;*/
+	margin: 0;
+	background: #f1f1f1;
 }
 
 body.login {
@@ -14,6 +15,57 @@ body.login {
 }
 
 :root {
-	/*--mdc-theme-background: #242424;*/
 	--mdc-theme-primary: #ecb72d;
+}
+
+nav.toolbar {
+	background: #242424;
+	color: white;
+	text-align: center;
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 64px;
+	display: flex;
+    align-items: center;
+    justify-content: center;
+}
+nav.toolbar > h1 {
+	margin: 0;
+}
+nav.toolbar > img {
+	height: 75%;
+	margin-right: 10px;
+}
+main {
+	margin-top: 100px;
+}
+li.mdc-list-item > button {
+	width: initial;
+	height: initial;
+}
+.card {
+	margin-right: auto;
+    margin-left: auto;
+    margin-top: 40px;
+    margin-bottom: 40px;
+    max-width: 1200px;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+    border-radius: 2px;
+    background-color: white;
+    box-sizing: border-box;
+}
+.card > .card-content {
+	padding: 20px 16px;
+}
+.card > .card-content > .center {
+	display: flex;
+	align-items: center;
+	flex-direction: column;
+	max-width: 600px;
+	margin: 0 auto;
+}
+.card > .card-content > .center > * {
+	width: 100%;
 }
