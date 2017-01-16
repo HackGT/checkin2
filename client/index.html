@@ -11,6 +11,7 @@
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,700" />
 		<link rel="stylesheet" href="/default.css" />
 		<script src="https://cdnjs.cloudflare.com/ajax/libs/qwest/4.4.5/qwest.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
 	</head>
 	<body class="mdc-typography">
 		<nav class="toolbar">
@@ -45,7 +46,8 @@
 					<span id="name" class="mdc-list-item__text__primary mdc-typography--title">Name</span>
 					<span id="emails" class="mdc-list-item__text__primary mdc-typography--body1">Emails</span>
 				</span>
-				<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised mdc-list-item__end-detail" data-mdc-auto-init="MDCRipple">
+				<span id="status" class="mdc-typography--body2 status"></span>
+				<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple">
 					Check in
 				</button>
 			</li>

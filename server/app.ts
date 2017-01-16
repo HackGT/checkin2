@@ -147,6 +147,7 @@ let authenticateWithReject = async function (request: express.Request, response:
 		});
 	}
 	else {
+		response.locals.username = user.username;
 		next();
 	}
 };
@@ -157,6 +158,7 @@ let authenticateWithRedirect = async function (request: express.Request, respons
 		response.redirect("/login");
 	}
 	else {
+		response.locals.username = user.username;
 		next();
 	}
 };
@@ -407,9 +409,53 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 			gatech_email: attendee.gatech_email,
 			checked_in: attendee.checked_in,
 			checked_in_date: attendee.checked_in_date,
+			checked_in_by: attendee.checked_in_by,
 			id: attendee.id
 		};
 	}));
+});
+
+apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (request, response) => {
+	let id: string = request.body.id || "";
+	let shouldRevert: boolean = request.body.revert === "true";
+	if (!id) {
+		response.status(400).json({
+			"error": "Missing attendee ID"
+		});
+		return;
+	}
+	let attendee = await Attendee.findOne({id: id});
+	if (shouldRevert) {
+		attendee.checked_in = false;
+		attendee.checked_in_by = undefined;
+		attendee.checked_in_date = undefined;
+	}
+	else {
+		attendee.checked_in = true;
+		attendee.checked_in_by = response.locals.username;
+		attendee.checked_in_date = new Date();
+	}
+
+	try {
+		await attendee.save();
+		// TODO: send out a WebSocket notification with this information so that all users stay up-to-date
+		response.status(200).json({
+			tag: attendee.tag,
+			name: attendee.name,
+			communication_email: attendee.communication_email,
+			gatech_email: attendee.gatech_email,
+			checked_in: attendee.checked_in,
+			checked_in_date: attendee.checked_in_date,
+			checked_in_by: attendee.checked_in_by,
+			id: attendee.id
+		});
+	}
+	catch (e) {
+		console.error(e);
+		response.status(500).json({
+			"error": "An error occurred while processing check in"
+		});
+	}
 });
 
 app.use("/api", apiRouter);
