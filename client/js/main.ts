@@ -12,18 +12,11 @@ enum CheckInStatus {
 	Any, CheckedIn, NotCheckedIn
 }
 
-function loadAttendees(filter: string = "", tag: string = "", checkedIn: CheckInStatus = CheckInStatus.Any) {
-	let checkedInValue: string = "";
-	if (checkedIn === CheckInStatus.CheckedIn) {
-		checkedInValue = "true";
-	}
-	if (checkedIn === CheckInStatus.NotCheckedIn) {
-		checkedInValue = "false";
-	}
+function loadAttendees(filter: string = "", tag: string = "", checkedIn: string = "") {
 	qwest.get("/api/search", {
 		"q": filter,
 		"tag": tag,
-		"checkedin": checkedInValue
+		"checkedin": checkedIn
 	}).then((xhr, response: IAttendee[]) => {
 		let attendeeList = document.getElementById("attendees")!;
 		// Remove current contents
@@ -49,3 +42,11 @@ function loadAttendees(filter: string = "", tag: string = "", checkedIn: CheckIn
 }
 
 loadAttendees();
+let queryField = <HTMLInputElement> document.getElementById("query")!;
+queryField.addEventListener("keyup", e => {
+	loadAttendees(queryField.value);
+});
+let checkedInFilterField = <HTMLSelectElement> document.getElementById("checked-in-filter")!;
+checkedInFilterField.addEventListener("change", e => {
+	loadAttendees(queryField.value, undefined, checkedInFilterField.value);
+});
