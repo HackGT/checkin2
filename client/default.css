@@ -29,8 +29,8 @@ nav.toolbar {
 	right: 0;
 	height: 64px;
 	display: flex;
-    align-items: center;
-    justify-content: center;
+	align-items: center;
+	justify-content: center;
 }
 nav.toolbar > h1 {
 	margin: 0;
@@ -48,14 +48,14 @@ li.mdc-list-item > button {
 }
 .card {
 	margin-right: auto;
-    margin-left: auto;
-    margin-top: 40px;
-    margin-bottom: 40px;
-    max-width: 1200px;
-    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
-    border-radius: 2px;
-    background-color: white;
-    box-sizing: border-box;
+	margin-left: auto;
+	margin-top: 40px;
+	margin-bottom: 40px;
+	max-width: 1200px;
+	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+	border-radius: 2px;
+	background-color: white;
+	box-sizing: border-box;
 }
 .card > .card-content {
 	padding: 20px 16px;
@@ -69,4 +69,8 @@ li.mdc-list-item > button {
 }
 .card > .card-content > .center > * {
 	width: 100%;
+	margin-bottom: 10px;
+}
+.card > .card-content > .center > em {
+	text-align: center;
 }

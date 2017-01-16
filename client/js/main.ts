@@ -35,6 +35,7 @@ function loadAttendees(filter: string = "", tag: string = "", checkedIn: string 
 			let attendeeItem = document.importNode(attendeeTemplate.content, true);
 			attendeeList.appendChild(attendeeItem);
 		}
+		document.getElementById("count")!.textContent = response.length.toString();
 		(<any> window).mdc.autoInit();
 	}).catch((e, xhr, response) => {
 		alert(response.error);
