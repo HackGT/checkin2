@@ -1,8 +1,10 @@
 import * as fs from "fs";
+import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
 
 import * as express from "express";
+import * as serveStatic from "serve-static";
 import * as compression from "compression";
 import * as bodyParser from "body-parser";
 import * as cookieParser from "cookie-parser";
@@ -30,18 +32,19 @@ let uploadHandler = multer({
 import * as mongoose from "mongoose";
 import * as csvParse from "csv-parse";
 
+const PORT = 3000;
+const DATABASE = "test";
+const STATIC_ROOT = "../client";
+
 let app = express();
 app.use(compression());
+app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
 app.use(cookieParser(undefined, {
 	"path": "/",
 	"maxAge": 1000 * 60 * 60 * 24 * 30 * 6, // 6 months
 	"secure": false,
 	"httpOnly": true
 }));
-
-
-const PORT = 3000;
-const DATABASE = "test";
 
 (<any>mongoose).Promise = global.Promise;
 mongoose.connect(`mongodb://localhost/${DATABASE}`);
@@ -147,8 +150,9 @@ let authenticateMiddleware = async function (request: express.Request, response:
 	}
 }
 
+let apiRouter = express.Router();
 // User routes
-app.route("/user/signup").post(postParser, async (request, response) => {
+apiRouter.route("/user/signup").post(postParser, async (request, response) => {
 	response.clearCookie("auth");
 	let username: string = request.body.username || "";
 	let password: string = request.body.password || "";
@@ -192,7 +196,7 @@ app.route("/user/signup").post(postParser, async (request, response) => {
 		});
 	}
 });
-app.route("/user/login").post(postParser, async (request, response) => {
+apiRouter.route("/user/login").post(postParser, async (request, response) => {
 	response.clearCookie("auth");
 	let username: string = request.body.username || "";
 	let password: string = request.body.password || "";
@@ -240,7 +244,7 @@ app.route("/user/login").post(postParser, async (request, response) => {
 
 // User importing from CSV files
 // `import` is the fieldname that should be used to upload the CSV file
-app.route("/data/import/:tag").post(authenticateMiddleware, uploadHandler.single("import"), (request, response) => {
+apiRouter.route("/data/import/:tag").post(authenticateMiddleware, uploadHandler.single("import"), (request, response) => {
 	let parser = csvParse({ trim: true });
 	let attendeeData: IAttendee[] = [];
 	let headerParsed: boolean = false;
@@ -332,7 +336,7 @@ app.route("/data/import/:tag").post(authenticateMiddleware, uploadHandler.single
 	fs.createReadStream(request.file.path).pipe(parser);
 });
 
-app.route("/search").get(authenticateMiddleware, async (request, response) => {
+apiRouter.route("/search").get(authenticateMiddleware, async (request, response) => {
 	let query: string = request.query.q || "";
 	let queryRegExp = new RegExp(query, "i");
 	let checkinStatus: string = request.query.checkedin || "";
@@ -397,11 +401,7 @@ app.route("/search").get(authenticateMiddleware, async (request, response) => {
 	}));
 });
 
-app.get("/", (request, response) => {
-	// TODO: implement UI
-  	response.send("Hello World!");
-});
+app.use("/api", apiRouter);
 
 app.listen(PORT, () => {
 	console.log(`Check in system started on port ${PORT}`);
-});
