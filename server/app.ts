@@ -2,6 +2,7 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
+import * as http from "http";
 
 import * as express from "express";
 import * as serveStatic from "serve-static";
@@ -33,6 +34,7 @@ let uploadHandler = multer({
 
 import * as mongoose from "mongoose";
 import * as csvParse from "csv-parse";
+import * as WebSocket from "ws";
 
 const PORT = 3000;
 const DATABASE = "test";
@@ -40,12 +42,13 @@ const STATIC_ROOT = "../client";
 
 let app = express();
 app.use(compression());
-app.use(cookieParser(undefined, {
+let cookieParserInstance = cookieParser(undefined, {
 	"path": "/",
 	"maxAge": 1000 * 60 * 60 * 24 * 30 * 6, // 6 months
 	"secure": false,
 	"httpOnly": true
-}));
+});
+app.use(cookieParserInstance);
 
 (<any>mongoose).Promise = global.Promise;
 mongoose.connect(`mongodb://localhost/${DATABASE}`);
@@ -438,8 +441,8 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 
 	try {
 		await attendee.save();
-		// TODO: send out a WebSocket notification with this information so that all users stay up-to-date
-		response.status(200).json({
+		let updateData = JSON.stringify({
+			reverted: shouldRevert,
 			tag: attendee.tag,
 			name: attendee.name,
 			communication_email: attendee.communication_email,
@@ -448,6 +451,14 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 			checked_in_date: attendee.checked_in_date,
 			checked_in_by: attendee.checked_in_by,
 			id: attendee.id
+		});
+		wss.clients.forEach(function each(client) {
+			if (client.readyState === WebSocket.OPEN) {
+				client.send(updateData);
+			}
+		});
+		response.status(200).json({
+			"success": true
 		});
 	}
 	catch (e) {
@@ -484,6 +495,19 @@ app.route("/login").get(async (request, response) => {
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
 
-app.listen(PORT, () => {
+// WebSocket server
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
+wss.on("connection", function(rawSocket) {
+	let request = (<express.Request> rawSocket.upgradeReq);
+	cookieParserInstance(request, null!, async (err) => {
+		let authKey = request.cookies.auth;
+		let user = await User.findOne({"auth_keys": authKey});
+		if (!user) {
+			rawSocket.close();
+		}
+	});
+});
+server.listen(PORT, () => {
 	console.log(`Check in system started on port ${PORT}`);
 });

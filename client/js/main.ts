@@ -1,6 +1,7 @@
 declare let moment: any;
 
 interface IAttendee {
+	reverted?: boolean;
 	id: string;
 	tag: string;
 	name: string;
@@ -22,17 +23,6 @@ function checkIn (e: Event) {
 	qwest.post("/api/checkin", {
 		id: button.parentElement!.id.slice(5),
 		revert: isCheckedIn ? "true" : "false"
-	}).then((xhr, response: IAttendee) => {
-		if (!isCheckedIn) {
-			button.textContent = "Uncheck in";
-			button.classList.add("checked-in");
-			document.querySelector(`#${button.parentElement!.id} > span.status`)!.textContent = `Checked in ${moment(response.checked_in_date).fromNow()} by ${response.checked_in_by || "unknown"}`;
-		}
-		else {
-			button.textContent = "Check in";
-			button.classList.remove("checked-in");
-			document.querySelector(`#${button.parentElement!.id} > span.status`)!.textContent = "";
-		}
 	}).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {
@@ -94,4 +84,23 @@ queryField.addEventListener("keyup", e => {
 let checkedInFilterField = <HTMLSelectElement> document.getElementById("checked-in-filter")!;
 checkedInFilterField.addEventListener("change", e => {
 	loadAttendees(queryField.value, undefined, checkedInFilterField.value);
+});
+
+const socket = new WebSocket(`ws://${window.location.host}`);
+// Listen for messages
+socket.addEventListener("message", (event) => {
+	let attendee: IAttendee = JSON.parse(event.data);
+	let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > button`)!;
+	let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.id} > span.status`)!;
+
+	if (!attendee.reverted) {
+		button.textContent = "Uncheck in";
+		button.classList.add("checked-in");
+		status.textContent = `Checked in ${moment(attendee.checked_in_date).fromNow()} by ${attendee.checked_in_by || "unknown"}`;
+	}
+	else {
+		button.textContent = "Check in";
+		button.classList.remove("checked-in");
+		status.textContent = "";
+	}
 });
