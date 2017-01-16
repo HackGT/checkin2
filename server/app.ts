@@ -75,6 +75,7 @@ const User = mongoose.model<IUserMongoose>("User", new mongoose.Schema({
 	auth_keys: [String]
 }));
 interface IAttendee {
+	id: string;
 	tag: string;
 	name: string;
 	communication_email: string;
@@ -85,6 +86,11 @@ interface IAttendee {
 }
 interface IAttendeeMongoose extends IAttendee, mongoose.Document {}
 const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Schema({
+	id: {
+		type: String,
+		required: true,
+		unique: true
+	},
 	tag: {
 		type: String,
 		required: true
@@ -278,7 +284,8 @@ app.route("/data/import/:tag").post(authenticateMiddleware, uploadHandler.single
 					name: name,
 					communication_email: record[emailIndex].toLowerCase(),
 					gatech_email: record[gatechEmailIndex].toLowerCase(),
-					checked_in: false
+					checked_in: false,
+					id: crypto.randomBytes(16).toString("hex")
 				});
 			}
 		}
@@ -384,7 +391,8 @@ app.route("/search").get(authenticateMiddleware, async (request, response) => {
 			communication_email: attendee.communication_email,
 			gatech_email: attendee.gatech_email,
 			checked_in: attendee.checked_in,
-			checked_in_date: attendee.checked_in_date
+			checked_in_date: attendee.checked_in_date,
+			id: attendee.id
 		};
 	}));
 });
