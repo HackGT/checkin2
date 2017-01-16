@@ -15,6 +15,13 @@ enum CheckInStatus {
 	Any, CheckedIn, NotCheckedIn
 }
 
+function statusFormatter (time: Date, by: string = "unknown"): string {
+	// Escape possible HTML in username
+	by = by.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+	return `Checked in <abbr title="${moment(time).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
+}
+
 function checkIn (e: Event) {
 	let button = (<HTMLButtonElement> e.srcElement)!;
 	let isCheckedIn: boolean = button.classList.contains("checked-in");
@@ -57,7 +64,7 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 			if (attendee.checked_in_date) {
 				button.textContent = "Uncheck in";
 				button.classList.add("checked-in");
-				status.textContent = `Checked in ${moment(attendee.checked_in_date).fromNow()} by ${attendee.checked_in_by || "unknown"}`;
+				status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
 			}
 			else {
 				button.textContent = "Check in";
@@ -86,17 +93,17 @@ checkedInFilterField.addEventListener("change", e => {
 	loadAttendees(queryField.value, undefined, checkedInFilterField.value);
 });
 
+// Listen for updates
 const socket = new WebSocket(`ws://${window.location.host}`);
-// Listen for messages
 socket.addEventListener("message", (event) => {
 	let attendee: IAttendee = JSON.parse(event.data);
 	let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > button`)!;
 	let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.id} > span.status`)!;
 
-	if (!attendee.reverted) {
+	if (!attendee.reverted && attendee.checked_in_date) {
 		button.textContent = "Uncheck in";
 		button.classList.add("checked-in");
-		status.textContent = `Checked in ${moment(attendee.checked_in_date).fromNow()} by ${attendee.checked_in_by || "unknown"}`;
+		status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
 	}
 	else {
 		button.textContent = "Check in";
@@ -104,3 +111,8 @@ socket.addEventListener("message", (event) => {
 		status.textContent = "";
 	}
 });
+
+// Update check in relative times every minute the lazy way
+setInterval(() => {
+	loadAttendees();
+}, 1000 * 60);
