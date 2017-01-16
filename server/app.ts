@@ -9,7 +9,9 @@ import * as compression from "compression";
 import * as bodyParser from "body-parser";
 import * as cookieParser from "cookie-parser";
 import * as multer from "multer";
-let postParser = bodyParser.json();
+let postParser = bodyParser.urlencoded({
+	extended: false
+});
 let uploadHandler = multer({
 	"storage": multer.diskStorage({
 		destination: function (req, file, cb) {
@@ -38,7 +40,6 @@ const STATIC_ROOT = "../client";
 
 let app = express();
 app.use(compression());
-app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
 app.use(cookieParser(undefined, {
 	"path": "/",
 	"maxAge": 1000 * 60 * 60 * 24 * 30 * 6, // 6 months
@@ -137,7 +138,7 @@ function pbkdf2Async (...params: any[]) {
 	});
 }
 
-let authenticateMiddleware = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
+let authenticateWithReject = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
 	let authKey = request.cookies.auth;
 	let user = await User.findOne({"auth_keys": authKey});
 	if (!user) {
@@ -148,7 +149,17 @@ let authenticateMiddleware = async function (request: express.Request, response:
 	else {
 		next();
 	}
-}
+};
+let authenticateWithRedirect = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
+	let authKey = request.cookies.auth;
+	let user = await User.findOne({"auth_keys": authKey});
+	if (!user) {
+		response.redirect("/login");
+	}
+	else {
+		next();
+	}
+};
 
 let apiRouter = express.Router();
 // User routes
@@ -244,7 +255,7 @@ apiRouter.route("/user/login").post(postParser, async (request, response) => {
 
 // User importing from CSV files
 // `import` is the fieldname that should be used to upload the CSV file
-apiRouter.route("/data/import/:tag").post(authenticateMiddleware, uploadHandler.single("import"), (request, response) => {
+apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.single("import"), (request, response) => {
 	let parser = csvParse({ trim: true });
 	let attendeeData: IAttendee[] = [];
 	let headerParsed: boolean = false;
@@ -336,7 +347,7 @@ apiRouter.route("/data/import/:tag").post(authenticateMiddleware, uploadHandler.
 	fs.createReadStream(request.file.path).pipe(parser);
 });
 
-apiRouter.route("/search").get(authenticateMiddleware, async (request, response) => {
+apiRouter.route("/search").get(authenticateWithReject, async (request, response) => {
 	let query: string = request.query.q || "";
 	let queryRegExp = new RegExp(query, "i");
 	let checkinStatus: string = request.query.checkedin || "";
@@ -403,5 +414,30 @@ apiRouter.route("/search").get(authenticateMiddleware, async (request, response)
 
 app.use("/api", apiRouter);
 
+app.route("/").get(authenticateWithRedirect, async (request, response) => {
+	fs.readFile(path.join(__dirname, STATIC_ROOT, "index.html"), { encoding: "utf8" }, (err, html) => {
+		if (err) {
+			console.error(err);
+			response.status(500).send("An internal server error occurred");
+			return;
+		}
+		response.send(html);
+	});
+});
+app.route("/login").get(async (request, response) => {
+	response.clearCookie("auth");
+	fs.readFile(path.join(__dirname, STATIC_ROOT, "login.html"), { encoding: "utf8" }, (err, html) => {
+		if (err) {
+			console.error(err);
+			response.status(500).send("An internal server error occurred");
+			return;
+		}
+		response.send(html);
+	});
+});
+app.use("/node_modules", serveStatic(path.resolve(__dirname, "node_modules")));
+app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
+
 app.listen(PORT, () => {
 	console.log(`Check in system started on port ${PORT}`);
+});

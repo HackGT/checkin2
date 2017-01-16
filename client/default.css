@@ -1,0 +1,19 @@
+html, body {
+	height: 100%;
+	width: 100%;
+	/*background-color: #21252b;*/
+}
+
+body.login {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+.mdc-textfield > input {
+	width: 20vw;
+}
+
+:root {
+	/*--mdc-theme-background: #242424;*/
+	--mdc-theme-primary: #ecb72d;
+}

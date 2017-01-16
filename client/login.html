@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>Login | HackGT Check In</title>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+
+		<link rel="stylesheet" href="/node_modules/material-components-web/dist/material-components-web.css" />
+		<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+		<link rel="stylesheet" href="/default.css" />
+		<script async src="https://cdnjs.cloudflare.com/ajax/libs/qwest/4.4.5/qwest.min.js"></script>
+	</head>
+	<body class="login">
+		<div class="mdc-card">
+			<section class="mdc-card__primary">
+				<h1 class="mdc-card__title mdc-card__title--large">Login</h1>
+			</section>
+			<section class="mdc-card__supporting-text">
+				<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+					<input class="mdc-textfield__input" type="text" id="username">
+					<label class="mdc-textfield__label" for="username">Username</label>
+				</div>
+				<br />
+				<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+					<input class="mdc-textfield__input" type="password" id="password">
+					<label class="mdc-textfield__label" for="password">Password</label>
+				</div>
+			</section>
+			<section class="mdc-card__actions">
+				<button id="submit" class="mdc-button mdc-button--compact mdc-card__action mdc-button--primary mdc-ripple-surface" data-mdc-auto-init="MDCRipple">
+					Log in
+				</button>
+			</section>
+		</div>
+
+		<script src="/node_modules/material-components-web/dist/material-components-web.js"></script>
+		<script src="/js/login.js"></script>
+	</body>
+</html>

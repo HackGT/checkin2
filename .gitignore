@@ -38,3 +38,5 @@ jspm_packages
 app.js
 *.js.map
 .vscode/
+**/bower_components/
+client/js/*.js
