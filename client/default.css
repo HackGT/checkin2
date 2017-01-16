@@ -19,6 +19,7 @@ body.login {
 }
 
 nav.toolbar {
+	z-index: 100;
 	background: #242424;
 	color: white;
 	text-align: center;

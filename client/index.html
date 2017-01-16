@@ -10,7 +10,7 @@
 		<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
 		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,700" />
 		<link rel="stylesheet" href="/default.css" />
-		<script async src="https://cdnjs.cloudflare.com/ajax/libs/qwest/4.4.5/qwest.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/qwest/4.4.5/qwest.min.js"></script>
 	</head>
 	<body class="mdc-typography">
 		<nav class="toolbar">
@@ -32,33 +32,25 @@
 						</select>
 					</section>
 
-					<ul class="mdc-list mdc-list--two-line">
-						<li class="mdc-list-item">
-							<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_circle</i>
-							<span class="mdc-list-item__text">
-								<span class="mdc-list-item__text__primary mdc-typography--title">Ryan Petschek</span>
-								<span class="mdc-list-item__text__primary mdc-typography--body1">petschekr@gmail.com, petschekr@gatech.edu</span>
-							</span>
-							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised mdc-list-item__end-detail" data-mdc-auto-init="MDCRipple">
-								Check in
-							</button>
-						</li>
-						<li class="mdc-list-item">
-							<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_circle</i>
-							<span class="mdc-list-item__text">
-								<span class="mdc-list-item__text__primary mdc-typography--title">Two-line item</span>
-								<span class="mdc-list-item__text__primary mdc-typography--body1">Secondary text</span>
-							</span>
-							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised mdc-list-item__end-detail" data-mdc-auto-init="MDCRipple">
-								Check in
-							</button>
-						</li>
+					<ul class="mdc-list mdc-list--two-line" id="attendees">
 					</ul>
 				</div>
 			</div>
 		</main>
+		<template id="attendee-item">
+			<li class="mdc-list-item">
+				<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_circle</i>
+				<span class="mdc-list-item__text">
+					<span id="name" class="mdc-list-item__text__primary mdc-typography--title">Name</span>
+					<span id="emails" class="mdc-list-item__text__primary mdc-typography--body1">Emails</span>
+				</span>
+				<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised mdc-list-item__end-detail" data-mdc-auto-init="MDCRipple">
+					Check in
+				</button>
+			</li>
+		</template>
 
 		<script src="/node_modules/material-components-web/dist/material-components-web.js"></script>
-		<script src="/js/login.js"></script>
+		<script src="/js/main.js"></script>
 	</body>
 </html>
