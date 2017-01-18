@@ -143,6 +143,34 @@ function pbkdf2Async (...params: any[]) {
 	});
 }
 
+// Check for number of users and create default account if none
+const DEFAULT_USERNAME = "admin";
+const DEFAULT_PASSWORD = "admin";
+(async () => {
+	let users = await User.find();
+	if (users.length !== 0)
+		return;
+
+	let salt = crypto.randomBytes(32);
+	let passwordHashed = await pbkdf2Async(DEFAULT_PASSWORD, salt, 500000, 128, "sha256");
+
+	let defaultUser = new User({
+		username: DEFAULT_USERNAME,
+		login: {
+			hash: passwordHashed.toString("hex"),
+			salt: salt.toString("hex")
+		},
+		auth_keys: []
+	});
+	await defaultUser.save();
+	console.info(`
+Created default user
+	Username: ${DEFAULT_USERNAME}
+	Password: ${DEFAULT_PASSWORD}
+**Delete this user after you have used it to set up your account**
+	`);
+})();
+
 let authenticateWithReject = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
 	let authKey = request.cookies.auth;
 	let user = await User.findOne({"auth_keys": authKey});
@@ -170,7 +198,7 @@ let authenticateWithRedirect = async function (request: express.Request, respons
 
 let apiRouter = express.Router();
 // User routes
-apiRouter.route("/user/signup").post(postParser, async (request, response) => {
+apiRouter.route("/user/signup").post(authenticateWithReject, postParser, async (request, response) => {
 	response.clearCookie("auth");
 	let username: string = request.body.username || "";
 	let password: string = request.body.password || "";
