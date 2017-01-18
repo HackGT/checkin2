@@ -6,15 +6,12 @@ WORKDIR /usr/src/checkin
 
 # Bundle app source
 COPY . /usr/src/checkin
-WORKDIR server
+WORKDIR /usr/src/checkin/server
 RUN npm install
-EXPOSE 3000
 
-WORKDIR ../
+WORKDIR /usr/src/checkin
 RUN npm install -g typescript
 RUN tsc
 
-WORKDIR server
-# Set this to the name of the linked MongoDB container
-ENV db="checkin-db"
-CMD [ "npm", "start" ]
+WORKDIR /usr/src/checkin/server
+CMD ["npm", "start"]

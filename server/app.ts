@@ -37,9 +37,8 @@ import * as csvParse from "csv-parse";
 import * as WebSocket from "ws";
 import * as cheerio from "cheerio";
 
-const PORT = 3000;
-const DATABASE_ADDRESS = process.env.db || "localhost";
-const DATABASE = "test";
+const PORT = parseInt(process.env.PORT) || 3000;
+const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost/test';
 const STATIC_ROOT = "../client";
 
 let app = express();
@@ -53,7 +52,7 @@ let cookieParserInstance = cookieParser(undefined, {
 app.use(cookieParserInstance);
 
 (<any>mongoose).Promise = global.Promise;
-mongoose.connect(`mongodb://${DATABASE_ADDRESS}/${DATABASE}`);
+mongoose.connect(MONGO_URL);
 
 interface IUser {
 	username: string;
