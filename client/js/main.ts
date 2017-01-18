@@ -23,7 +23,7 @@ function statusFormatter (time: Date, by: string = "unknown"): string {
 }
 
 function checkIn (e: Event) {
-	let button = (<HTMLButtonElement> e.srcElement)!;
+	let button = (<HTMLButtonElement> e.target)!;
 	let isCheckedIn: boolean = button.classList.contains("checked-in");
 	button.disabled = true;
 	
