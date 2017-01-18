@@ -28,7 +28,7 @@ function checkIn (e: Event) {
 	button.disabled = true;
 	
 	qwest.post("/api/checkin", {
-		id: button.parentElement!.id.slice(5),
+		id: button.parentElement!.parentElement!.id.slice(5),
 		revert: isCheckedIn ? "true" : "false"
 	}).catch((e, xhr, response) => {
 		alert(response.error);
@@ -59,8 +59,8 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 				emailContent = `${attendee.communication_email}, ${attendee.gatech_email}`;
 			attendeeTemplate.content.querySelector("#emails")!.textContent = emailContent;
 			
-			let button = attendeeTemplate.content.querySelector("button")!;
-			let status = attendeeTemplate.content.querySelector("span.status")!;
+			let button = attendeeTemplate.content.querySelector(".actions > button")!;
+			let status = attendeeTemplate.content.querySelector(".actions > span.status")!;
 			if (attendee.checked_in_date) {
 				button.textContent = "Uncheck in";
 				button.classList.add("checked-in");
@@ -74,7 +74,7 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 
 			let attendeeItem = document.importNode(attendeeTemplate.content, true);
 			attendeeList.appendChild(attendeeItem);
-			attendeeList.querySelector(`#item-${attendee.id} > button`)!.addEventListener("click", checkIn);
+			attendeeList.querySelector(`#item-${attendee.id} > .actions > button`)!.addEventListener("click", checkIn);
 		}
 		document.getElementById("count")!.textContent = response.length.toString();
 		(<any> window).mdc.autoInit();
@@ -97,8 +97,8 @@ checkedInFilterField.addEventListener("change", e => {
 const socket = new WebSocket(`ws://${window.location.host}`);
 socket.addEventListener("message", (event) => {
 	let attendee: IAttendee = JSON.parse(event.data);
-	let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > button`)!;
-	let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.id} > span.status`)!;
+	let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`)!;
+	let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
 	if (!attendee.reverted && attendee.checked_in_date) {
 		button.textContent = "Uncheck in";
