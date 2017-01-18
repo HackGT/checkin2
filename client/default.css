@@ -10,6 +10,18 @@ body.login {
 	justify-content: center;
 	align-items: center;
 }
+body.login .mdc-card {
+	background-color: white;
+	max-width: 450px;
+	width: 100%;
+	margin: 10px;
+}
+body.login .mdc-textfield, body.login input {
+	width: 100%;
+}
+body.login .mdc-card__actions {
+	justify-content: center;
+}
 .mdc-textfield > input {
 	width: 20vw;
 }
@@ -46,9 +58,9 @@ li.mdc-list-item > .actions > button {
 	width: initial;
 	height: initial;
 	margin-left: 16px;
-    margin-right: 16px;
+	margin-right: 16px;
 	-webkit-transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
-    transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
+	transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
 }
 li.mdc-list-item > .actions > button.checked-in {
 	background-color: #ff4136;
