@@ -35,6 +35,6 @@ spec:
           containerPort: 3030
         env:
         - name: PORT
-          value: 3030
+          value: "3030"
         - name: MONGO_URL
           value: mongodb://mongo-mongodb/checkin
