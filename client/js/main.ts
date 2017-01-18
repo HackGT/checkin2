@@ -11,9 +11,10 @@ interface IAttendee {
 	checked_in_date?: Date;
 	checked_in_by?: string;
 }
-enum CheckInStatus {
-	Any, CheckedIn, NotCheckedIn
+enum State {
+	CheckIn, Import
 }
+let currentState: State;
 
 function statusFormatter (time: Date, by: string = "unknown"): string {
 	// Escape possible HTML in username
@@ -82,8 +83,19 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 		alert(response.error);
 	});
 }
+function enterState(state: State) {
+	currentState = state;
+	if (state === State.CheckIn) {
+		document.getElementById("checkin")!.style.display = "block";
+		document.getElementById("import")!.style.display = "none";
+		loadAttendees();
+	}
+	if (state === State.Import) {
+		document.getElementById("checkin")!.style.display = "none";
+		document.getElementById("import")!.style.display = "block";
+	}
+}
 
-loadAttendees();
 let queryField = <HTMLInputElement> document.getElementById("query")!;
 queryField.addEventListener("keyup", e => {
 	loadAttendees(queryField.value);
@@ -102,6 +114,9 @@ document.querySelector("nav.toolbar > i:first-of-type")!.addEventListener("click
 // Listen for updates
 const socket = new WebSocket(`ws://${window.location.host}`);
 socket.addEventListener("message", (event) => {
+	if (currentState !== State.CheckIn)
+		return;
+	
 	let attendee: IAttendee = JSON.parse(event.data);
 	let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`)!;
 	let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
@@ -118,7 +133,30 @@ socket.addEventListener("message", (event) => {
 	}
 });
 
+enterState(State.CheckIn);
+// ES6 is pretty cool
+let [enterCheckIn, enterImport] = ["enter-checkin", "enter-import"].map((id) => document.getElementById(id)!);
+const drawerSelectedClass = "mdc-temporary-drawer--selected";
+// setTimeout is necessary probably because the drawer is reshown upon any click event
+enterCheckIn.addEventListener("click", (e) => {
+	enterCheckIn.classList.add(drawerSelectedClass);
+	enterImport.classList.remove(drawerSelectedClass);
+	enterState(State.CheckIn);
+	setTimeout(() => {
+		drawer.open = false;
+	}, 10);
+});
+enterImport.addEventListener("click", (e) => {
+	enterCheckIn.classList.remove(drawerSelectedClass);
+	enterImport.classList.add(drawerSelectedClass);
+	enterState(State.Import);
+	setTimeout(() => {
+		drawer.open = false;
+	}, 10);
+});
 // Update check in relative times every minute the lazy way
 setInterval(() => {
-	loadAttendees();
+	if (currentState === State.CheckIn) {
+		loadAttendees();
+	}
 }, 1000 * 60);

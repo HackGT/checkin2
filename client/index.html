@@ -31,7 +31,7 @@
 				</header>
 
 				<nav id="icon-with-text-demo" class="mdc-temporary-drawer__content mdc-list">
-					<a class="mdc-list-item mdc-temporary-drawer--selected" href="#">
+					<a class="mdc-list-item mdc-temporary-drawer--selected" href="#" id="enter-checkin">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">format_list_bulleted</i>
 						Check in
 					</a>
@@ -41,7 +41,7 @@
 							<!-- Content filled in by server -->
 						</select>
 					</a>
-					<a class="mdc-list-item" href="#">
+					<a class="mdc-list-item" href="#" id="enter-import">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">playlist_add</i>
 						Import attendees
 					</a>
@@ -65,25 +65,60 @@
 		</aside>
 
 		<main>
-			<div class="card">
-				<div class="card-content">
-					<section class="center">
-						<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-							<input class="mdc-textfield__input" type="text" id="query">
-							<label class="mdc-textfield__label" for="query">Search for names and emails</label>
-						</div>
-						<select class="mdc-select" style="max-width: 300px;" id="checked-in-filter">
-							<option value="" default selected>All attendees</option>
-							<option value="true">Checked in attendees</option>
-							<option value="false">Non checked in attendees</option>
-						</select>
-						<em>Found <span id="count">0</span> attendees</em>
-					</section>
+			<section id="checkin">
+				<div class="card">
+					<div class="card-content">
+						<section class="center">
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="text" id="query">
+								<label class="mdc-textfield__label" for="query">Search for names and emails</label>
+							</div>
+							<select class="mdc-select" style="max-width: 300px;" id="checked-in-filter">
+								<option value="" default selected>All attendees</option>
+								<option value="true">Checked in attendees</option>
+								<option value="false">Non checked in attendees</option>
+							</select>
+							<em>Found <span id="count">0</span> attendees</em>
+						</section>
 
-					<ul class="mdc-list mdc-list--two-line" id="attendees">
-					</ul>
+						<ul class="mdc-list mdc-list--two-line" id="attendees">
+						</ul>
+					</div>
 				</div>
-			</div>
+			</section>
+
+			<section id="import" style="display: none;">
+				<div class="card">
+					<div class="card-content">
+						<section class="center">
+							<h1 class="mdc-typography--headline">Import attendees</h1>
+
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="text" id="add-tag">
+								<label class="mdc-textfield__label" for="add-tag">Tag for this import</label>
+							</div>
+							
+							<input class="mdc-textfield__input" type="file" name="import">
+							
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="text" id="name-header">
+								<label class="mdc-textfield__label" for="name-header">CSV name header</label>
+							</div>
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="text" id="gatech-email-header">
+								<label class="mdc-textfield__label" for="gatech-email-header">CSV Georgia Tech email header</label>
+							</div>
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="text" id="communication-email-header">
+								<label class="mdc-textfield__label" for="communication-email-header">CSV communication email header</label>
+							</div>
+							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple">
+								Import
+							</button>
+						</section>
+					</div>
+				</div>
+			</section>
 		</main>
 		<template id="attendee-item">
 			<li class="mdc-list-item">

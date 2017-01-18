@@ -120,6 +120,13 @@ li.mdc-list-item .actions {
 .card > .card-content > .center > em {
 	text-align: center;
 }
+#import .center > button {
+	width: initial;
+    margin-top: 10px;
+}
+input[type="file"] {
+	margin-bottom: 0 !important;
+}
 abbr {
 	border-bottom: 1px dashed rgba(0,0,0,0.3);
 }
