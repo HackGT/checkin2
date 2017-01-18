@@ -35,6 +35,7 @@ let uploadHandler = multer({
 import * as mongoose from "mongoose";
 import * as csvParse from "csv-parse";
 import * as WebSocket from "ws";
+import * as cheerio from "cheerio";
 
 const PORT = 3000;
 const DATABASE_ADDRESS = process.env.db || "localhost";
@@ -472,14 +473,29 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 
 app.use("/api", apiRouter);
 
-app.route("/").get(authenticateWithRedirect, async (request, response) => {
-	fs.readFile(path.join(__dirname, STATIC_ROOT, "index.html"), { encoding: "utf8" }, (err, html) => {
+app.route("/").get(authenticateWithRedirect, (request, response) => {
+	fs.readFile(path.join(__dirname, STATIC_ROOT, "index.html"), { encoding: "utf8" }, async (err, html) => {
 		if (err) {
 			console.error(err);
 			response.status(500).send("An internal server error occurred");
 			return;
 		}
-		response.send(html);
+		let attendees = await Attendee.find().sort({ tag: "desc" });
+		let tags: string[] = attendees.reduce((prev, current) => {
+			if (prev.indexOf(current.tag) === -1) {
+				// Escape possible HTML in tags
+				let tag: string = current.tag.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+				prev.push(tag);
+			}
+			return prev;
+		}, <string[]> []);
+
+		let $ = cheerio.load(html);
+		$("#username").text(response.locals.username);
+		for (let tag of tags) {
+			$(".tags").append(`<option>${tags}</option>`);
+		}
+		response.send($.html());
 	});
 });
 app.route("/login").get(async (request, response) => {

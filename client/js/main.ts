@@ -93,6 +93,12 @@ checkedInFilterField.addEventListener("change", e => {
 	loadAttendees(queryField.value, undefined, checkedInFilterField.value);
 });
 
+mdc.ripple.MDCRipple.attachTo(document.querySelector(".mdc-ripple-surface"));
+let drawer = new mdc.drawer.MDCTemporaryDrawer(document.querySelector(".mdc-temporary-drawer"));
+document.querySelector("nav.toolbar > i:first-of-type")!.addEventListener("click", () => {
+	drawer.open = !drawer.open;
+});
+
 // Listen for updates
 const socket = new WebSocket(`ws://${window.location.host}`);
 socket.addEventListener("message", (event) => {

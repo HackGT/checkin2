@@ -15,9 +15,40 @@
 	</head>
 	<body class="mdc-typography">
 		<nav class="toolbar">
+			<i class="material-icons mdc-ripple-surface" aria-hidden="true">menu</i>
+
 			<img src="https://hackgt.com/img/logo.png" alt="" />
 			<h1 class="mdc-typography--title">HackGT Check In</h1>
 		</nav>
+
+		<aside class="mdc-temporary-drawer mdc-typography">
+			<nav class="mdc-temporary-drawer__drawer">
+
+				<header class="mdc-temporary-drawer__header">
+					<div class="mdc-temporary-drawer__header-content" id="username">
+						<!-- Content filled in by server -->
+					</div>
+				</header>
+
+				<nav id="icon-with-text-demo" class="mdc-temporary-drawer__content mdc-list">
+					<a class="mdc-list-item mdc-temporary-drawer--selected" href="#">
+						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">format_list_bulleted</i>
+						Check in
+					</a>
+					<a class="mdc-list-item" href="#">
+						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">assignment</i>
+						<select class="mdc-list-item tags" id="tag">
+							<!-- Content filled in by server -->
+						</select>
+					</a>
+					<a class="mdc-list-item" href="/login">
+						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">exit_to_app</i>
+						Log out
+					</a>
+				</nav>
+			</nav>
+		</aside>
+
 		<main>
 			<div class="card">
 				<div class="card-content">
