@@ -180,7 +180,7 @@ document.querySelector("#import button")!.addEventListener("click", (e) => {
 	let form = new FormData();
 	let fileInput = <HTMLInputElement> document.querySelector(`#import input[type="file"]`)!;
 	let tagInput = <HTMLInputElement> document.getElementById("add-tag");
-	let tag: string = tagInput.value;
+	let tag: string = tagInput.value.trim().toLowerCase();
 	let nameInput = <HTMLInputElement> document.getElementById("name-header");
 	let emailInput = <HTMLInputElement> document.getElementById("email-headers");
 	if (!fileInput.files || fileInput.files.length < 1) {
