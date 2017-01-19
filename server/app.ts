@@ -24,8 +24,7 @@ let uploadHandler = multer({
 	}),
 	"limits": {
 		"fileSize": 50000000, // 50 MB
-		"files": 1,
-		"fields": 0
+		"files": 1
 	},
 	"fileFilter": function (request, file, callback) {
 		callback(null!, !!file.originalname.match("\.csv$"));
@@ -86,8 +85,7 @@ interface IAttendee {
 	id: string;
 	tag: string;
 	name: string;
-	communication_email: string;
-	gatech_email: string;
+	emails: string[];
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
@@ -108,12 +106,8 @@ const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Sche
 		required: true,
 		//unique: true
 	},
-	communication_email: {
-		type: String,
-		required: true
-	},
-	gatech_email: {
-		type: String,
+	emails: {
+		type: [String],
 		required: true
 	},
 	checked_in: {
@@ -289,50 +283,77 @@ apiRouter.route("/user/login").post(postParser, async (request, response) => {
 
 // User importing from CSV files
 // `import` is the fieldname that should be used to upload the CSV file
-apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.single("import"), (request, response) => {
+apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.single("import"), (request, response) => {
 	let parser = csvParse({ trim: true });
 	let attendeeData: IAttendee[] = [];
 	let headerParsed: boolean = false;
-	let nameIndex: number = 0;
-	let emailIndex: number = 0;
-	let gatechEmailIndex: number = 0;
-	let tag: string = request.params.tag.toLowerCase();
+	let nameIndex: number | null = null;
+	let emailIndexes: number[] = [];
 
+	let tag: string = request.body.tag;
+	let nameHeader: string = request.body.name;
+	let emailHeadersRaw: string = request.body.email;
+	if (!tag) {
+		response.status(400).json({
+			"error": "Missing tag"
+		});
+		return;
+	}
+	if (!nameHeader || !emailHeadersRaw) {
+		response.status(400).json({
+			"error": "Missing CSV headers names to import"
+		});
+		return;
+	}
+	tag = tag.trim().toLowerCase();
+	nameHeader = nameHeader.trim();
+	let emailHeaders: string[] = emailHeadersRaw.split(",").map((header) => { return header.trim(); });
+	
 	parser.on("readable", () => {
 		let record: any;
 		while (record = parser.read()) {
 			if (!headerParsed) {
 				// Header row
 				for (let i = 0; i < record.length; i++) {
-					let label = record[i];
-					if (label.match(/^email address$/i)) {
-						emailIndex = i;
-					}
-					else if (label.match(/^gt email address$/i)) {
-						gatechEmailIndex = i;
-					}
-					else if (label.match(/^name$/i)) {
+					let label: string = record[i];
+
+					if (label.match(new RegExp(`^${nameHeader}$`, "i"))) {
 						nameIndex = i;
+					}
+					for (let emailHeader of emailHeaders) {
+						if (label.match(new RegExp(`^${emailHeader}$`, "i"))) {
+							emailIndexes.push(i);
+						}
 					}
 				}
 				headerParsed = true;
 			}
 			else {
 				// Content rows
-				if (!record[nameIndex] || !record[emailIndex] || !record[gatechEmailIndex]) {
-					console.warn("Skipping due to missing required parameters", record);
-					continue;
+				if (!nameIndex || emailIndexes.length === 0) {
+					throw new Error("Invalid header names");
 				}
 				// Capitalize names
-				let name: string = record[nameIndex];
+				let name: string = record[nameIndex] || "";
 				name = name.split(" ").map(s => {
 					return s.charAt(0).toUpperCase() + s.slice(1)
 				}).join(" ");
+
+				let emails: string[] = [];
+				for (let emailIndex of emailIndexes) {
+					if (record[emailIndex])
+						emails.push(record[emailIndex]);
+				}
+				
+				if (!name || emails.length === 0) {
+					console.warn("Skipping due to missing name and/or emails", record);
+					continue;
+				}
+				
 				attendeeData.push({
 					tag: tag,
 					name: name,
-					communication_email: record[emailIndex].toLowerCase(),
-					gatech_email: record[gatechEmailIndex].toLowerCase(),
+					emails: emails,
 					checked_in: false,
 					id: crypto.randomBytes(16).toString("hex")
 				});
@@ -344,7 +365,7 @@ apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.
 		hasErrored = true;
 		console.error(err);
 		response.status(500).json({
-			"error": "Invalid CSV uploaded"
+			"error": "Invalid header names or CSV"
 		});
 	});
 	parser.on("finish", async () => {
@@ -367,7 +388,7 @@ apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.
 		}
 		catch (err) {
 			if (err.code === 11000) {
-				response.status(400).json({
+				response.status(409).json({
 					"error": "Name duplication detected. Please clear the current attendee list before importing this new list."
 				});
 				return;
@@ -378,6 +399,12 @@ apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.
 			});
 		}
 	});
+	if (!request.file) {
+		response.status(400).json({
+			"error": "No CSV file to process and import"
+		});
+		return;
+	}
 	fs.createReadStream(request.file.path).pipe(parser);
 });
 
@@ -437,8 +464,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 		return {
 			tag: attendee.tag,
 			name: attendee.name,
-			communication_email: attendee.communication_email,
-			gatech_email: attendee.gatech_email,
+			emails: attendee.emails,
 			checked_in: attendee.checked_in,
 			checked_in_date: attendee.checked_in_date,
 			checked_in_by: attendee.checked_in_by,
@@ -474,8 +500,7 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 			reverted: shouldRevert,
 			tag: attendee.tag,
 			name: attendee.name,
-			communication_email: attendee.communication_email,
-			gatech_email: attendee.gatech_email,
+			emails: attendee.emails,
 			checked_in: attendee.checked_in,
 			checked_in_date: attendee.checked_in_date,
 			checked_in_by: attendee.checked_in_by,

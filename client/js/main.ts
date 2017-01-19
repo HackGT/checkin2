@@ -5,8 +5,7 @@ interface IAttendee {
 	id: string;
 	tag: string;
 	name: string;
-	communication_email: string;
-	gatech_email: string;
+	emails: string[];
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
@@ -55,10 +54,13 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 			attendeeTemplate.content.querySelector("li")!.id = "item-" + attendee.id;
 			attendeeTemplate.content.querySelector("#name")!.textContent = attendee.name;
 			
-			let emailContent: string = attendee.gatech_email;
-			if (attendee.communication_email !== attendee.gatech_email)
-				emailContent = `${attendee.communication_email}, ${attendee.gatech_email}`;
-			attendeeTemplate.content.querySelector("#emails")!.textContent = emailContent;
+			let emails = attendee.emails.reduce((prev, current) => {
+				if (prev.indexOf(current) === -1) {
+					prev.push(current);
+				}
+				return prev;
+			}, <string[]> []);
+			attendeeTemplate.content.querySelector("#emails")!.textContent = emails.join(", ");
 			
 			let button = attendeeTemplate.content.querySelector(".actions > button")!;
 			let status = attendeeTemplate.content.querySelector(".actions > span.status")!;
