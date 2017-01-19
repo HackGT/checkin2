@@ -303,7 +303,12 @@ socket.addEventListener("message", (event) => {
 		return;
 	
 	let attendee: IAttendee = JSON.parse(event.data);
-	let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`)!;
+	let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
+	if (!button) {
+		// This attendee belongs to a tag that isn't currently being shown
+		// This message can safely be ignored; the user list will be updated when switching tags
+		return;
+	}
 	let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
 	if (!attendee.reverted && attendee.checked_in_date) {
