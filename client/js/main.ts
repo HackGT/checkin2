@@ -11,7 +11,7 @@ interface IAttendee {
 	checked_in_by?: string;
 }
 enum State {
-	CheckIn, Import
+	CheckIn, Import, UserManagement
 }
 let currentState: State;
 
@@ -43,8 +43,41 @@ function checkIn (e: Event) {
 	});
 }
 
+function attachUserDeleteHandlers () {
+	let deleteButtons = document.querySelectorAll("#manage-users .actions > button");
+	for (let i = 0; i < deleteButtons.length; i++) {
+		deleteButtons[i].addEventListener("click", e => {
+			let source = (<HTMLButtonElement> e.target)!;
+			let username: string = source.parentElement!.parentElement!.querySelector(".username")!.textContent!;
+			let extraWarn: boolean = !!source.parentElement!.querySelector(".status")!.textContent;
+			const extraWarnMessage = `**YOU ARE TRYING TO DELETE THE ACCOUNT THAT YOU ARE CURRENTLY LOGGED IN WITH. THIS WILL DELETE YOUR USER AND LOG YOU OUT.**`;
+
+			let shouldContinue: boolean = confirm(`${extraWarn ? extraWarnMessage + "\n\n": ""}Are you sure that you want to delete the user '${username}'?`);
+			if (!shouldContinue)
+				return;
+
+			source.disabled = true;
+			qwest.delete("/api/user/update", {
+				username: username
+			}).then((xhr, response) => {
+				document.getElementById("users")!.innerHTML = response.userlist;
+				// Reattach button event handlers
+				attachUserDeleteHandlers();
+				
+				if (response.reauth) {
+					window.location.reload();
+				}
+			}).catch((e, xhr, response) => {
+				alert(response.error);
+			}).complete(() => {
+				source.disabled = false;
+			});
+		});
+	}
+}
+
 // ES6 is pretty cool
-let [enterCheckIn, enterImport] = ["enter-checkin", "enter-import"].map((id) => document.getElementById(id)!);
+let [enterCheckIn, enterImport, enterUserManagement] = ["enter-checkin", "enter-import", "enter-user-management"].map((id) => document.getElementById(id)!);
 
 let queryField = <HTMLInputElement> document.getElementById("query")!;
 queryField.addEventListener("keyup", e => {
@@ -148,24 +181,27 @@ async function enterState(state: State) {
 	if (state === State.CheckIn) {
 		enterCheckIn.classList.add(drawerSelectedClass);
 		enterImport.classList.remove(drawerSelectedClass);
+		enterUserManagement.classList.remove(drawerSelectedClass);
 		document.getElementById("checkin")!.style.display = "block";
 		document.getElementById("import")!.style.display = "none";
+		document.getElementById("manage-users")!.style.display = "none";
 		loadAttendees();
 	}
 	if (state === State.Import) {
 		enterCheckIn.classList.remove(drawerSelectedClass);
 		enterImport.classList.add(drawerSelectedClass);
+		enterUserManagement.classList.remove(drawerSelectedClass);
 		document.getElementById("checkin")!.style.display = "none";
 		document.getElementById("import")!.style.display = "block";
-		// Focus and blur fields with default values so that the label shifts up
-		let nameInput = <HTMLInputElement> document.getElementById("name-header");
-		let emailInput = <HTMLInputElement> document.getElementById("email-headers");
-		nameInput.focus();
-		await delay(10);
-		nameInput.blur();
-		emailInput.focus();
-		await delay(10);
-		emailInput.blur();
+		document.getElementById("manage-users")!.style.display = "none";
+	}
+	if (state === State.UserManagement) {
+		enterCheckIn.classList.remove(drawerSelectedClass);
+		enterImport.classList.remove(drawerSelectedClass);
+		enterUserManagement.classList.add(drawerSelectedClass);
+		document.getElementById("checkin")!.style.display = "none";
+		document.getElementById("import")!.style.display = "none";
+		document.getElementById("manage-users")!.style.display = "block";
 	}
 }
 
@@ -223,6 +259,43 @@ document.querySelector("#import button")!.addEventListener("click", (e) => {
 	});
 });
 
+document.getElementById("add-update-user")!.addEventListener("click", (e) => {
+	let button = (<HTMLButtonElement> e.target)!;
+	button.disabled = true;
+
+	let usernameInput = <HTMLInputElement> document.getElementById("manage-username");
+	let passwordInput = <HTMLInputElement> document.getElementById("manage-password");
+	let username = usernameInput.value.trim();
+	let password = passwordInput.value;
+	qwest.put("/api/user/update", {
+		username: username,
+		password: password
+	}).then((xhr, response) => {
+		document.getElementById("users")!.innerHTML = response.userlist;
+		// Reattach button event handlers
+		attachUserDeleteHandlers();
+
+		if (response.created) {
+			alert(`User '${username}' was successfully created`);
+		}
+		else {
+			alert(`Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`);
+		}
+		if (response.reauth) {
+			window.location.reload();
+		}
+		[usernameInput, passwordInput].forEach(el => {
+			el.value = "";
+			el.nextElementSibling.classList.remove("mdc-textfield__label--float-above");
+		});
+		
+	}).catch((e, xhr, response) => {
+		alert(response.error);
+	}).complete(() => {
+		button.disabled = false;
+	});
+});
+
 // Listen for updates
 const socket = new WebSocket(`ws://${window.location.host}`);
 socket.addEventListener("message", (event) => {
@@ -245,6 +318,7 @@ socket.addEventListener("message", (event) => {
 	}
 });
 
+attachUserDeleteHandlers();
 enterState(State.CheckIn);
 const drawerSelectedClass = "mdc-temporary-drawer--selected";
 // setTimeout is necessary probably because the drawer is reshown upon any click event
@@ -255,6 +329,11 @@ enterCheckIn.addEventListener("click", async (e) => {
 });
 enterImport.addEventListener("click", async (e) => {
 	enterState(State.Import);
+	await delay(10);
+	drawer.open = false;
+});
+enterUserManagement.addEventListener("click", async (e) => {
+	enterState(State.UserManagement);
 	await delay(10);
 	drawer.open = false;
 });

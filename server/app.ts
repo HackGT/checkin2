@@ -189,10 +189,33 @@ let authenticateWithRedirect = async function (request: express.Request, respons
 	}
 };
 
+function generateUserList (currentUserName: string): Promise<string> {
+	return new Promise<string>(async (resolve, reject) => {
+		let users = await User.find().sort({ username: "asc" });
+		resolve(users.map((user) => {
+			let username = user.username.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+			return `
+				<li class="mdc-list-item">
+					<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
+					<span class="mdc-list-item__text">
+						<span class="mdc-list-item__text__primary mdc-typography--title username">${user.username}</span>
+						<span class="mdc-list-item__text__primary mdc-typography--body1">${user.auth_keys.length} active session${user.auth_keys.length === 1 ? "": "s"}</span>
+					</span>
+					<div class="actions">
+						<span class="mdc-typography--body2 status">${user.username === currentUserName ? "Active session" : ""}</span>
+						<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
+							Delete
+						</button>
+					</div>
+				</li>
+			`;
+		}).join("\n"));
+	});
+}
+
 let apiRouter = express.Router();
 // User routes
-apiRouter.route("/user/signup").post(authenticateWithReject, postParser, async (request, response) => {
-	response.clearCookie("auth");
+apiRouter.route("/user/update").put(authenticateWithReject, postParser, async (request, response) => {
 	let username: string = request.body.username || "";
 	let password: string = request.body.password || "";
 	username = username.trim();
@@ -203,38 +226,74 @@ apiRouter.route("/user/signup").post(authenticateWithReject, postParser, async (
 		return;
 	}
 
+	let user = await User.findOne({username: username});
+	let userCreated: boolean = !user;
 	let salt = crypto.randomBytes(32);
 	let passwordHashed = await pbkdf2Async(password, salt, 500000, 128, "sha256");
-	let authKey = crypto.randomBytes(32).toString("hex");
-
-	let user = new User({
-		username: username,
-		login: {
-			hash: passwordHashed.toString("hex"),
-			salt: salt.toString("hex")
-		},
-		auth_keys: [authKey]
-	});
-	try {
-		await user.save();
-		response.cookie("auth", authKey);
-		response.status(201).json({
-			"success": true
+	if (!user) {
+		// Create new user
+		user = new User({
+			username: username,
+			login: {
+				hash: passwordHashed.toString("hex"),
+				salt: salt.toString("hex")
+			},
+			auth_keys: []
 		});
 	}
-	catch (e) {
-		if (e.code === 11000) {
-			response.status(400).json({
-				"error": "That username is already in use"
+	else {
+		// Update password
+		user.login.hash = passwordHashed.toString("hex");
+		user.login.salt = salt.toString("hex");
+		// Logs out active users
+		user.auth_keys = [];
+	}
+
+	try {
+		await user.save();
+		response.status(201).json({
+			"success": true,
+			"reauth": username === response.locals.username,
+			"created": userCreated,
+			"userlist": await generateUserList(response.locals.username)
+		});
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": `An error occurred while ${!userCreated ? "updating" : "creating"} the user`
+		});
+	}
+}).delete(authenticateWithReject, postParser, async (request, response) => {
+	let username: string = request.body.username || "";
+	if (!username) {
+		response.status(400).json({
+			"error": "Username not specified"
+		});
+		return;
+	}
+	try {
+		if ((await User.find()).length === 1) {
+			response.status(412).json({
+				"error": "You cannot delete the only user"
 			});
 			return;
 		}
-		console.error(e);
+		await User.remove({ "username": username });
+		response.status(201).json({
+			"success": true,
+			"reauth": username === response.locals.username,
+			"userlist": await generateUserList(response.locals.username)
+		});
+	}
+	catch (err) {
+		console.error(err);
 		response.status(500).json({
-			"error": "An error occurred while saving the new user"
+			"error": `An error occurred while deleting the user`
 		});
 	}
 });
+
 apiRouter.route("/user/login").post(postParser, async (request, response) => {
 	response.clearCookie("auth");
 	let username: string = request.body.username || "";
@@ -561,11 +620,18 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 		for (let tag of tags) {
 			$(".tags").append(`<option>${tag}</option>`);
 		}
+		let userListHTML: string = await generateUserList(response.locals.username);
+		$("#users").append(userListHTML);
+
 		response.send($.html());
 	});
 });
 app.route("/login").get(async (request, response) => {
-	response.clearCookie("auth");
+	if (request.cookies.auth) {
+		let authKey: string = request.cookies.auth;
+		await User.update({ "auth_keys": authKey }, { $pull: { "auth_keys": authKey } }).exec();
+		response.clearCookie("auth");
+	}
 	fs.readFile(path.join(__dirname, STATIC_ROOT, "login.html"), { encoding: "utf8" }, (err, html) => {
 		if (err) {
 			console.error(err);

@@ -86,7 +86,7 @@ li.mdc-list-item > .actions > button {
 	-webkit-transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
 	transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
 }
-li.mdc-list-item > .actions > button.checked-in {
+li.mdc-list-item > .actions > button.checked-in, li.mdc-list-item > .actions > button.danger {
 	background-color: #ff4136;
 }
 li.mdc-list-item .actions {
@@ -120,7 +120,7 @@ li.mdc-list-item .actions {
 .card > .card-content > .center > em {
 	text-align: center;
 }
-#import .center > button {
+#import .center > button, #manage-users .center > button {
 	width: initial;
     margin-top: 10px;
 }
