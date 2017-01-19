@@ -24,8 +24,7 @@ let uploadHandler = multer({
 	}),
 	"limits": {
 		"fileSize": 50000000, // 50 MB
-		"files": 1,
-		"fields": 0
+		"files": 1
 	},
 	"fileFilter": function (request, file, callback) {
 		callback(null!, !!file.originalname.match("\.csv$"));
@@ -40,6 +39,9 @@ import * as cheerio from "cheerio";
 const PORT = parseInt(process.env.PORT) || 3000;
 const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost/test';
 const STATIC_ROOT = "../client";
+
+const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8")).version;
+const VERSION_HASH = require("child_process").execSync("git rev-parse --short HEAD").toString().trim();
 
 let app = express();
 app.use(compression());
@@ -86,8 +88,7 @@ interface IAttendee {
 	id: string;
 	tag: string;
 	name: string;
-	communication_email: string;
-	gatech_email: string;
+	emails: string[];
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
@@ -108,12 +109,8 @@ const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Sche
 		required: true,
 		//unique: true
 	},
-	communication_email: {
-		type: String,
-		required: true
-	},
-	gatech_email: {
-		type: String,
+	emails: {
+		type: [String],
 		required: true
 	},
 	checked_in: {
@@ -195,10 +192,33 @@ let authenticateWithRedirect = async function (request: express.Request, respons
 	}
 };
 
+function generateUserList (currentUserName: string): Promise<string> {
+	return new Promise<string>(async (resolve, reject) => {
+		let users = await User.find().sort({ username: "asc" });
+		resolve(users.map((user) => {
+			let username = user.username.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+			return `
+				<li class="mdc-list-item">
+					<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
+					<span class="mdc-list-item__text">
+						<span class="mdc-list-item__text__primary mdc-typography--title username">${user.username}</span>
+						<span class="mdc-list-item__text__primary mdc-typography--body1">${user.auth_keys.length} active session${user.auth_keys.length === 1 ? "": "s"}</span>
+					</span>
+					<div class="actions">
+						<span class="mdc-typography--body2 status">${user.username === currentUserName ? "Active session" : ""}</span>
+						<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
+							Delete
+						</button>
+					</div>
+				</li>
+			`;
+		}).join("\n"));
+	});
+}
+
 let apiRouter = express.Router();
 // User routes
-apiRouter.route("/user/signup").post(authenticateWithReject, postParser, async (request, response) => {
-	response.clearCookie("auth");
+apiRouter.route("/user/update").put(authenticateWithReject, postParser, async (request, response) => {
 	let username: string = request.body.username || "";
 	let password: string = request.body.password || "";
 	username = username.trim();
@@ -209,38 +229,74 @@ apiRouter.route("/user/signup").post(authenticateWithReject, postParser, async (
 		return;
 	}
 
+	let user = await User.findOne({username: username});
+	let userCreated: boolean = !user;
 	let salt = crypto.randomBytes(32);
 	let passwordHashed = await pbkdf2Async(password, salt, 500000, 128, "sha256");
-	let authKey = crypto.randomBytes(32).toString("hex");
-
-	let user = new User({
-		username: username,
-		login: {
-			hash: passwordHashed.toString("hex"),
-			salt: salt.toString("hex")
-		},
-		auth_keys: [authKey]
-	});
-	try {
-		await user.save();
-		response.cookie("auth", authKey);
-		response.status(201).json({
-			"success": true
+	if (!user) {
+		// Create new user
+		user = new User({
+			username: username,
+			login: {
+				hash: passwordHashed.toString("hex"),
+				salt: salt.toString("hex")
+			},
+			auth_keys: []
 		});
 	}
-	catch (e) {
-		if (e.code === 11000) {
-			response.status(400).json({
-				"error": "That username is already in use"
+	else {
+		// Update password
+		user.login.hash = passwordHashed.toString("hex");
+		user.login.salt = salt.toString("hex");
+		// Logs out active users
+		user.auth_keys = [];
+	}
+
+	try {
+		await user.save();
+		response.status(201).json({
+			"success": true,
+			"reauth": username === response.locals.username,
+			"created": userCreated,
+			"userlist": await generateUserList(response.locals.username)
+		});
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": `An error occurred while ${!userCreated ? "updating" : "creating"} the user`
+		});
+	}
+}).delete(authenticateWithReject, postParser, async (request, response) => {
+	let username: string = request.body.username || "";
+	if (!username) {
+		response.status(400).json({
+			"error": "Username not specified"
+		});
+		return;
+	}
+	try {
+		if ((await User.find()).length === 1) {
+			response.status(412).json({
+				"error": "You cannot delete the only user"
 			});
 			return;
 		}
-		console.error(e);
+		await User.remove({ "username": username });
+		response.status(201).json({
+			"success": true,
+			"reauth": username === response.locals.username,
+			"userlist": await generateUserList(response.locals.username)
+		});
+	}
+	catch (err) {
+		console.error(err);
 		response.status(500).json({
-			"error": "An error occurred while saving the new user"
+			"error": `An error occurred while deleting the user`
 		});
 	}
 });
+
 apiRouter.route("/user/login").post(postParser, async (request, response) => {
 	response.clearCookie("auth");
 	let username: string = request.body.username || "";
@@ -289,50 +345,77 @@ apiRouter.route("/user/login").post(postParser, async (request, response) => {
 
 // User importing from CSV files
 // `import` is the fieldname that should be used to upload the CSV file
-apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.single("import"), (request, response) => {
+apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.single("import"), (request, response) => {
 	let parser = csvParse({ trim: true });
 	let attendeeData: IAttendee[] = [];
 	let headerParsed: boolean = false;
-	let nameIndex: number = 0;
-	let emailIndex: number = 0;
-	let gatechEmailIndex: number = 0;
-	let tag: string = request.params.tag.toLowerCase();
+	let nameIndex: number | null = null;
+	let emailIndexes: number[] = [];
 
+	let tag: string = request.body.tag;
+	let nameHeader: string = request.body.name;
+	let emailHeadersRaw: string = request.body.email;
+	if (!tag) {
+		response.status(400).json({
+			"error": "Missing tag"
+		});
+		return;
+	}
+	if (!nameHeader || !emailHeadersRaw) {
+		response.status(400).json({
+			"error": "Missing CSV headers names to import"
+		});
+		return;
+	}
+	tag = tag.trim().toLowerCase();
+	nameHeader = nameHeader.trim();
+	let emailHeaders: string[] = emailHeadersRaw.split(",").map((header) => { return header.trim(); });
+	
 	parser.on("readable", () => {
 		let record: any;
 		while (record = parser.read()) {
 			if (!headerParsed) {
 				// Header row
 				for (let i = 0; i < record.length; i++) {
-					let label = record[i];
-					if (label.match(/^email address$/i)) {
-						emailIndex = i;
-					}
-					else if (label.match(/^gt email address$/i)) {
-						gatechEmailIndex = i;
-					}
-					else if (label.match(/^name$/i)) {
+					let label: string = record[i];
+
+					if (label.match(new RegExp(`^${nameHeader}$`, "i"))) {
 						nameIndex = i;
+					}
+					for (let emailHeader of emailHeaders) {
+						if (label.match(new RegExp(`^${emailHeader}$`, "i"))) {
+							emailIndexes.push(i);
+						}
 					}
 				}
 				headerParsed = true;
 			}
 			else {
 				// Content rows
-				if (!record[nameIndex] || !record[emailIndex] || !record[gatechEmailIndex]) {
-					console.warn("Skipping due to missing required parameters", record);
-					continue;
+				if (!nameIndex || emailIndexes.length === 0) {
+					throw new Error("Invalid header names");
 				}
 				// Capitalize names
-				let name: string = record[nameIndex];
+				let name: string = record[nameIndex] || "";
 				name = name.split(" ").map(s => {
 					return s.charAt(0).toUpperCase() + s.slice(1)
 				}).join(" ");
+
+				let emails: string[] = [];
+				for (let emailIndex of emailIndexes) {
+					if (record[emailIndex])
+						emails.push(record[emailIndex]);
+				}
+				
+				if (!name || emails.length === 0) {
+					console.warn("Skipping due to missing name and/or emails", record);
+					continue;
+				}
+				
 				attendeeData.push({
 					tag: tag,
 					name: name,
-					communication_email: record[emailIndex].toLowerCase(),
-					gatech_email: record[gatechEmailIndex].toLowerCase(),
+					emails: emails,
 					checked_in: false,
 					id: crypto.randomBytes(16).toString("hex")
 				});
@@ -344,7 +427,7 @@ apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.
 		hasErrored = true;
 		console.error(err);
 		response.status(500).json({
-			"error": "Invalid CSV uploaded"
+			"error": "Invalid header names or CSV"
 		});
 	});
 	parser.on("finish", async () => {
@@ -367,7 +450,7 @@ apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.
 		}
 		catch (err) {
 			if (err.code === 11000) {
-				response.status(400).json({
+				response.status(409).json({
 					"error": "Name duplication detected. Please clear the current attendee list before importing this new list."
 				});
 				return;
@@ -378,7 +461,30 @@ apiRouter.route("/data/import/:tag").post(authenticateWithReject, uploadHandler.
 			});
 		}
 	});
+	if (!request.file) {
+		response.status(400).json({
+			"error": "No CSV file to process and import"
+		});
+		return;
+	}
 	fs.createReadStream(request.file.path).pipe(parser);
+});
+
+apiRouter.route("/data/tag/:tag").delete(authenticateWithReject, async (request, response) => {
+	let tag: string = request.params.tag;
+
+	try {
+		await Attendee.find({"tag": tag}).remove();
+		response.status(200).json({
+			"success": true
+		});
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": "An error occurred while deleting tag"
+		});
+	}
 });
 
 apiRouter.route("/search").get(authenticateWithReject, async (request, response) => {
@@ -395,10 +501,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 				"name": { $regex: queryRegExp }
 			},
 			{
-				"communication_email": { $regex: queryRegExp }
-			},
-			{
-				"gatech_email": { $regex: queryRegExp }
+				"emails": { $regex: queryRegExp }
 			}
 		]).exec();
 	}
@@ -437,8 +540,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 		return {
 			tag: attendee.tag,
 			name: attendee.name,
-			communication_email: attendee.communication_email,
-			gatech_email: attendee.gatech_email,
+			emails: attendee.emails,
 			checked_in: attendee.checked_in,
 			checked_in_date: attendee.checked_in_date,
 			checked_in_by: attendee.checked_in_by,
@@ -474,8 +576,7 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 			reverted: shouldRevert,
 			tag: attendee.tag,
 			name: attendee.name,
-			communication_email: attendee.communication_email,
-			gatech_email: attendee.gatech_email,
+			emails: attendee.emails,
 			checked_in: attendee.checked_in,
 			checked_in_date: attendee.checked_in_date,
 			checked_in_by: attendee.checked_in_by,
@@ -507,7 +608,7 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 			response.status(500).send("An internal server error occurred");
 			return;
 		}
-		let attendees = await Attendee.find().sort({ tag: "desc" });
+		let attendees = await Attendee.find().sort({ tag: "asc" });
 		let tags: string[] = attendees.reduce((prev, current) => {
 			if (prev.indexOf(current.tag) === -1) {
 				// Escape possible HTML in tags
@@ -519,14 +620,22 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 
 		let $ = cheerio.load(html);
 		$("#username").text(response.locals.username);
+		$("#version").text(`v${VERSION_NUMBER} @ ${VERSION_HASH}`);
 		for (let tag of tags) {
-			$(".tags").append(`<option>${tags}</option>`);
+			$(".tags").append(`<option>${tag}</option>`);
 		}
+		let userListHTML: string = await generateUserList(response.locals.username);
+		$("#users").append(userListHTML);
+
 		response.send($.html());
 	});
 });
 app.route("/login").get(async (request, response) => {
-	response.clearCookie("auth");
+	if (request.cookies.auth) {
+		let authKey: string = request.cookies.auth;
+		await User.update({ "auth_keys": authKey }, { $pull: { "auth_keys": authKey } }).exec();
+		response.clearCookie("auth");
+	}
 	fs.readFile(path.join(__dirname, STATIC_ROOT, "login.html"), { encoding: "utf8" }, (err, html) => {
 		if (err) {
 			console.error(err);
@@ -553,5 +662,5 @@ wss.on("connection", function(rawSocket) {
 	});
 });
 server.listen(PORT, () => {
-	console.log(`Check in system started on port ${PORT}`);
+	console.log(`Check in system v${VERSION_NUMBER} @ ${VERSION_HASH} started on port ${PORT}`);
 });

@@ -25,8 +25,13 @@
 			<nav class="mdc-temporary-drawer__drawer">
 
 				<header class="mdc-temporary-drawer__header">
-					<div class="mdc-temporary-drawer__header-content" id="username">
-						<!-- Content filled in by server -->
+					<div class="mdc-temporary-drawer__header-content">
+						<span id="username">
+							<!-- Content filled in by server -->
+						</span>
+						<span id="version">
+							<!-- Content filled in by server -->
+						</span>
 					</div>
 				</header>
 
@@ -37,7 +42,7 @@
 					</a>
 					<a class="mdc-list-item" href="#">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">assignment</i>
-						<select class="mdc-list-item tags" id="tag">
+						<select class="mdc-list-item tags" id="tag-choose">
 							<!-- Content filled in by server -->
 						</select>
 					</a>
@@ -47,12 +52,12 @@
 					</a>
 					<a class="mdc-list-item" href="#">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">delete_sweep</i>
-						<select class="mdc-list-item tags" id="tag">
+						<select class="mdc-list-item tags" id="tag-delete">
 							<option selected value="">Choose tag to delete</option>
 							<!-- Content filled in by server -->
 						</select>
 					</a>
-					<a class="mdc-list-item" href="#">
+					<a class="mdc-list-item" href="#" id="enter-user-management">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">account_box</i>
 						Configure users
 					</a>
@@ -78,7 +83,7 @@
 								<option value="true">Checked in attendees</option>
 								<option value="false">Non checked in attendees</option>
 							</select>
-							<em>Found <span id="count">0</span> attendees</em>
+							<em id="loading-status">Loading...</em>
 						</section>
 
 						<ul class="mdc-list mdc-list--two-line" id="attendees">
@@ -100,22 +105,45 @@
 							
 							<input class="mdc-textfield__input" type="file" name="import">
 							
+							<!-- Default header values match up with HackGTeeny survey headers -->
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="name-header">
-								<label class="mdc-textfield__label" for="name-header">CSV name header</label>
+								<input class="mdc-textfield__input" type="text" id="name-header" value="name">
+								<label class="mdc-textfield__label mdc-textfield__label--float-above" for="name-header">CSV name header</label>
 							</div>
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="gatech-email-header">
-								<label class="mdc-textfield__label" for="gatech-email-header">CSV Georgia Tech email header</label>
-							</div>
-							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="communication-email-header">
-								<label class="mdc-textfield__label" for="communication-email-header">CSV communication email header</label>
+								<input class="mdc-textfield__input" type="text" id="email-headers" value="gt email address, email address">
+								<label class="mdc-textfield__label mdc-textfield__label--float-above" for="email-headers">CSV email headers (comma delimited)</label>
 							</div>
 							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple">
 								Import
 							</button>
 						</section>
+					</div>
+				</div>
+			</section>
+
+			<section id="manage-users" style="display: none;">
+				<div class="card">
+					<div class="card-content">
+						<section class="center">
+							<h1 class="mdc-typography--headline">Manage users</h1>
+							<p>Enter an existing username to update that account's password</p>
+
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="text" id="manage-username">
+								<label class="mdc-textfield__label" for="manage-username">Username</label>
+							</div>
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="password" id="manage-password">
+								<label class="mdc-textfield__label" for="manage-password">Password</label>
+							</div>
+							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-update-user">
+								Add / Update user
+							</button>
+						</section>
+
+						<ul class="mdc-list mdc-list mdc-list--two-line" id="users">
+						</ul>
 					</div>
 				</div>
 			</section>
