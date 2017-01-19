@@ -16,14 +16,11 @@ body.login .mdc-card {
 	width: 100%;
 	margin: 10px;
 }
-body.login .mdc-textfield, body.login input {
+body.login .mdc-textfield, input {
 	width: 100%;
 }
 body.login .mdc-card__actions {
 	justify-content: center;
-}
-.mdc-textfield > input {
-	width: 20vw;
 }
 
 :root {
