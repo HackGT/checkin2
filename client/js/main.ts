@@ -5,8 +5,7 @@ interface IAttendee {
 	id: string;
 	tag: string;
 	name: string;
-	communication_email: string;
-	gatech_email: string;
+	emails: string[];
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
@@ -15,6 +14,12 @@ enum State {
 	CheckIn, Import
 }
 let currentState: State;
+
+function delay (milliseconds: number) {
+	return new Promise<void>(resolve => {
+		setTimeout(resolve, milliseconds);
+	});
+}
 
 function statusFormatter (time: Date, by: string = "unknown"): string {
 	// Escape possible HTML in username
@@ -55,10 +60,13 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 			attendeeTemplate.content.querySelector("li")!.id = "item-" + attendee.id;
 			attendeeTemplate.content.querySelector("#name")!.textContent = attendee.name;
 			
-			let emailContent: string = attendee.gatech_email;
-			if (attendee.communication_email !== attendee.gatech_email)
-				emailContent = `${attendee.communication_email}, ${attendee.gatech_email}`;
-			attendeeTemplate.content.querySelector("#emails")!.textContent = emailContent;
+			let emails = attendee.emails.reduce((prev, current) => {
+				if (prev.indexOf(current) === -1) {
+					prev.push(current);
+				}
+				return prev;
+			}, <string[]> []);
+			attendeeTemplate.content.querySelector("#emails")!.textContent = emails.join(", ");
 			
 			let button = attendeeTemplate.content.querySelector(".actions > button")!;
 			let status = attendeeTemplate.content.querySelector(".actions > span.status")!;
@@ -83,7 +91,7 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 		alert(response.error);
 	});
 }
-function enterState(state: State) {
+async function enterState(state: State) {
 	currentState = state;
 	if (state === State.CheckIn) {
 		document.getElementById("checkin")!.style.display = "block";
@@ -93,6 +101,15 @@ function enterState(state: State) {
 	if (state === State.Import) {
 		document.getElementById("checkin")!.style.display = "none";
 		document.getElementById("import")!.style.display = "block";
+		// Focus and blur fields with default values so that the label shifts up
+		let nameInput = <HTMLInputElement> document.getElementById("name-header");
+		let emailInput = <HTMLInputElement> document.getElementById("email-headers");
+		nameInput.focus();
+		await delay(10);
+		nameInput.blur();
+		emailInput.focus();
+		await delay(10);
+		emailInput.blur();
 	}
 }
 
@@ -109,6 +126,54 @@ mdc.ripple.MDCRipple.attachTo(document.querySelector(".mdc-ripple-surface"));
 let drawer = new mdc.drawer.MDCTemporaryDrawer(document.querySelector(".mdc-temporary-drawer"));
 document.querySelector("nav.toolbar > i:first-of-type")!.addEventListener("click", () => {
 	drawer.open = !drawer.open;
+});
+
+document.querySelector("#import button")!.addEventListener("click", (e) => {
+	let button = (<HTMLButtonElement> e.target)!;
+	button.disabled = true;
+
+	let form = new FormData();
+	let fileInput = <HTMLInputElement> document.querySelector(`#import input[type="file"]`)!;
+	let tagInput = <HTMLInputElement> document.getElementById("add-tag");
+	let tag: string = tagInput.value;
+	let nameInput = <HTMLInputElement> document.getElementById("name-header");
+	let emailInput = <HTMLInputElement> document.getElementById("email-headers");
+	if (!fileInput.files || fileInput.files.length < 1) {
+		alert("Please choose a CSV file to upload");
+		button.disabled = false;
+		return;
+	}
+	form.append("import", fileInput.files[0]);
+	form.append("tag", tagInput.value);
+	form.append("name", nameInput.value);
+	form.append("email", emailInput.value.replace(/, /g, ","));
+
+	qwest.post("/api/data/import", 
+		form
+	).then(() => {
+		// Clear the form
+		[fileInput, tagInput, nameInput, emailInput].forEach((el) => {
+			el.value = el.defaultValue;
+		});
+		// Get current list of tags
+		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => {
+			return el.textContent;
+		});
+		// Add new tags to the options list
+		if (tags.indexOf(tag) === -1) {
+			let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
+			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+				let tagOption = document.createElement("option");
+				tagOption.textContent = tag;
+				el.appendChild(tagOption);
+			});
+		}
+		alert("Successfully imported attendees");
+	}).catch((e, xhr, response) => {
+		alert(response.error);
+	}).complete(() => {
+		button.disabled = false;
+	});
 });
 
 // Listen for updates
@@ -138,21 +203,19 @@ enterState(State.CheckIn);
 let [enterCheckIn, enterImport] = ["enter-checkin", "enter-import"].map((id) => document.getElementById(id)!);
 const drawerSelectedClass = "mdc-temporary-drawer--selected";
 // setTimeout is necessary probably because the drawer is reshown upon any click event
-enterCheckIn.addEventListener("click", (e) => {
+enterCheckIn.addEventListener("click", async (e) => {
 	enterCheckIn.classList.add(drawerSelectedClass);
 	enterImport.classList.remove(drawerSelectedClass);
 	enterState(State.CheckIn);
-	setTimeout(() => {
-		drawer.open = false;
-	}, 10);
+	await delay(10);
+	drawer.open = false;
 });
-enterImport.addEventListener("click", (e) => {
+enterImport.addEventListener("click", async (e) => {
 	enterCheckIn.classList.remove(drawerSelectedClass);
 	enterImport.classList.add(drawerSelectedClass);
 	enterState(State.Import);
-	setTimeout(() => {
-		drawer.open = false;
-	}, 10);
+	await delay(10);
+	drawer.open = false;
 });
 // Update check in relative times every minute the lazy way
 setInterval(() => {
