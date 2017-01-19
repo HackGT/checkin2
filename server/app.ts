@@ -587,7 +587,11 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 	});
 });
 app.route("/login").get(async (request, response) => {
-	response.clearCookie("auth");
+	if (request.cookies.auth) {
+		let authKey: string = request.cookies.auth;
+		await User.update({ "auth_keys": authKey }, { $pull: { "auth_keys": authKey } }).exec();
+		response.clearCookie("auth");
+	}
 	fs.readFile(path.join(__dirname, STATIC_ROOT, "login.html"), { encoding: "utf8" }, (err, html) => {
 		if (err) {
 			console.error(err);
