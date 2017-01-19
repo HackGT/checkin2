@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as url from "url";
 import * as os from "os";
 import * as crypto from "crypto";
 import * as http from "http";
@@ -37,12 +38,12 @@ import * as WebSocket from "ws";
 import * as cheerio from "cheerio";
 
 const PORT = parseInt(process.env.PORT) || 3000;
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost/';
-const UNIQUE_APP_ID = process.env.UNIQUE_APP_ID || 'ultimate-checkin';
+const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/";
+const UNIQUE_APP_ID = process.env.UNIQUE_APP_ID || "ultimate-checkin";
 const STATIC_ROOT = "../client";
 
 const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8")).version;
-const VERSION_HASH = require("child_process").execSync("git rev-parse --short HEAD").toString().trim();
+const VERSION_HASH = process.env.VERSION_HASH || require("git-rev-sync").short();
 
 let app = express();
 app.use(compression());
@@ -55,7 +56,7 @@ let cookieParserInstance = cookieParser(undefined, {
 app.use(cookieParserInstance);
 
 (<any>mongoose).Promise = global.Promise;
-mongoose.connect(`${MONGO_URL}/${UNIQUE_APP_ID}`);
+mongoose.connect(url.resolve(MONGO_URL, UNIQUE_APP_ID));
 
 interface IUser {
 	username: string;
