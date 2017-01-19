@@ -120,7 +120,7 @@ li.mdc-list-item .actions {
 .card > .card-content > .center > em {
 	text-align: center;
 }
-#import .center > button {
+#import .center > button, #manage-users .center > button {
 	width: initial;
     margin-top: 10px;
 }

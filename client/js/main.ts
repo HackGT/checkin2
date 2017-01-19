@@ -11,7 +11,7 @@ interface IAttendee {
 	checked_in_by?: string;
 }
 enum State {
-	CheckIn, Import
+	CheckIn, Import, UserManagement
 }
 let currentState: State;
 
@@ -44,7 +44,7 @@ function checkIn (e: Event) {
 }
 
 // ES6 is pretty cool
-let [enterCheckIn, enterImport] = ["enter-checkin", "enter-import"].map((id) => document.getElementById(id)!);
+let [enterCheckIn, enterImport, enterUserManagement] = ["enter-checkin", "enter-import", "enter-user-management"].map((id) => document.getElementById(id)!);
 
 let queryField = <HTMLInputElement> document.getElementById("query")!;
 queryField.addEventListener("keyup", e => {
@@ -146,15 +146,19 @@ async function enterState(state: State) {
 	if (state === State.CheckIn) {
 		enterCheckIn.classList.add(drawerSelectedClass);
 		enterImport.classList.remove(drawerSelectedClass);
+		enterUserManagement.classList.remove(drawerSelectedClass);
 		document.getElementById("checkin")!.style.display = "block";
 		document.getElementById("import")!.style.display = "none";
+		document.getElementById("manage-users")!.style.display = "none";
 		loadAttendees();
 	}
 	if (state === State.Import) {
 		enterCheckIn.classList.remove(drawerSelectedClass);
 		enterImport.classList.add(drawerSelectedClass);
+		enterUserManagement.classList.remove(drawerSelectedClass);
 		document.getElementById("checkin")!.style.display = "none";
 		document.getElementById("import")!.style.display = "block";
+		document.getElementById("manage-users")!.style.display = "none";
 		// Focus and blur fields with default values so that the label shifts up
 		let nameInput = <HTMLInputElement> document.getElementById("name-header");
 		let emailInput = <HTMLInputElement> document.getElementById("email-headers");
@@ -164,6 +168,14 @@ async function enterState(state: State) {
 		emailInput.focus();
 		await delay(10);
 		emailInput.blur();
+	}
+	if (state === State.UserManagement) {
+		enterCheckIn.classList.remove(drawerSelectedClass);
+		enterImport.classList.remove(drawerSelectedClass);
+		enterUserManagement.classList.add(drawerSelectedClass);
+		document.getElementById("checkin")!.style.display = "none";
+		document.getElementById("import")!.style.display = "none";
+		document.getElementById("manage-users")!.style.display = "block";
 	}
 }
 
@@ -256,6 +268,11 @@ enterImport.addEventListener("click", async (e) => {
 	await delay(10);
 	drawer.open = false;
 });
+enterUserManagement.addEventListener("click", async (e) => {
+	enterState(State.UserManagement);
+	await delay(10);
+	drawer.open = false;
+});	
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (currentState === State.CheckIn) {
