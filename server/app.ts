@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as url from "url";
 import * as os from "os";
 import * as crypto from "crypto";
 import * as http from "http";
@@ -37,7 +38,7 @@ import * as WebSocket from "ws";
 import * as cheerio from "cheerio";
 
 const PORT = parseInt(process.env.PORT) || 3000;
-const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost";
+const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/";
 const UNIQUE_APP_ID = process.env.UNIQUE_APP_ID || "ultimate-checkin";
 const STATIC_ROOT = "../client";
 
@@ -55,7 +56,7 @@ let cookieParserInstance = cookieParser(undefined, {
 app.use(cookieParserInstance);
 
 (<any>mongoose).Promise = global.Promise;
-mongoose.connect(`${MONGO_URL}/${UNIQUE_APP_ID}`);
+mongoose.connect(url.resolve(MONGO_URL, UNIQUE_APP_ID));
 
 interface IUser {
 	username: string;
