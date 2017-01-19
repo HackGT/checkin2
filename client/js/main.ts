@@ -67,8 +67,10 @@ tagDeleteSelector.addEventListener("change", e => {
 	if (!tag)
 		return;
 	let shouldContinue = confirm(`Are you sure that you want to delete all attendees tagged with '${tag}'?`);
-	if (!shouldContinue)
+	if (!shouldContinue) {
+		tagDeleteSelector.selectedIndex = 0;
 		return;
+	}
 	tagDeleteSelector.disabled = true;
 	qwest.delete(`/api/data/tag/${tag}`)
 	.then(() => {
