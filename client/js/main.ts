@@ -43,9 +43,54 @@ function checkIn (e: Event) {
 	});
 }
 
-function loadAttendees (filter: string = "", tag: string = "", checkedIn: string = "") {
+// ES6 is pretty cool
+let [enterCheckIn, enterImport] = ["enter-checkin", "enter-import"].map((id) => document.getElementById(id)!);
+
+let queryField = <HTMLInputElement> document.getElementById("query")!;
+queryField.addEventListener("keyup", e => {
+	loadAttendees();
+});
+let checkedInFilterField = <HTMLSelectElement> document.getElementById("checked-in-filter")!;
+checkedInFilterField.addEventListener("change", e => {
+	loadAttendees();
+});
+let tagSelector = <HTMLSelectElement> document.getElementById("tag-choose")!;
+tagSelector.addEventListener("change", e => {
+	if (currentState !== State.CheckIn)
+		enterState(State.CheckIn);
+	drawer.open = false;
+	loadAttendees();
+});
+let tagDeleteSelector = <HTMLSelectElement> document.getElementById("tag-delete")!;
+tagDeleteSelector.addEventListener("change", e => {
+	let tag: string = tagDeleteSelector.value;
+	if (!tag)
+		return;
+	let shouldContinue = confirm(`Are you sure that you want to delete all attendees tagged with '${tag}'?`);
+	if (!shouldContinue)
+		return;
+	tagDeleteSelector.disabled = true;
+	qwest.delete(`/api/data/tag/${tag}`)
+	.then(() => {
+		drawer.open = false;
+
+		let deleteIndex: number = tagDeleteSelector.selectedIndex;
+		tagDeleteSelector.removeChild(tagDeleteSelector.options[deleteIndex]);
+		tagSelector.removeChild(tagSelector.options[deleteIndex - 1]); // - 1 compensates for default "please choose" <option>
+		loadAttendees();
+	})
+	.catch((e, xhr, response) => {
+		alert(response.error);
+	}).complete(() => {
+		tagDeleteSelector.disabled = false;
+	});
+});
+
+function loadAttendees (filter: string = queryField.value, checkedIn: string = checkedInFilterField.value) {
 	let status = document.getElementById("loading-status")!;
-	status.innerText = "Loading...";
+	status.textContent = "Loading...";
+
+	let tag: string = tagSelector.value;
 	qwest.get("/api/search", {
 		"q": filter,
 		"tag": tag,
@@ -87,22 +132,27 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 			attendeeList.appendChild(attendeeItem);
 			attendeeList.querySelector(`#item-${attendee.id} > .actions > button`)!.addEventListener("click", checkIn);
 		}
-		//Found <span id="count">0</span> attendees
-		status.innerText = `Found ${response.length} attendee${response.length === 1 ? "" : "s"}`; // with tag ${}
+		tag = tag || "no tags found";
+		tag = tag.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+		status.innerHTML = `Found ${response.length} attendee${response.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
 		(<any> window).mdc.autoInit();
 	}).catch((e, xhr, response) => {
-		status.innerText = "An error occurred";
+		status.textContent = "An error occurred";
 		alert(response.error);
 	});
 }
 async function enterState(state: State) {
 	currentState = state;
 	if (state === State.CheckIn) {
+		enterCheckIn.classList.add(drawerSelectedClass);
+		enterImport.classList.remove(drawerSelectedClass);
 		document.getElementById("checkin")!.style.display = "block";
 		document.getElementById("import")!.style.display = "none";
 		loadAttendees();
 	}
 	if (state === State.Import) {
+		enterCheckIn.classList.remove(drawerSelectedClass);
+		enterImport.classList.add(drawerSelectedClass);
 		document.getElementById("checkin")!.style.display = "none";
 		document.getElementById("import")!.style.display = "block";
 		// Focus and blur fields with default values so that the label shifts up
@@ -116,15 +166,6 @@ async function enterState(state: State) {
 		emailInput.blur();
 	}
 }
-
-let queryField = <HTMLInputElement> document.getElementById("query")!;
-queryField.addEventListener("keyup", e => {
-	loadAttendees(queryField.value);
-});
-let checkedInFilterField = <HTMLSelectElement> document.getElementById("checked-in-filter")!;
-checkedInFilterField.addEventListener("change", e => {
-	loadAttendees(queryField.value, undefined, checkedInFilterField.value);
-});
 
 mdc.ripple.MDCRipple.attachTo(document.querySelector(".mdc-ripple-surface"));
 let drawer = new mdc.drawer.MDCTemporaryDrawer(document.querySelector(".mdc-temporary-drawer"));
@@ -203,20 +244,14 @@ socket.addEventListener("message", (event) => {
 });
 
 enterState(State.CheckIn);
-// ES6 is pretty cool
-let [enterCheckIn, enterImport] = ["enter-checkin", "enter-import"].map((id) => document.getElementById(id)!);
 const drawerSelectedClass = "mdc-temporary-drawer--selected";
 // setTimeout is necessary probably because the drawer is reshown upon any click event
 enterCheckIn.addEventListener("click", async (e) => {
-	enterCheckIn.classList.add(drawerSelectedClass);
-	enterImport.classList.remove(drawerSelectedClass);
 	enterState(State.CheckIn);
 	await delay(10);
 	drawer.open = false;
 });
 enterImport.addEventListener("click", async (e) => {
-	enterCheckIn.classList.remove(drawerSelectedClass);
-	enterImport.classList.add(drawerSelectedClass);
 	enterState(State.Import);
 	await delay(10);
 	drawer.open = false;
@@ -224,6 +259,6 @@ enterImport.addEventListener("click", async (e) => {
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (currentState === State.CheckIn) {
-		loadAttendees(queryField.value, undefined, checkedInFilterField.value);
+		loadAttendees();
 	}
 }, 1000 * 60);

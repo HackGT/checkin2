@@ -408,6 +408,23 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 	fs.createReadStream(request.file.path).pipe(parser);
 });
 
+apiRouter.route("/data/tag/:tag").delete(authenticateWithReject, async (request, response) => {
+	let tag: string = request.params.tag;
+
+	try {
+		await Attendee.find({"tag": tag}).remove();
+		response.status(200).json({
+			"success": true
+		});
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": "An error occurred while deleting tag"
+		});
+	}
+});
+
 apiRouter.route("/search").get(authenticateWithReject, async (request, response) => {
 	let query: string = request.query.q || "";
 	let queryRegExp = new RegExp(query, "i");
