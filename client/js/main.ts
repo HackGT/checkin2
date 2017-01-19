@@ -224,6 +224,6 @@ enterImport.addEventListener("click", async (e) => {
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (currentState === State.CheckIn) {
-		loadAttendees();
+		loadAttendees(queryField.value, undefined, checkedInFilterField.value);
 	}
 }, 1000 * 60);
