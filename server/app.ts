@@ -195,11 +195,11 @@ function generateUserList (currentUserName: string): Promise<string> {
 		resolve(users.map((user) => {
 			let username = user.username.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 			return `
-				<li class="mdc-list-item" id="user-${user._id}">
+				<li class="mdc-list-item">
 					<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
 					<span class="mdc-list-item__text">
-						<span id="name" class="mdc-list-item__text__primary mdc-typography--title">${user.username}</span>
-						<span id="emails" class="mdc-list-item__text__primary mdc-typography--body1">${user.auth_keys.length} active session${user.auth_keys.length === 1 ? "": "s"}</span>
+						<span class="mdc-list-item__text__primary mdc-typography--title username">${user.username}</span>
+						<span class="mdc-list-item__text__primary mdc-typography--body1">${user.auth_keys.length} active session${user.auth_keys.length === 1 ? "": "s"}</span>
 					</span>
 					<div class="actions">
 						<span class="mdc-typography--body2 status">${user.username === currentUserName ? "Active session" : ""}</span>
@@ -251,21 +251,49 @@ apiRouter.route("/user/update").put(authenticateWithReject, postParser, async (r
 
 	try {
 		await user.save();
-		let userListHTML: string = await generateUserList(response.locals.username);
 		response.status(201).json({
 			"success": true,
 			"reauth": username === response.locals.username,
 			"created": userCreated,
-			"userlist": userListHTML
+			"userlist": await generateUserList(response.locals.username)
 		});
 	}
-	catch (e) {
-		console.error(e);
+	catch (err) {
+		console.error(err);
 		response.status(500).json({
 			"error": `An error occurred while ${!userCreated ? "updating" : "creating"} the user`
 		});
 	}
+}).delete(authenticateWithReject, postParser, async (request, response) => {
+	let username: string = request.body.username || "";
+	if (!username) {
+		response.status(400).json({
+			"error": "Username not specified"
+		});
+		return;
+	}
+	try {
+		if ((await User.find()).length === 1) {
+			response.status(412).json({
+				"error": "You cannot delete the only user"
+			});
+			return;
+		}
+		await User.remove({ "username": username });
+		response.status(201).json({
+			"success": true,
+			"reauth": username === response.locals.username,
+			"userlist": await generateUserList(response.locals.username)
+		});
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": `An error occurred while deleting the user`
+		});
+	}
 });
+
 apiRouter.route("/user/login").post(postParser, async (request, response) => {
 	response.clearCookie("auth");
 	let username: string = request.body.username || "";
