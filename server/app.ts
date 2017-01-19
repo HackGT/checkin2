@@ -439,10 +439,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 				"name": { $regex: queryRegExp }
 			},
 			{
-				"communication_email": { $regex: queryRegExp }
-			},
-			{
-				"gatech_email": { $regex: queryRegExp }
+				"emails": { $regex: queryRegExp }
 			}
 		]).exec();
 	}
