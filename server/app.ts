@@ -558,12 +558,31 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 			}
 			return prev;
 		}, <string[]> []);
+		let users = await User.find().sort({ username: "asc" });
 
 		let $ = cheerio.load(html);
 		$("#username").text(response.locals.username);
 		for (let tag of tags) {
 			$(".tags").append(`<option>${tag}</option>`);
 		}
+		for (let user of users) {
+			$("#users").append(`
+			<li class="mdc-list-item" id="user-${user._id}">
+				<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
+				<span class="mdc-list-item__text">
+					<span id="name" class="mdc-list-item__text__primary mdc-typography--title">${user.username}</span>
+					<span id="emails" class="mdc-list-item__text__primary mdc-typography--body1">${user.auth_keys.length} active sessions</span>
+				</span>
+				<div class="actions">
+					<span class="mdc-typography--body2 status">${user.username === response.locals.username ? "Active session" : ""}</span>
+					<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
+						Delete
+					</button>
+				</div>
+			</li>
+			`);
+		}
+
 		response.send($.html());
 	});
 });
