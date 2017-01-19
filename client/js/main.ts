@@ -43,9 +43,25 @@ function checkIn (e: Event) {
 	});
 }
 
-function loadAttendees (filter: string = "", tag: string = "", checkedIn: string = "") {
+let queryField = <HTMLInputElement> document.getElementById("query")!;
+queryField.addEventListener("keyup", e => {
+	loadAttendees(queryField.value);
+});
+let checkedInFilterField = <HTMLSelectElement> document.getElementById("checked-in-filter")!;
+checkedInFilterField.addEventListener("change", e => {
+	loadAttendees(queryField.value, checkedInFilterField.value);
+});
+let tagSelector = <HTMLOptionElement> document.getElementById("tag-choose")!;
+tagSelector.addEventListener("change", e => {
+	drawer.open = false;
+	loadAttendees(queryField.value, checkedInFilterField.value);
+});
+
+function loadAttendees (filter: string = "", checkedIn: string = "") {
 	let status = document.getElementById("loading-status")!;
-	status.innerText = "Loading...";
+	status.textContent = "Loading...";
+
+	let tag: string = tagSelector.value;
 	qwest.get("/api/search", {
 		"q": filter,
 		"tag": tag,
@@ -87,11 +103,11 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 			attendeeList.appendChild(attendeeItem);
 			attendeeList.querySelector(`#item-${attendee.id} > .actions > button`)!.addEventListener("click", checkIn);
 		}
-		//Found <span id="count">0</span> attendees
-		status.innerText = `Found ${response.length} attendee${response.length === 1 ? "" : "s"}`; // with tag ${}
+		tag = tag.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+		status.innerHTML = `Found ${response.length} attendee${response.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
 		(<any> window).mdc.autoInit();
 	}).catch((e, xhr, response) => {
-		status.innerText = "An error occurred";
+		status.textContent = "An error occurred";
 		alert(response.error);
 	});
 }
@@ -116,15 +132,6 @@ async function enterState(state: State) {
 		emailInput.blur();
 	}
 }
-
-let queryField = <HTMLInputElement> document.getElementById("query")!;
-queryField.addEventListener("keyup", e => {
-	loadAttendees(queryField.value);
-});
-let checkedInFilterField = <HTMLSelectElement> document.getElementById("checked-in-filter")!;
-checkedInFilterField.addEventListener("change", e => {
-	loadAttendees(queryField.value, undefined, checkedInFilterField.value);
-});
 
 mdc.ripple.MDCRipple.attachTo(document.querySelector(".mdc-ripple-surface"));
 let drawer = new mdc.drawer.MDCTemporaryDrawer(document.querySelector(".mdc-temporary-drawer"));
@@ -224,6 +231,6 @@ enterImport.addEventListener("click", async (e) => {
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (currentState === State.CheckIn) {
-		loadAttendees(queryField.value, undefined, checkedInFilterField.value);
+		loadAttendees(queryField.value, checkedInFilterField.value);
 	}
 }, 1000 * 60);
