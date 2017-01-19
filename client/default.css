@@ -1,5 +1,4 @@
 html, body {
-	height: 100%;
 	width: 100%;
 	margin: 0;
 	background: #f1f1f1;
@@ -9,6 +8,7 @@ body.login {
 	display: flex;
 	justify-content: center;
 	align-items: center;
+	height: 100vh;
 }
 body.login .mdc-card {
 	background-color: white;
