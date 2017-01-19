@@ -48,18 +48,18 @@ let [enterCheckIn, enterImport] = ["enter-checkin", "enter-import"].map((id) => 
 
 let queryField = <HTMLInputElement> document.getElementById("query")!;
 queryField.addEventListener("keyup", e => {
-	loadAttendees(queryField.value);
+	loadAttendees();
 });
 let checkedInFilterField = <HTMLSelectElement> document.getElementById("checked-in-filter")!;
 checkedInFilterField.addEventListener("change", e => {
-	loadAttendees(queryField.value, checkedInFilterField.value);
+	loadAttendees();
 });
 let tagSelector = <HTMLSelectElement> document.getElementById("tag-choose")!;
 tagSelector.addEventListener("change", e => {
 	if (currentState !== State.CheckIn)
 		enterState(State.CheckIn);
 	drawer.open = false;
-	loadAttendees(queryField.value, checkedInFilterField.value);
+	loadAttendees();
 });
 let tagDeleteSelector = <HTMLSelectElement> document.getElementById("tag-delete")!;
 tagDeleteSelector.addEventListener("change", e => {
@@ -86,7 +86,7 @@ tagDeleteSelector.addEventListener("change", e => {
 	});
 });
 
-function loadAttendees (filter: string = "", checkedIn: string = "") {
+function loadAttendees (filter: string = queryField.value, checkedIn: string = checkedInFilterField.value) {
 	let status = document.getElementById("loading-status")!;
 	status.textContent = "Loading...";
 
@@ -259,6 +259,6 @@ enterImport.addEventListener("click", async (e) => {
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (currentState === State.CheckIn) {
-		loadAttendees(queryField.value, checkedInFilterField.value);
+		loadAttendees();
 	}
 }, 1000 * 60);
