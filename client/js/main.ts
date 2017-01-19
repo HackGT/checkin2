@@ -159,15 +159,6 @@ async function enterState(state: State) {
 		document.getElementById("checkin")!.style.display = "none";
 		document.getElementById("import")!.style.display = "block";
 		document.getElementById("manage-users")!.style.display = "none";
-		// Focus and blur fields with default values so that the label shifts up
-		let nameInput = <HTMLInputElement> document.getElementById("name-header");
-		let emailInput = <HTMLInputElement> document.getElementById("email-headers");
-		nameInput.focus();
-		await delay(10);
-		nameInput.blur();
-		emailInput.focus();
-		await delay(10);
-		emailInput.blur();
 	}
 	if (state === State.UserManagement) {
 		enterCheckIn.classList.remove(drawerSelectedClass);
@@ -226,6 +217,40 @@ document.querySelector("#import button")!.addEventListener("click", (e) => {
 			});
 		}
 		alert("Successfully imported attendees");
+	}).catch((e, xhr, response) => {
+		alert(response.error);
+	}).complete(() => {
+		button.disabled = false;
+	});
+});
+
+document.getElementById("add-update-user")!.addEventListener("click", (e) => {
+	let button = (<HTMLButtonElement> e.target)!;
+	button.disabled = true;
+
+	let usernameInput = <HTMLInputElement> document.getElementById("manage-username");
+	let passwordInput = <HTMLInputElement> document.getElementById("manage-password");
+	let username = usernameInput.value.trim();
+	let password = passwordInput.value;
+	qwest.put("/api/user/update", {
+		username: username,
+		password: password
+	}).then((xhr, response) => {
+		document.getElementById("users")!.innerHTML = response.userlist;
+		if (response.created) {
+			alert(`User '${username}' was successfully created`);
+		}
+		else {
+			alert(`Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`);
+		}
+		if (response.reauth) {
+			window.location.reload();
+		}
+		[usernameInput, passwordInput].forEach(el => {
+			el.value = "";
+			el.nextElementSibling.classList.remove("mdc-textfield__label--float-above");
+		});
+		
 	}).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {

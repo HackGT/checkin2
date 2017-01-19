@@ -189,10 +189,33 @@ let authenticateWithRedirect = async function (request: express.Request, respons
 	}
 };
 
+function generateUserList (currentUserName: string): Promise<string> {
+	return new Promise<string>(async (resolve, reject) => {
+		let users = await User.find().sort({ username: "asc" });
+		resolve(users.map((user) => {
+			let username = user.username.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+			return `
+				<li class="mdc-list-item" id="user-${user._id}">
+					<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
+					<span class="mdc-list-item__text">
+						<span id="name" class="mdc-list-item__text__primary mdc-typography--title">${user.username}</span>
+						<span id="emails" class="mdc-list-item__text__primary mdc-typography--body1">${user.auth_keys.length} active session${user.auth_keys.length === 1 ? "": "s"}</span>
+					</span>
+					<div class="actions">
+						<span class="mdc-typography--body2 status">${user.username === currentUserName ? "Active session" : ""}</span>
+						<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
+							Delete
+						</button>
+					</div>
+				</li>
+			`;
+		}).join("\n"));
+	});
+}
+
 let apiRouter = express.Router();
 // User routes
-apiRouter.route("/user/signup").post(authenticateWithReject, postParser, async (request, response) => {
-	response.clearCookie("auth");
+apiRouter.route("/user/update").put(authenticateWithReject, postParser, async (request, response) => {
 	let username: string = request.body.username || "";
 	let password: string = request.body.password || "";
 	username = username.trim();
@@ -203,35 +226,43 @@ apiRouter.route("/user/signup").post(authenticateWithReject, postParser, async (
 		return;
 	}
 
+	let user = await User.findOne({username: username});
+	let userCreated: boolean = !user;
 	let salt = crypto.randomBytes(32);
 	let passwordHashed = await pbkdf2Async(password, salt, 500000, 128, "sha256");
-	let authKey = crypto.randomBytes(32).toString("hex");
+	if (!user) {
+		// Create new user
+		user = new User({
+			username: username,
+			login: {
+				hash: passwordHashed.toString("hex"),
+				salt: salt.toString("hex")
+			},
+			auth_keys: []
+		});
+	}
+	else {
+		// Update password
+		user.login.hash = passwordHashed.toString("hex");
+		user.login.salt = salt.toString("hex");
+		// Logs out active users
+		user.auth_keys = [];
+	}
 
-	let user = new User({
-		username: username,
-		login: {
-			hash: passwordHashed.toString("hex"),
-			salt: salt.toString("hex")
-		},
-		auth_keys: [authKey]
-	});
 	try {
 		await user.save();
-		response.cookie("auth", authKey);
+		let userListHTML: string = await generateUserList(response.locals.username);
 		response.status(201).json({
-			"success": true
+			"success": true,
+			"reauth": username === response.locals.username,
+			"created": userCreated,
+			"userlist": userListHTML
 		});
 	}
 	catch (e) {
-		if (e.code === 11000) {
-			response.status(400).json({
-				"error": "That username is already in use"
-			});
-			return;
-		}
 		console.error(e);
 		response.status(500).json({
-			"error": "An error occurred while saving the new user"
+			"error": `An error occurred while ${!userCreated ? "updating" : "creating"} the user`
 		});
 	}
 });
@@ -558,30 +589,14 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 			}
 			return prev;
 		}, <string[]> []);
-		let users = await User.find().sort({ username: "asc" });
 
 		let $ = cheerio.load(html);
 		$("#username").text(response.locals.username);
 		for (let tag of tags) {
 			$(".tags").append(`<option>${tag}</option>`);
 		}
-		for (let user of users) {
-			$("#users").append(`
-			<li class="mdc-list-item" id="user-${user._id}">
-				<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
-				<span class="mdc-list-item__text">
-					<span id="name" class="mdc-list-item__text__primary mdc-typography--title">${user.username}</span>
-					<span id="emails" class="mdc-list-item__text__primary mdc-typography--body1">${user.auth_keys.length} active sessions</span>
-				</span>
-				<div class="actions">
-					<span class="mdc-typography--body2 status">${user.username === response.locals.username ? "Active session" : ""}</span>
-					<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
-						Delete
-					</button>
-				</div>
-			</li>
-			`);
-		}
+		let userListHTML: string = await generateUserList(response.locals.username);
+		$("#users").append(userListHTML);
 
 		response.send($.html());
 	});

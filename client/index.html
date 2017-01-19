@@ -103,11 +103,11 @@
 							<!-- Default header values match up with HackGTeeny survey headers -->
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
 								<input class="mdc-textfield__input" type="text" id="name-header" value="name">
-								<label class="mdc-textfield__label" for="name-header">CSV name header</label>
+								<label class="mdc-textfield__label mdc-textfield__label--float-above" for="name-header">CSV name header</label>
 							</div>
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
 								<input class="mdc-textfield__input" type="text" id="email-headers" value="gt email address, email address">
-								<label class="mdc-textfield__label" for="email-headers">CSV email headers (comma delimited)</label>
+								<label class="mdc-textfield__label mdc-textfield__label--float-above" for="email-headers">CSV email headers (comma delimited)</label>
 							</div>
 							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple">
 								Import
@@ -122,17 +122,18 @@
 					<div class="card-content">
 						<section class="center">
 							<h1 class="mdc-typography--headline">Manage users</h1>
+							<p>Enter an existing username to update that account's password</p>
 
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="">
-								<label class="mdc-textfield__label" for="">Username</label>
+								<input class="mdc-textfield__input" type="text" id="manage-username">
+								<label class="mdc-textfield__label" for="manage-username">Username</label>
 							</div>
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="password" id="">
-								<label class="mdc-textfield__label" for="">Password</label>
+								<input class="mdc-textfield__input" type="password" id="manage-password">
+								<label class="mdc-textfield__label" for="manage-password">Password</label>
 							</div>
-							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple">
-								Add new user
+							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-update-user">
+								Add / Update user
 							</button>
 						</section>
 
