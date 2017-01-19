@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as url from "url";
 import * as os from "os";
 import * as crypto from "crypto";
 import * as http from "http";
@@ -37,11 +38,12 @@ import * as WebSocket from "ws";
 import * as cheerio from "cheerio";
 
 const PORT = parseInt(process.env.PORT) || 3000;
-const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost/test';
+const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/";
+const UNIQUE_APP_ID = process.env.UNIQUE_APP_ID || "ultimate-checkin";
 const STATIC_ROOT = "../client";
 
 const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8")).version;
-const VERSION_HASH = require("child_process").execSync("git rev-parse --short HEAD").toString().trim();
+const VERSION_HASH = process.env.VERSION_HASH || require("git-rev-sync").short();
 
 let app = express();
 app.use(compression());
@@ -54,7 +56,7 @@ let cookieParserInstance = cookieParser(undefined, {
 app.use(cookieParserInstance);
 
 (<any>mongoose).Promise = global.Promise;
-mongoose.connect(MONGO_URL);
+mongoose.connect(url.resolve(MONGO_URL, UNIQUE_APP_ID));
 
 interface IUser {
 	username: string;
@@ -370,7 +372,7 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 	tag = tag.trim().toLowerCase();
 	nameHeader = nameHeader.trim();
 	let emailHeaders: string[] = emailHeadersRaw.split(",").map((header) => { return header.trim(); });
-	
+
 	parser.on("readable", () => {
 		let record: any;
 		while (record = parser.read()) {
@@ -406,12 +408,12 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 					if (record[emailIndex])
 						emails.push(record[emailIndex]);
 				}
-				
+
 				if (!name || emails.length === 0) {
 					console.warn("Skipping due to missing name and/or emails", record);
 					continue;
 				}
-				
+
 				attendeeData.push({
 					tag: tag,
 					name: name,
