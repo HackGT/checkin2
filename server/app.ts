@@ -40,6 +40,9 @@ const PORT = parseInt(process.env.PORT) || 3000;
 const MONGO_URL = process.env.MONGO_URL || 'mongodb://localhost/test';
 const STATIC_ROOT = "../client";
 
+const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8")).version;
+const VERSION_HASH = require("child_process").execSync("git rev-parse --short HEAD").toString().trim();
+
 let app = express();
 app.use(compression());
 let cookieParserInstance = cookieParser(undefined, {
@@ -617,6 +620,7 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 
 		let $ = cheerio.load(html);
 		$("#username").text(response.locals.username);
+		$("#version").text(`v${VERSION_NUMBER} @ ${VERSION_HASH}`);
 		for (let tag of tags) {
 			$(".tags").append(`<option>${tag}</option>`);
 		}
@@ -658,5 +662,5 @@ wss.on("connection", function(rawSocket) {
 	});
 });
 server.listen(PORT, () => {
-	console.log(`Check in system started on port ${PORT}`);
+	console.log(`Check in system v${VERSION_NUMBER} @ ${VERSION_HASH} started on port ${PORT}`);
 });

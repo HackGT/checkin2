@@ -63,6 +63,16 @@ nav.toolbar > i:first-of-type {
 nav.toolbar .mdc-ripple-surface.mdc-ripple-upgraded::before {
 	background-color: rgba(255, 255, 255, 0.15);
 }
+#username {
+	font-size: 120%;
+}
+#version {
+	position: absolute;
+	top: 16px;
+	left: 16px;
+	font-size: 75%;
+	opacity: 0.7;
+}
 aside.mdc-temporary-drawer {
 	z-index: 10;
 }
@@ -122,7 +132,7 @@ li.mdc-list-item .actions {
 }
 #import .center > button, #manage-users .center > button {
 	width: initial;
-    margin-top: 10px;
+	margin-top: 10px;
 }
 input[type="file"] {
 	margin-bottom: 0 !important;
