@@ -44,6 +44,8 @@ function checkIn (e: Event) {
 }
 
 function loadAttendees (filter: string = "", tag: string = "", checkedIn: string = "") {
+	let status = document.getElementById("loading-status")!;
+	status.innerText = "Loading...";
 	qwest.get("/api/search", {
 		"q": filter,
 		"tag": tag,
@@ -85,9 +87,11 @@ function loadAttendees (filter: string = "", tag: string = "", checkedIn: string
 			attendeeList.appendChild(attendeeItem);
 			attendeeList.querySelector(`#item-${attendee.id} > .actions > button`)!.addEventListener("click", checkIn);
 		}
-		document.getElementById("count")!.textContent = response.length.toString();
+		//Found <span id="count">0</span> attendees
+		status.innerText = `Found ${response.length} attendee${response.length === 1 ? "" : "s"}`; // with tag ${}
 		(<any> window).mdc.autoInit();
 	}).catch((e, xhr, response) => {
+		status.innerText = "An error occurred";
 		alert(response.error);
 	});
 }
