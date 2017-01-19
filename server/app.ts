@@ -532,7 +532,7 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 			response.status(500).send("An internal server error occurred");
 			return;
 		}
-		let attendees = await Attendee.find().sort({ tag: "desc" });
+		let attendees = await Attendee.find().sort({ tag: "asc" });
 		let tags: string[] = attendees.reduce((prev, current) => {
 			if (prev.indexOf(current.tag) === -1) {
 				// Escape possible HTML in tags
@@ -545,7 +545,7 @@ app.route("/").get(authenticateWithRedirect, (request, response) => {
 		let $ = cheerio.load(html);
 		$("#username").text(response.locals.username);
 		for (let tag of tags) {
-			$(".tags").append(`<option>${tags}</option>`);
+			$(".tags").append(`<option>${tag}</option>`);
 		}
 		response.send($.html());
 	});
