@@ -297,7 +297,8 @@ document.getElementById("add-update-user")!.addEventListener("click", (e) => {
 });
 
 // Listen for updates
-const socket = new WebSocket(`ws://${window.location.host}`);
+let wsProtocol = location.protocol === "http:" ? "ws" : "wss";
+const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
 socket.addEventListener("message", (event) => {
 	if (currentState !== State.CheckIn)
 		return;
