@@ -297,32 +297,43 @@ document.getElementById("add-update-user")!.addEventListener("click", (e) => {
 });
 
 // Listen for updates
-let wsProtocol = location.protocol === "http:" ? "ws" : "wss";
-const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
-socket.addEventListener("message", (event) => {
-	if (currentState !== State.CheckIn)
-		return;
-	
-	let attendee: IAttendee = JSON.parse(event.data);
-	let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
-	if (!button) {
-		// This attendee belongs to a tag that isn't currently being shown
-		// This message can safely be ignored; the user list will be updated when switching tags
-		return;
-	}
-	let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
+const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
+function startWebSocketListener() {
+	const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
+	socket.addEventListener("message", (event) => {
+		if (currentState !== State.CheckIn)
+			return;
+		
+		let attendee: IAttendee = JSON.parse(event.data);
+		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
+		if (!button) {
+			// This attendee belongs to a tag that isn't currently being shown
+			// This message can safely be ignored; the user list will be updated when switching tags
+			return;
+		}
+		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
-	if (!attendee.reverted && attendee.checked_in_date) {
-		button.textContent = "Uncheck in";
-		button.classList.add("checked-in");
-		status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
-	}
-	else {
-		button.textContent = "Check in";
-		button.classList.remove("checked-in");
-		status.textContent = "";
-	}
-});
+		if (!attendee.reverted && attendee.checked_in_date) {
+			button.textContent = "Uncheck in";
+			button.classList.add("checked-in");
+			status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+		}
+		else {
+			button.textContent = "Check in";
+			button.classList.remove("checked-in");
+			status.textContent = "";
+		}
+	});
+	socket.addEventListener("error", (event) => {
+		console.warn("Socket encountered an error, restarting...:", event);
+		startWebSocketListener();
+	});
+	socket.addEventListener("close", (event) => {
+		console.warn("Socket closed unexpectedly");
+		startWebSocketListener();
+	});
+}
+startWebSocketListener();
 
 attachUserDeleteHandlers();
 enterState(State.CheckIn);
