@@ -1,6 +1,6 @@
 {
   "name": "check-in",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Check in for HackGT events",
   "main": "app.js",
   "scripts": {
@@ -16,6 +16,7 @@
     "csv-parse": "^1.1.9",
     "express": "^4.14.0",
     "git-rev-sync": "^1.8.0",
+    "json2csv": "^3.7.3",
     "material-components-web": "^0.2.0",
     "mongoose": "^4.7.6",
     "multer": "^1.2.1",
