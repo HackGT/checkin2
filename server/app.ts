@@ -194,6 +194,17 @@ let authenticateWithRedirect = async function (request: express.Request, respons
 	}
 };
 
+function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
+	return {
+		tag: attendee.tag,
+		name: attendee.name,
+		emails: attendee.emails,
+		checked_in: attendee.checked_in,
+		checked_in_date: attendee.checked_in_date,
+		checked_in_by: attendee.checked_in_by,
+		id: attendee.id
+	};
+}
 function generateUserList (currentUserName: string): Promise<string> {
 	return new Promise<string>(async (resolve, reject) => {
 		let users = await User.find().sort({ username: "asc" });
@@ -538,17 +549,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 		});
 	}
 	// Map to remove mongoose attributes
-	response.json(filteredAttendees.map((attendee): IAttendee => {
-		return {
-			tag: attendee.tag,
-			name: attendee.name,
-			emails: attendee.emails,
-			checked_in: attendee.checked_in,
-			checked_in_date: attendee.checked_in_date,
-			checked_in_by: attendee.checked_in_by,
-			id: attendee.id
-		};
-	}));
+	response.json(filteredAttendees.map(simplifyAttendee));
 });
 
 apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (request, response) => {
@@ -575,14 +576,8 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 	try {
 		await attendee.save();
 		let updateData = JSON.stringify({
-			reverted: shouldRevert,
-			tag: attendee.tag,
-			name: attendee.name,
-			emails: attendee.emails,
-			checked_in: attendee.checked_in,
-			checked_in_date: attendee.checked_in_date,
-			checked_in_by: attendee.checked_in_by,
-			id: attendee.id
+			...simplifyAttendee(attendee),
+			reverted: shouldRevert
 		});
 		wss.clients.forEach(function each(client) {
 			if (client.readyState === WebSocket.OPEN) {
