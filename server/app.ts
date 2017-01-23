@@ -34,6 +34,7 @@ let uploadHandler = multer({
 
 import * as mongoose from "mongoose";
 import * as csvParse from "csv-parse";
+import * as json2csv from "json2csv";
 import * as WebSocket from "ws";
 import * as cheerio from "cheerio";
 
@@ -481,6 +482,27 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 		return;
 	}
 	fs.createReadStream(request.file.path).pipe(parser);
+});
+
+apiRouter.route("/data/export").get(authenticateWithReject, async (request, response) => {
+	try {
+		let attendees: IAttendeeMongoose[] = await Attendee.find();
+		let attendeesSimplified: any[] = attendees.map(simplifyAttendee).map((attendee: any) => {
+			attendee.emails = attendee.emails.join(", ");
+			attendee.checked_in = attendee.checked_in ? "Checked in" : "";
+			attendee.checked_in_date = attendee.checked_in_date ? attendee.checked_in_date.toISOString() : "";
+			return attendee;
+		});
+		response.status(200).type("text/csv").attachment("export.csv");
+		response.write(json2csv({ data: attendeesSimplified, fields: Object.keys(attendeesSimplified[0])}));
+		response.end();
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": "An error occurred while exporting data"
+		});
+	}
 });
 
 apiRouter.route("/data/tag/:tag").delete(authenticateWithReject, async (request, response) => {
