@@ -5,9 +5,14 @@
   "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node app.js"
+    "start": "node server/app.js"
   },
   "license": "MIT",
+  "author": {
+    "name": "Ryan Petschek",
+    "email": "petschekr@gmail.com",
+    "url": "https://github.com/petschekr"
+  },
   "dependencies": {
     "body-parser": "^1.15.2",
     "cheerio": "^0.22.0",
@@ -45,6 +50,6 @@
   "bugs": {
     "url": "https://github.com/HackGT/Ultimate-Checkin/issues"
   },
-  "homepage": "https://github.com/HackGT/Ultimate-Checkin#readme",
+  "homepage": "https://checkin.hack.gt",
   "private": true
 }

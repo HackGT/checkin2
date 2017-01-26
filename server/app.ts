@@ -43,8 +43,8 @@ const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/";
 const UNIQUE_APP_ID = process.env.UNIQUE_APP_ID || "ultimate-checkin";
 const STATIC_ROOT = "../client";
 
-const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8")).version;
-const VERSION_HASH = process.env.VERSION_HASH || require("git-rev-sync").short();
+const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")).version;
+const VERSION_HASH = require("git-rev-sync").short();
 
 let app = express();
 app.use(compression());
@@ -664,7 +664,7 @@ app.route("/login").get(async (request, response) => {
 		response.send(html);
 	});
 });
-app.use("/node_modules", serveStatic(path.resolve(__dirname, "node_modules")));
+app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
 
 // WebSocket server
