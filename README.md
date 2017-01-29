@@ -3,8 +3,18 @@ Simple, robust, and mobile-friendly check in system for hackathons and other eve
 
 Originally designed and built for HackGT events.
 
-## Usage
+![Check in](https://i.imgur.com/swDTnGI.png)
 
+## Usage
+The check in interface is divided into several sections that can be switched between from the flyout side menu:
+
+- Main check in interface (*shown above*)
+- Choose check in tag (*integrated into the menu*)
+- Import users
+- Delete check in tag (*integrated into the menu*)
+- Manage and configure users
+
+Check in status is kept synchronized across multiple open instances in real-time using WebSockets.
 
 ## Installation and Deployment
 A [Dockerfile](Dockerfile) is provided for convenience.
@@ -29,7 +39,7 @@ Development is organized using [Git Flow](http://nvie.com/posts/a-successful-git
 
 Try to follow existing coding styles and conventions. For example, use TypeScript's [type annotations](http://www.typescriptlang.org/docs/handbook/basic-types.html) whenever possible and Promises for asyncronous operations in conjunction with ES7 async/await (TypeScript's transpilation allows for the use of these features even on platforms that don't support or entirely support ES6 and ES7).
 
-[Strict null-checking](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-0.html) is enabled in the `tsconfig.json` which may require some vanilla JavaScript code to fail to compile unless minor changes are made.
+[Strict null-checking](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-0.html) is enabled in the `tsconfig.json` which make some vanilla JavaScript code fail to compile unless minor changes are made.
 
 ## License
 Copyright &copy; 2017 HackGT. Released under the MIT license. See [LICENSE](LICENSE) for more information.
