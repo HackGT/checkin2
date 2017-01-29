@@ -406,7 +406,7 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 			}
 			else {
 				// Content rows
-				if (!nameIndex || emailIndexes.length === 0) {
+				if (nameIndex === null || emailIndexes.length === 0) {
 					throw new Error("Invalid header names");
 				}
 				// Capitalize names
