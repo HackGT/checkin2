@@ -4,6 +4,7 @@ import * as crypto from "crypto";
 import * as mocha from "mocha";
 import {expect} from "chai";
 import * as request from "supertest";
+import * as cheerio from "cheerio";
 
 import {app, pbkdf2Async, mongoose} from "../server/app";
 import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee} from "../server/schema";
@@ -57,6 +58,13 @@ describe("Content endpoints", () => {
 			.redirects(0)
 			.expect(200)
 			.expect("Content-Type", /html/)
+			.expect(response => {
+				let $ = cheerio.load(response.text);
+				expect($("#username").text()).to.equal(testUser.username);
+				expect($("#version").text()).to.match(/^v[0-9-.a-z]+ @ [a-f0-9]{7}$/);
+				expect($(".tags").length).to.be.greaterThan(0);
+				expect($("#users").children().length).to.be.greaterThan(0);
+			})
 			.end(done)
 	});
 	it("Unauthenticated GET /login", done => {
