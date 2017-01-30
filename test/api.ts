@@ -103,3 +103,70 @@ describe("Content endpoints", () => {
 		});
 	});
 });
+
+describe("User endpoints", () => {
+	before(function() {
+		this.timeout(1000 * 30);
+		return insertTestUser();
+	});
+	after(function() {
+		this.timeout(1000 * 30);
+		return removeTestUser();
+	});
+
+	it("Unauthenticated PUT /api/user/update");
+	it("Authenticated PUT /api/user/update");
+	it("Unauthenticated DELETE /api/user/update");
+	it("Authenticated DELETE /api/user/update");
+	it("POST /api/user/login");
+});
+
+describe("Data endpoints", () => {
+	before(function() {
+		this.timeout(1000 * 30);
+		return insertTestUser();
+	});
+	after(function() {
+		this.timeout(1000 * 30);
+		return removeTestUser();
+	});
+
+	it("Unauthenticated POST /api/data/import");
+	it("Authenticated POST /api/data/import");
+	it("Unauthenticated GET /api/data/export");
+	it("Authenticated GET /api/data/export");
+});
+
+describe("Data endpoints", () => {
+	before(function() {
+		this.timeout(1000 * 30);
+		return insertTestUser();
+	});
+	after(function() {
+		this.timeout(1000 * 30);
+		return removeTestUser();
+	});
+
+	it("Unauthenticated POST /api/data/import");
+	it("Authenticated POST /api/data/import");
+	it("Unauthenticated GET /api/data/export");
+	it("Authenticated GET /api/data/export");
+	it("Unauthenticated DELETE /api/tag/:tag");
+	it("Authenticated DELETE /api/tag/:tag");
+});
+
+describe("Miscellaneous endpoints", () => {
+	before(function() {
+		this.timeout(1000 * 30);
+		return insertTestUser();
+	});
+	after(function() {
+		this.timeout(1000 * 30);
+		return removeTestUser();
+	});
+
+	it("Unauthenticated GET /api/search");
+	it("Authenticated GET /api/search");
+	it("Unauthenticated POST /api/checkin");
+	it("Authenticated POST /api/checkin");
+});
