@@ -39,7 +39,7 @@ Development is organized using [Git Flow](http://nvie.com/posts/a-successful-git
 
 Try to follow existing coding styles and conventions. For example, use TypeScript's [type annotations](http://www.typescriptlang.org/docs/handbook/basic-types.html) whenever possible and Promises for asyncronous operations in conjunction with ES7 async/await (TypeScript's transpilation allows for the use of these features even on platforms that don't support or entirely support ES6 and ES7).
 
-[Strict null-checking](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-0.html) is enabled in the `tsconfig.json` which make some vanilla JavaScript code fail to compile unless minor changes are made.
+[Strict null-checking](https://www.typescriptlang.org/docs/handbook/release-notes/typescript-2-0.html) is enabled in the `tsconfig.json` which might make some vanilla JavaScript code fail to compile unless minor changes are made.
 
 ## License
 Copyright &copy; 2017 HackGT. Released under the MIT license. See [LICENSE](LICENSE) for more information.
