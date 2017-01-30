@@ -65,7 +65,7 @@ describe("Content endpoints", () => {
 				expect($(".tags").length).to.be.greaterThan(0);
 				expect($("#users").children().length).to.be.greaterThan(0);
 			})
-			.end(done)
+			.end(done);
 	});
 	it("Unauthenticated GET /login", done => {
 		request(app)
@@ -73,7 +73,7 @@ describe("Content endpoints", () => {
 			.redirects(0)
 			.expect(200)
 			.expect("Content-Type", /html/)
-			.end(done)
+			.end(done);
 	});
 	it("Authenticated GET /login", done => {
 		request(app)
@@ -83,7 +83,7 @@ describe("Content endpoints", () => {
 			.expect(200)
 			.expect("set-cookie", /^auth=;/)
 			.expect("Content-Type", /html/)
-			.end(done)
+			.end(done);
 	});
 
 	describe("Static content", () => {
@@ -92,14 +92,14 @@ describe("Content endpoints", () => {
 				.get("/default.css")
 				.expect(200)
 				.expect("Content-Type", /css/)
-				.end(done)
+				.end(done);
 		});
 		it("/node_modules/material-components-web/dist/material-components-web.css", done => {
 			request(app)
 				.get("/node_modules/material-components-web/dist/material-components-web.css")
 				.expect(200)
 				.expect("Content-Type", /css/)
-				.end(done)
+				.end(done);
 		});
 	});
 });
@@ -114,9 +114,27 @@ describe("User endpoints", () => {
 		return removeTestUser();
 	});
 
-	it("Unauthenticated PUT /api/user/update");
+	it("Unauthenticated PUT /api/user/update", done => {
+		request(app)
+			.put("/api/user/update")
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
 	it("Authenticated PUT /api/user/update");
-	it("Unauthenticated DELETE /api/user/update");
+	it("Unauthenticated DELETE /api/user/update", done => {
+		request(app)
+			.delete("/api/user/update")
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
 	it("Authenticated DELETE /api/user/update");
 	it("POST /api/user/login");
 });
@@ -131,28 +149,39 @@ describe("Data endpoints", () => {
 		return removeTestUser();
 	});
 
-	it("Unauthenticated POST /api/data/import");
-	it("Authenticated POST /api/data/import");
-	it("Unauthenticated GET /api/data/export");
-	it("Authenticated GET /api/data/export");
-});
-
-describe("Data endpoints", () => {
-	before(function() {
-		this.timeout(1000 * 30);
-		return insertTestUser();
+	it("Unauthenticated POST /api/data/import", done => {
+		request(app)
+			.post("/api/data/import")
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
 	});
-	after(function() {
-		this.timeout(1000 * 30);
-		return removeTestUser();
-	});
-
-	it("Unauthenticated POST /api/data/import");
 	it("Authenticated POST /api/data/import");
-	it("Unauthenticated GET /api/data/export");
+	it("Unauthenticated GET /api/data/export", done => {
+		request(app)
+			.get("/api/data/export")
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
 	it("Authenticated GET /api/data/export");
-	it("Unauthenticated DELETE /api/tag/:tag");
-	it("Authenticated DELETE /api/tag/:tag");
+	it("Unauthenticated DELETE /api/data/tag/:tag", done => {
+		request(app)
+			.delete("/api/data/tag/test")
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("Authenticated DELETE /api/data/tag/:tag");
 });
 
 describe("Miscellaneous endpoints", () => {
@@ -165,8 +194,26 @@ describe("Miscellaneous endpoints", () => {
 		return removeTestUser();
 	});
 
-	it("Unauthenticated GET /api/search");
+	it("Unauthenticated GET /api/search", done => {
+		request(app)
+			.get("/api/search")
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
 	it("Authenticated GET /api/search");
-	it("Unauthenticated POST /api/checkin");
+	it("Unauthenticated POST /api/checkin", done => {
+		request(app)
+			.post("/api/checkin")
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
 	it("Authenticated POST /api/checkin");
 });
