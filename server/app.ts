@@ -46,7 +46,7 @@ const STATIC_ROOT = "../client";
 const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")).version;
 const VERSION_HASH = require("git-rev-sync").short();
 
-let app = express();
+export let app = express();
 app.use(compression());
 let cookieParserInstance = cookieParser(undefined, {
 	"path": "/",
@@ -59,77 +59,10 @@ app.use(cookieParserInstance);
 (<any>mongoose).Promise = global.Promise;
 mongoose.connect(url.resolve(MONGO_URL, UNIQUE_APP_ID));
 
-interface IUser {
-	username: string;
-	login: {
-		hash: string;
-		salt: string;
-	};
-	auth_keys: string[];
-}
-interface IUserMongoose extends IUser, mongoose.Document {}
-
-const User = mongoose.model<IUserMongoose>("User", new mongoose.Schema({
-	username: {
-		type: String,
-		required: true,
-		unique: true
-	},
-	login: {
-		hash: {
-			type: String,
-			required: true,
-		},
-		salt: {
-			type: String,
-			required: true,
-		}
-	},
-	auth_keys: [String]
-}));
-interface IAttendee {
-	id: string;
-	tag: string;
-	name: string;
-	emails: string[];
-	checked_in: boolean;
-	checked_in_date?: Date;
-	checked_in_by?: string;
-}
-interface IAttendeeMongoose extends IAttendee, mongoose.Document {}
-const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Schema({
-	id: {
-		type: String,
-		required: true,
-		unique: true
-	},
-	tag: {
-		type: String,
-		required: true
-	},
-	name: {
-		type: String,
-		required: true,
-		//unique: true
-	},
-	emails: {
-		type: [String],
-		required: true
-	},
-	checked_in: {
-		type: Boolean,
-		required: true,
-	},
-	checked_in_date: {
-		type: Date
-	},
-	checked_in_by: {
-		type: String
-	}
-}));
+import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee} from "./schema";
 
 // Promise version of crypto.pbkdf2()
-function pbkdf2Async (...params: any[]) {
+export function pbkdf2Async (...params: any[]) {
 	return new Promise<Buffer>((resolve, reject) => {
 		params.push(function (err: Error, derivedKey: Buffer) {
 			if (err) {
