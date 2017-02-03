@@ -17,15 +17,25 @@ let testUser = {
 }
 testUser.cookie = `auth=${testUser.key}`;
 
+let cachedPassword: { "raw": string | null, "salt": string | null, "hashed": string | null} = {
+	"raw": null,
+	"salt": null,
+	"hashed": null
+};
+
 async function insertTestUser() {
 	// Create a new user with username and password "test"
-	let salt = crypto.randomBytes(32);
-	let passwordHashed = await pbkdf2Async(testUser.password, salt, 500000, 128, "sha256");
+	// Only run PBKDF2 if the raw password changed to speed things up
+	if (!cachedPassword.hashed || cachedPassword.raw !== testUser.password) {
+		cachedPassword.raw = testUser.password;
+		cachedPassword.salt = crypto.randomBytes(32).toString("hex");
+		cachedPassword.hashed = (await pbkdf2Async(testUser.password, Buffer.from(cachedPassword.salt, "hex"), 500000, 128, "sha256")).toString("hex");
+	}
 	let user = new User({
 		username: testUser.username,
 		login: {
-			hash: passwordHashed.toString("hex"),
-			salt: salt.toString("hex")
+			hash: cachedPassword.hashed,
+			salt: cachedPassword.salt
 		},
 		auth_keys: [testUser.key]
 	});
