@@ -114,6 +114,68 @@ describe("User endpoints", () => {
 		return removeTestUser();
 	});
 
+	it("POST /api/user/login (no data)", function (done) {
+		this.timeout(100);
+		request(app)
+			.post("/api/user/login")
+			.expect(400)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/user/login (invalid username and password)", function (done) {
+		this.timeout(1000 * 5);
+		request(app)
+			.post("/api/user/login")
+			.type("form")
+			.send({
+				"username": crypto.randomBytes(16).toString("hex"),
+				"password": crypto.randomBytes(16).toString("hex")
+			})
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/user/login (invalid password)", function (done) {
+		this.timeout(1000 * 5);
+		request(app)
+			.post("/api/user/login")
+			.type("form")
+			.send({
+				"username": testUser.username,
+				"password": crypto.randomBytes(16).toString("hex")
+			})
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/user/login (valid username and password)", function (done) {
+		this.timeout(1000 * 5);
+		request(app)
+			.post("/api/user/login")
+			.type("form")
+			.send({
+				"username": testUser.username,
+				"password": testUser.password
+			})
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("success");
+				expect(request.body).property("success", true);
+				expect(request.header["set-cookie"][0]).to.match(/^auth=;/);
+				expect(request.header["set-cookie"][1]).to.match(/^auth=[0-9a-f]{64}/);
+			})
+			.end(done);
+	});
 	it("Unauthenticated PUT /api/user/update", done => {
 		request(app)
 			.put("/api/user/update")
@@ -136,7 +198,6 @@ describe("User endpoints", () => {
 			.end(done);
 	});
 	it("Authenticated DELETE /api/user/update");
-	it("POST /api/user/login");
 });
 
 describe("Data endpoints", () => {
