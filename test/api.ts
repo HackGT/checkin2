@@ -325,7 +325,57 @@ describe("User endpoints", () => {
 			})
 			.end(done);
 	});
-	it("DELETE /api/user/update (authenticated)");
+	it("DELETE /api/user/update (current user)", async () => {
+		expect(await User.findOne({"username": testUser.username})).to.exist;
+		return request(app)
+			.delete("/api/user/update")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				"username": testUser.username
+			})
+			.expect(201)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.all.keys("success", "reauth", "userlist");
+				expect(request.body.success).to.be.true;
+				expect(request.body.reauth).to.be.true;
+				expect(request.body.userlist).to.be.a("string");
+				expect(await User.findOne({"username": testUser.username})).to.not.exist;
+
+				// Return to original state
+				await insertTestUser();
+			});
+	});
+	it("DELETE /api/user/update (different user)", async () => {
+		let newUsername = crypto.randomBytes(16).toString("hex");
+		// Set up another dummy user with the same password as the test user for better performance when testing
+		await new User({
+			username: newUsername,
+			login: {
+				hash: cachedPassword.hashed,
+				salt: cachedPassword.salt
+			},
+			auth_keys: []
+		}).save();
+
+		return request(app)
+			.delete("/api/user/update")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				"username": newUsername
+			})
+			.expect(201)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.all.keys("success", "reauth", "userlist");
+				expect(request.body.success).to.be.true;
+				expect(request.body.reauth).to.be.false;
+				expect(request.body.userlist).to.be.a("string");
+				expect(await User.findOne({"username": newUsername})).to.not.exist;
+			});
+	});
 });
 
 describe("Data endpoints", () => {
