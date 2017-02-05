@@ -55,13 +55,13 @@ describe("Content endpoints", () => {
 		return removeTestUser();
 	});
 
-	it("Unauthenticated GET /", done => {
+	it("GET / (unauthenticated)", done => {
 		request(app)
 			.get("/")
 			.expect("location", "/login")
 			.end(done);
 	});
-	it("Authenticated GET /", done => {
+	it("GET / (authenticated)", done => {
 		request(app)
 			.get("/")
 			.set("Cookie", testUser.cookie)
@@ -77,7 +77,7 @@ describe("Content endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Unauthenticated GET /login", done => {
+	it("GET /login (unauthenticated)", done => {
 		request(app)
 			.get("/login")
 			.redirects(0)
@@ -85,7 +85,7 @@ describe("Content endpoints", () => {
 			.expect("Content-Type", /html/)
 			.end(done);
 	});
-	it("Authenticated GET /login", done => {
+	it("GET /login (authenticated)", done => {
 		request(app)
 			.get("/login")
 			.set("Cookie", testUser.cookie)
@@ -97,14 +97,14 @@ describe("Content endpoints", () => {
 	});
 
 	describe("Static content", () => {
-		it("/default.css", done => {
+		it("GET /default.css", done => {
 			request(app)
 				.get("/default.css")
 				.expect(200)
 				.expect("Content-Type", /css/)
 				.end(done);
 		});
-		it("/node_modules/material-components-web/dist/material-components-web.css", done => {
+		it("GET /node_modules/material-components-web/dist/material-components-web.css", done => {
 			request(app)
 				.get("/node_modules/material-components-web/dist/material-components-web.css")
 				.expect(200)
@@ -186,7 +186,7 @@ describe("User endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Unauthenticated PUT /api/user/update", done => {
+	it("PUT /api/user/update (unauthenticated)", done => {
 		request(app)
 			.put("/api/user/update")
 			.expect(401)
@@ -196,7 +196,7 @@ describe("User endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated PUT /api/user/update (no data)", done => {
+	it("PUT /api/user/update (no data)", done => {
 		request(app)
 			.put("/api/user/update")
 			.set("Cookie", testUser.cookie)
@@ -207,7 +207,7 @@ describe("User endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated PUT /api/user/update (update current user)", async function () {
+	it("PUT /api/user/update (update current user)", async function () {
 		this.timeout(1000 * 5);
 
 		let user = await User.findOne({"username": testUser.username});
@@ -243,7 +243,7 @@ describe("User endpoints", () => {
 				await insertTestUser();
 			});
 	});
-	it("Authenticated PUT /api/user/update (update different user)", async function () {
+	it("PUT /api/user/update (update different user)", async function () {
 		this.timeout(1000 * 5);
 
 		let newUsername = crypto.randomBytes(16).toString("hex");
@@ -284,7 +284,7 @@ describe("User endpoints", () => {
 				await User.remove({"username": newUsername});
 			});
 	});
-	it("Authenticated PUT /api/user/update (add new user)", async function () {
+	it("PUT /api/user/update (add new user)", async function () {
 		this.timeout(1000 * 5);
 
 		let newUsername = crypto.randomBytes(16).toString("hex");
@@ -315,7 +315,7 @@ describe("User endpoints", () => {
 				await User.remove({"username": newUsername});
 			});
 	});
-	it("Unauthenticated DELETE /api/user/update", done => {
+	it("DELETE /api/user/update (unauthenticated)", done => {
 		request(app)
 			.delete("/api/user/update")
 			.expect(401)
@@ -325,7 +325,7 @@ describe("User endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated DELETE /api/user/update");
+	it("DELETE /api/user/update (authenticated)");
 });
 
 describe("Data endpoints", () => {
@@ -338,7 +338,7 @@ describe("Data endpoints", () => {
 		return removeTestUser();
 	});
 
-	it("Unauthenticated POST /api/data/import", done => {
+	it("POST /api/data/import (unauthenticated)", done => {
 		request(app)
 			.post("/api/data/import")
 			.expect(401)
@@ -348,8 +348,8 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated POST /api/data/import");
-	it("Unauthenticated GET /api/data/export", done => {
+	it("POST /api/data/import (authenticated)");
+	it("GET /api/data/export (unauthenticated)", done => {
 		request(app)
 			.get("/api/data/export")
 			.expect(401)
@@ -359,8 +359,8 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated GET /api/data/export");
-	it("Unauthenticated DELETE /api/data/tag/:tag", done => {
+	it("GET /api/data/export (authenticated)");
+	it("DELETE /api/data/tag/:tag (unauthenticated)", done => {
 		request(app)
 			.delete("/api/data/tag/test")
 			.expect(401)
@@ -370,7 +370,7 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated DELETE /api/data/tag/:tag");
+	it("DELETE /api/data/tag/:tag (authenticated)");
 });
 
 describe("Miscellaneous endpoints", () => {
@@ -383,7 +383,7 @@ describe("Miscellaneous endpoints", () => {
 		return removeTestUser();
 	});
 
-	it("Unauthenticated GET /api/search", done => {
+	it("GET /api/search (unauthenticated)", done => {
 		request(app)
 			.get("/api/search")
 			.expect(401)
@@ -393,8 +393,8 @@ describe("Miscellaneous endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated GET /api/search");
-	it("Unauthenticated POST /api/checkin", done => {
+	it("GET /api/search (authenticated)");
+	it("POST /api/checkin (unauthenticated)", done => {
 		request(app)
 			.post("/api/checkin")
 			.expect(401)
@@ -404,5 +404,5 @@ describe("Miscellaneous endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated POST /api/checkin");
+	it("POST /api/checkin (authenticated)");
 });
