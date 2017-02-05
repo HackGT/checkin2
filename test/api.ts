@@ -196,7 +196,125 @@ describe("User endpoints", () => {
 			})
 			.end(done);
 	});
-	it("Authenticated PUT /api/user/update");
+	it("Authenticated PUT /api/user/update (no data)", done => {
+		request(app)
+			.put("/api/user/update")
+			.set("Cookie", testUser.cookie)
+			.expect(400)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("Authenticated PUT /api/user/update (update current user)", async function () {
+		this.timeout(1000 * 5);
+
+		let user = await User.findOne({"username": testUser.username});
+		expect(user.login.hash).to.equal(cachedPassword.hashed);
+		expect(user.login.salt).to.equal(cachedPassword.salt);
+		expect(user.auth_keys).to.not.be.empty;
+
+		return request(app)
+			.put("/api/user/update")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				"username": testUser.username,
+				"password": crypto.randomBytes(16).toString("hex")
+			})
+			.expect(201)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.all.keys("success", "reauth", "created", "userlist");
+				expect(request.body.success).to.be.true;
+				expect(request.body.reauth).to.be.true;
+				expect(request.body.created).to.be.false;
+				expect(request.body.userlist).to.be.a("string");
+
+				let updatedUser = await User.findOne({"username": testUser.username});
+				let {hash: newHash, salt: newSalt} = updatedUser.login;
+				expect(newHash).to.not.equal(user.login.hash);
+				expect(newSalt).to.not.equal(user.login.salt);
+				expect(updatedUser.auth_keys).to.be.empty;
+
+				// Return to original state
+				await removeTestUser();
+				await insertTestUser();
+			});
+	});
+	it("Authenticated PUT /api/user/update (update different user)", async function () {
+		this.timeout(1000 * 5);
+
+		let newUsername = crypto.randomBytes(16).toString("hex");
+		// Set up another dummy user with the same password as the test user for better performance when testing
+		await new User({
+			username: newUsername,
+			login: {
+				hash: cachedPassword.hashed,
+				salt: cachedPassword.salt
+			},
+			auth_keys: []
+		}).save();
+
+		return request(app)
+			.put("/api/user/update")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				"username": newUsername,
+				"password": crypto.randomBytes(16).toString("hex")
+			})
+			.expect(201)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.all.keys("success", "reauth", "created", "userlist");
+				expect(request.body.success).to.be.true;
+				expect(request.body.reauth).to.be.false;
+				expect(request.body.created).to.be.false;
+				expect(request.body.userlist).to.be.a("string");
+
+				let updatedUser = await User.findOne({"username": newUsername});
+				let {hash: newHash, salt: newSalt} = updatedUser.login;
+				expect(newHash).to.not.equal(cachedPassword.hashed);
+				expect(newSalt).to.not.equal(cachedPassword.salt);
+				expect(updatedUser.auth_keys).to.be.empty;
+
+				// Return to original state
+				await User.remove({"username": newUsername});
+			});
+	});
+	it("Authenticated PUT /api/user/update (add new user)", async function () {
+		this.timeout(1000 * 5);
+
+		let newUsername = crypto.randomBytes(16).toString("hex");
+		expect(await User.findOne({"username": newUsername})).to.not.exist;
+
+		return request(app)
+			.put("/api/user/update")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				"username": newUsername,
+				"password": crypto.randomBytes(16).toString("hex")
+			})
+			.expect(201)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.all.keys("success", "reauth", "created", "userlist");
+				expect(request.body.success).to.be.true;
+				expect(request.body.reauth).to.be.false;
+				expect(request.body.created).to.be.true;
+				expect(request.body.userlist).to.be.a("string");
+
+				let user = await User.findOne({"username": newUsername});
+				expect(user).to.exist;
+				expect(user.auth_keys).to.be.empty;
+
+				// Return to original state
+				await User.remove({"username": newUsername});
+			});
+	});
 	it("Unauthenticated DELETE /api/user/update", done => {
 		request(app)
 			.delete("/api/user/update")
