@@ -398,7 +398,13 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
-	it("POST /api/data/import (authenticated)");
+	it("POST /api/data/import (missing tag)");
+	it("POST /api/data/import (missing CSV upload)");
+	it("POST /api/data/import (missing CSV header names)");
+	it("POST /api/data/import (invalid CSV header names)");
+	it("POST /api/data/import (no entries to import)");
+	it("POST /api/data/import (duplicates)");
+	it("POST /api/data/import (valid)");
 	it("GET /api/data/export (unauthenticated)", done => {
 		request(app)
 			.get("/api/data/export")
