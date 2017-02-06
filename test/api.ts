@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as crypto from "crypto";
+import * as path from "path";
 
 import * as mocha from "mocha";
 import {expect} from "chai";
@@ -398,13 +399,105 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
-	it("POST /api/data/import (missing tag)");
-	it("POST /api/data/import (missing CSV upload)");
-	it("POST /api/data/import (missing CSV header names)");
-	it("POST /api/data/import (invalid CSV header names)");
-	it("POST /api/data/import (no entries to import)");
-	it("POST /api/data/import (duplicates)");
-	it("POST /api/data/import (valid)");
+	it("POST /api/data/import (missing tag)", done => {
+		request(app)
+			.post("/api/data/import")
+			.set("Cookie", testUser.cookie)
+			.field("tag", "")
+			.field("name", crypto.randomBytes(16).toString("hex"))
+			.field("email", crypto.randomBytes(16).toString("hex"))
+			.expect(400)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/data/import (missing CSV header names)", done => {
+		request(app)
+			.post("/api/data/import")
+			.set("Cookie", testUser.cookie)
+			.field("tag", crypto.randomBytes(16).toString("hex"))
+			.field("name", "")
+			.field("email", "")
+			.expect(400)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/data/import (missing CSV upload)", done => {
+		request(app)
+			.post("/api/data/import")
+			.set("Cookie", testUser.cookie)
+			.field("tag", crypto.randomBytes(16).toString("hex"))
+			.field("name", crypto.randomBytes(16).toString("hex"))
+			.field("email", crypto.randomBytes(16).toString("hex"))
+			.expect(400)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/data/import (invalid CSV header names)", done => {
+		request(app)
+			.post("/api/data/import")
+			.set("Cookie", testUser.cookie)
+			.field("tag", crypto.randomBytes(16).toString("hex"))
+			.field("name", crypto.randomBytes(16).toString("hex"))
+			.field("email", crypto.randomBytes(16).toString("hex"))
+			.attach("import", path.resolve(__dirname, "data/valid.csv"), "test.csv")
+			.expect(415)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/data/import (no entries to import)", done => {
+		request(app)
+			.post("/api/data/import")
+			.set("Cookie", testUser.cookie)
+			.field("tag", crypto.randomBytes(16).toString("hex"))
+			.field("name", "name")
+			.field("email", "email")
+			.attach("import", path.resolve(__dirname, "data/headers-only.csv"), "test.csv")
+			.expect(415)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/data/import (valid)", async () => {
+		let tag = crypto.randomBytes(16).toString("hex");
+		expect(await Attendee.find({"tag": tag})).to.have.length(0);
+
+		return request(app)
+			.post("/api/data/import")
+			.set("Cookie", testUser.cookie)
+			.field("tag", tag)
+			.field("name", "name")
+			.field("email", "email")
+			.attach("import", path.resolve(__dirname, "data/valid.csv"), "test.csv")
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.property("success");
+				expect(request.body.success).to.be.true;
+
+				let importedAttendees = await Attendee.find({"tag": tag});
+				expect(importedAttendees).to.have.length(5);
+				for (let attendee of importedAttendees) {
+					expect(attendee.name).to.match(/^Test \d$/);
+					expect(attendee.emails).to.have.length(1);
+					expect(attendee.emails[0]).to.match(/^test\d@example\.com$/);
+				}
+				await Attendee.find({"tag": tag}).remove();
+			});
+	});
 	it("GET /api/data/export (unauthenticated)", done => {
 		request(app)
 			.get("/api/data/export")
