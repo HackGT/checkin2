@@ -371,10 +371,12 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 		}
 	});
 	let hasErrored: boolean = false;
-	parser.on("error", err => {
+	parser.on("error", (err: Error) => {
 		hasErrored = true;
-		console.error(err);
-		response.status(500).json({
+		if (err.message !== "Invalid header names") {
+			console.error(err);
+		}
+		response.status(415).json({
 			"error": "Invalid header names or CSV"
 		});
 	});
@@ -382,7 +384,7 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 		if (hasErrored)
 			return;
 		if (attendeeData.length < 1) {
-			response.status(400).json({
+			response.status(415).json({
 				"error": "No entries to import"
 			});
 			return;
