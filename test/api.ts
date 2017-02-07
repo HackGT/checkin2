@@ -508,7 +508,18 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
-	it("GET /api/data/export (authenticated)");
+	it("GET /api/data/export (authenticated)", done => {
+		request(app)
+			.get("/api/data/export")
+			.set("Cookie", testUser.cookie)
+			.expect(200)
+			.expect("Content-Type", /text\/csv/)
+			.expect("Content-Disposition", "attachment; filename=\"export.csv\"")
+			.expect(request => {
+				expect(request.text.replace(/\n/g, ",").replace(/"/g, "").split(",")).to.include.members(["tag","name","emails","checked_in","checked_in_date","checked_in_by","id"]);
+			})
+			.end(done);
+	});
 	it("DELETE /api/data/tag/:tag (unauthenticated)", done => {
 		request(app)
 			.delete("/api/data/tag/test")
