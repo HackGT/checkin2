@@ -520,6 +520,12 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 		return;
 	}
 	let attendee = await Attendee.findOne({id: id});
+	if (!attendee) {
+		response.status(400).json({
+			"error": "Invalid attendee ID"
+		});
+		return;
+	}
 	if (shouldRevert) {
 		attendee.checked_in = false;
 		attendee.checked_in_by = undefined;
