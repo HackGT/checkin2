@@ -40,3 +40,5 @@ app.js
 .vscode/
 **/bower_components/
 client/js/*.js
+test/api.js
+server/schema.js
