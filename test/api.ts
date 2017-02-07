@@ -566,13 +566,41 @@ describe("Data endpoints", () => {
 });
 
 describe("Miscellaneous endpoints", () => {
-	before(function() {
+	let testTags: string[];
+	const attendeeCount = 10;
+	let attendees: IAttendeeMongoose[] = [];
+	before(async function() {
 		this.timeout(1000 * 30);
-		return insertTestUser();
+
+		await insertTestUser();
+		testTags = [
+			crypto.randomBytes(16).toString("hex"),
+			crypto.randomBytes(16).toString("hex"),
+			crypto.randomBytes(16).toString("hex")
+		];
+		for (let tagIndex = 0; tagIndex < testTags.length; tagIndex++) {
+			for (let i = 0; i < attendeeCount; i++) {
+				attendees.push(new Attendee({
+					tag: testTags[tagIndex],
+					name: crypto.randomBytes(16).toString("hex"),
+					emails: crypto.randomBytes(16).toString("hex"),
+					checked_in: false,
+					id: crypto.randomBytes(16).toString("hex")
+				}));
+			}
+		}
+		await Attendee.insertMany(attendees);
+		expect(await Attendee.find({"tag": testTags})).to.have.length(testTags.length * attendeeCount);
 	});
-	after(function() {
+	after(async function() {
 		this.timeout(1000 * 30);
-		return removeTestUser();
+
+		await removeTestUser();
+		let ids = attendees.map(attendee => {
+			return attendee.id;
+		});
+		await Attendee.remove({"id": ids});
+		expect(await Attendee.find({"tag": testTags})).to.have.length(0);
 	});
 
 	it("GET /api/search (unauthenticated)", done => {
@@ -585,7 +613,161 @@ describe("Miscellaneous endpoints", () => {
 			})
 			.end(done);
 	});
-	it("GET /api/search (authenticated)");
+	it("GET /api/search (no filters)", done => {
+		request(app)
+			.get("/api/search")
+			.set("Cookie", testUser.cookie)
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				// Assertions here are more general because the returned attendees might include non-testing users
+				expect(request.body).to.be.an("array");
+				expect(request.body).to.have.length.of.at.least(testTags.length * attendeeCount);
+				for (let result of request.body) {
+					expect(result).to.contain.all.keys(["tag", "name", "emails", "checked_in", "id"]);
+					expect(result.tag).to.be.a("string");
+					expect(result.name).to.be.a("string");
+					expect(result.emails).to.be.an("array");
+					expect(result.checked_in).to.be.a("boolean");
+					if (result.checked_in) {
+						expect(result).to.have.contain.keys(["checked_in_date", "checked_in_by"]);
+						expect(result.checked_in_date).to.be.a("string");
+						expect(result.checked_in_by).to.be.a("string");
+					}
+					expect(result.id).to.be.a("string");
+				}
+			})
+			.end(done);
+	});
+	it("GET /api/search (name)", done => {
+		request(app)
+			.get("/api/search")
+			.set("Cookie", testUser.cookie)
+			.query({
+				"q": attendees[0].name
+			})
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.be.an("array");
+				expect(request.body).to.have.length(1);
+				let result = request.body[0];
+				expect(result).to.have.all.keys(["tag", "name", "emails", "checked_in", "id"]);
+				expect(result.tag).to.be.a("string");
+				expect(result.tag).to.equal(attendees[0].tag);
+				expect(result.name).to.be.a("string");
+				expect(result.name).to.equal(attendees[0].name);
+				expect(result.emails).to.be.an("array");
+				expect(result.emails).to.have.members(attendees[0].emails);
+				expect(result.checked_in).to.be.a("boolean");
+				expect(result.checked_in).to.be.false;
+				expect(result.id).to.be.a("string");
+				expect(result.id).to.equal(attendees[0].id);
+			})
+			.end(done);
+	});
+	it("GET /api/search (email)", done => {
+		request(app)
+			.get("/api/search")
+			.set("Cookie", testUser.cookie)
+			.query({
+				"q": attendees[0].emails[0]
+			})
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.be.an("array");
+				expect(request.body).to.have.length(1);
+				let result = request.body[0];
+				expect(result).to.have.all.keys(["tag", "name", "emails", "checked_in", "id"]);
+				expect(result.tag).to.be.a("string");
+				expect(result.tag).to.equal(attendees[0].tag);
+				expect(result.name).to.be.a("string");
+				expect(result.name).to.equal(attendees[0].name);
+				expect(result.emails).to.be.an("array");
+				expect(result.emails).to.have.members(attendees[0].emails);
+				expect(result.checked_in).to.be.a("boolean");
+				expect(result.checked_in).to.be.false;
+				expect(result.id).to.be.a("string");
+				expect(result.id).to.equal(attendees[0].id);
+			})
+			.end(done);
+	});
+	it("GET /api/search (check in status)", async () => {
+		let checkedInAttendee = await Attendee.findOne({"id": attendees[0].id});
+		checkedInAttendee.checked_in = true;
+		checkedInAttendee.checked_in_by = testUser.username;
+		checkedInAttendee.checked_in_date = new Date();
+		await checkedInAttendee.save();
+
+		return request(app)
+			.get("/api/search")
+			.set("Cookie", testUser.cookie)
+			.query({
+				"checkedin": "true"
+			})
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.be.an("array");
+				expect(request.body).to.have.length.of.at.least(1);
+				let checkedInAttendeeFound = false;
+				for (let attendee of request.body) {
+					expect(attendee).to.contain.all.keys(["tag", "name", "emails", "checked_in", "id"]);
+					expect(attendee.tag).to.be.a("string");
+					expect(attendee.name).to.be.a("string");
+					expect(attendee.emails).to.be.an("array");
+					expect(attendee.checked_in).to.be.a("boolean");
+					if (attendee.checked_in) {
+						expect(attendee).to.have.contain.keys(["checked_in_date", "checked_in_by"]);
+						expect(attendee.checked_in_date).to.be.a("string");
+						expect(attendee.checked_in_by).to.be.a("string");
+					}
+					expect(attendee.id).to.be.a("string");
+
+					if (attendee.id === attendees[0].id) {
+						checkedInAttendeeFound = true;
+						expect(attendee.tag).to.equal(attendees[0].tag);
+						expect(attendee.name).to.equal(attendees[0].name);
+						expect(attendee.emails).to.have.members(attendees[0].emails);
+						expect(attendee.checked_in).to.be.true;
+						expect(attendee.checked_in_by).to.equal(testUser.username);
+					}
+				}
+				expect(checkedInAttendeeFound).to.be.true;
+
+				// Reset state
+				checkedInAttendee = await Attendee.findOne({"id": attendees[0].id});
+				checkedInAttendee.checked_in = false;
+				checkedInAttendee.checked_in_by = undefined;
+				checkedInAttendee.checked_in_date = undefined;
+				await checkedInAttendee.save();
+			});
+	});
+	it("GET /api/search (tag)", done => {
+		request(app)
+			.get("/api/search")
+			.set("Cookie", testUser.cookie)
+			.query({
+				"tag": testTags[0]
+			})
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.be.an("array");
+				expect(request.body).to.have.length(attendeeCount);
+				for (let result of request.body) {
+					expect(result).to.have.all.keys(["tag", "name", "emails", "checked_in", "id"]);
+					expect(result.tag).to.be.a("string");
+					expect(result.name).to.be.a("string");
+					expect(result.emails).to.be.an("array");
+					expect(result.checked_in).to.be.a("boolean");
+					expect(result.checked_in).to.be.false;
+					expect(result.id).to.be.a("string");
+				}
+			})
+			.end(done);
+	});
 	it("POST /api/checkin (unauthenticated)", done => {
 		request(app)
 			.post("/api/checkin")
