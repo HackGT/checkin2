@@ -1,5 +1,8 @@
 # Ultimate Checkin
-Simple, robust, and mobile-friendly check in system for hackathons and other events. Capable of handling many concurrent events and displaying updates in real-time.
+
+<a href="https://zenhub.com"><img src="https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png"></a>
+
+**Simple, robust, and mobile-friendly check in system for hackathons and other events. Capable of handling many concurrent events and displaying updates in real-time.**
 
 Originally designed and built for HackGT events.
 
