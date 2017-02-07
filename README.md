@@ -34,6 +34,19 @@ On first start up, the server will automatically generate a default user with wh
 
 Because the server is not configured to serve over HTTPS, you'll want to set up some kind of reverse-proxy server like [Nginx](http://nginx.org/) in production.
 
+## Testing
+This project is using [Mocha](https://mochajs.org/) for unit testing. Currently, the tests only cover the server and the API.
+
+The unit tests require a locally running MongoDB server. The tests are designed to and *should* leave the database unaffected after completion and succeed even with the presence of existing data. Please file a new issue if this behavior is not observed. Running on an production database is still strongly discouraged, however.
+
+To run the tests (from the project's root directory):
+
+    npm install # Install required dependencies (including development dependencies)
+    npm install -g typescript # Install the TypeScript compiler
+    npm test # Compile and run the unit tests
+
+If adding or changing API endpoints (see the [Contributing](#contributing) section below), please write new tests or edit existing tests to retain 100% coverage.
+
 ## Contributing
 Development is organized using [Git Flow](http://nvie.com/posts/a-successful-git-branching-model/). All development work should occur on the `develop` branch and merged into `master` and tagged with the version  when production ready. Only ready-to-ship code should be merged into the `master` branch.
 
