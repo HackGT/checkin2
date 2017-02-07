@@ -530,7 +530,39 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
-	it("DELETE /api/data/tag/:tag (authenticated)");
+	it("DELETE /api/data/tag/:tag (authenticated)", async () => {
+		let tag = crypto.randomBytes(16).toString("hex");
+		let tag2 = crypto.randomBytes(16).toString("hex");
+		const testAttendeeNumber = 25;
+		let testAttendees: IAttendeeMongoose[] = [];
+		for (let i = 0; i < testAttendeeNumber * 2; i++) {
+			testAttendees.push(new Attendee({
+				tag: i < testAttendeeNumber ? tag : tag2,
+				name: crypto.randomBytes(16).toString("hex"),
+				emails: crypto.randomBytes(16).toString("hex"),
+				checked_in: false,
+				id: crypto.randomBytes(16).toString("hex")
+			}));
+		}
+		await Attendee.insertMany(testAttendees);
+		expect(await Attendee.find({"tag": tag})).to.have.length(testAttendeeNumber);
+		expect(await Attendee.find({"tag": tag2})).to.have.length(testAttendeeNumber);
+
+		return request(app)
+			.delete(`/api/data/tag/${tag}`)
+			.set("Cookie", testUser.cookie)
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.property("success");
+				expect(request.body.success).to.be.true;
+
+				expect(await Attendee.find({"tag": tag})).to.have.length(0);
+				expect(await Attendee.find({"tag": tag2})).to.have.length(testAttendeeNumber);
+
+				await Attendee.remove({"tag": tag2});
+			});
+	});
 });
 
 describe("Miscellaneous endpoints", () => {
