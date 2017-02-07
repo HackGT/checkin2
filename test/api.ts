@@ -6,6 +6,7 @@ import * as mocha from "mocha";
 import {expect} from "chai";
 import * as request from "supertest";
 import * as cheerio from "cheerio";
+import * as WebSocket from "ws";
 
 import {app, pbkdf2Async, mongoose} from "../server/app";
 import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee} from "../server/schema";
@@ -778,5 +779,162 @@ describe("Miscellaneous endpoints", () => {
 			})
 			.end(done);
 	});
-	it("POST /api/checkin (authenticated)");
+	it("POST /api/checkin (missing ID)", done => {
+		request(app)
+			.post("/api/checkin")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				id: "",
+				revert: ""
+			})
+			.expect(400)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/checkin (invalid ID)", done => {
+		request(app)
+			.post("/api/checkin")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				id: crypto.randomBytes(16).toString("hex"),
+				revert: ""
+			})
+			.expect(400)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("POST /api/checkin (check in)", async () => {
+		let attendee = await Attendee.findOne({"id": attendees[0].id});
+		expect(attendee).to.exist;
+		expect(attendee.checked_in).to.be.false;
+		expect(attendee.checked_in_by).to.not.exist;
+		expect(attendee.checked_in_date).to.not.exist;
+
+		return request(app)
+			.post("/api/checkin")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				id: attendees[0].id,
+				revert: ""
+			})
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.property("success");
+				expect(request.body.success).to.be.true;
+
+				attendee = await Attendee.findOne({"id": attendees[0].id});
+				expect(attendee).to.exist;
+				expect(attendee.checked_in).to.be.true;
+				expect(attendee.checked_in_by).to.be.a("string");
+				expect(attendee.checked_in_by).to.equal(testUser.username);
+				expect(attendee.checked_in_date).to.be.an.instanceOf(Date);
+
+				attendee.checked_in = false;
+				attendee.checked_in_by = undefined;
+				attendee.checked_in_date = undefined;
+				await attendee.save();
+			});
+	});
+	it("POST /api/checkin (revert check in)", async () => {
+		let attendee = await Attendee.findOne({"id": attendees[0].id});
+		expect(attendee).to.exist;
+		attendee.checked_in = true;
+		attendee.checked_in_by = testUser.username;
+		attendee.checked_in_date = new Date();
+		await attendee.save();
+
+		return request(app)
+			.post("/api/checkin")
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				id: attendees[0].id,
+				revert: "true"
+			})
+			.expect(200)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.property("success");
+				expect(request.body.success).to.be.true;
+
+				attendee = await Attendee.findOne({"id": attendees[0].id});
+				expect(attendee).to.exist;
+				expect(attendee.checked_in).to.be.false;
+				expect(attendee.checked_in_by).to.not.exist;
+				expect(attendee.checked_in_date).to.not.exist;
+			});
+	});
+	it("POST /api/checkin (WebSockets notifications)", async () => {
+		return new Promise<void>((resolve, reject) => {
+			const ws = new WebSocket("ws://localhost:3000", {
+				headers: { "Cookie": testUser.cookie }
+			});
+			let shouldReceiveMessage: boolean = false;
+			ws.on("open", async () => {
+				// Initiate check in request
+				let attendee = await Attendee.findOne({"id": attendees[0].id});
+				expect(attendee).to.exist;
+				expect(attendee.checked_in).to.be.false;
+				expect(attendee.checked_in_by).to.not.exist;
+				expect(attendee.checked_in_date).to.not.exist;
+				shouldReceiveMessage = true;
+				request(app)
+					.post("/api/checkin")
+					.set("Cookie", testUser.cookie)
+					.type("form")
+					.send({
+						id: attendees[0].id,
+						revert: ""
+					})
+					.then(async request => {
+						expect(request.body).to.have.property("success");
+						expect(request.body.success).to.be.true;
+
+						attendee = await Attendee.findOne({"id": attendees[0].id});
+						attendee.checked_in = false;
+						attendee.checked_in_by = undefined;
+						attendee.checked_in_date = undefined;
+						await attendee.save();
+					})
+					.catch(reason => {
+						reject({ "message": "Check in request failed. Are you authenticated correctly?", "raw": reason });
+					});
+			});
+			ws.on("close", (code, message) => {
+				reject({ "message": "Connection was closed. Are you authenticated correctly?" });
+			});
+			ws.on("message", (data, flags) => {
+				if (!shouldReceiveMessage) {
+					reject({ "message": "Got unexpected message before sending request", "data": data });
+					return;
+				}
+				let parsedData = JSON.parse(data);
+				expect(parsedData).to.be.an("object");
+				expect(parsedData.tag).to.be.a("string");
+				expect(parsedData.tag).to.equal(attendees[0].tag);
+				expect(parsedData.name).to.be.a("string");
+				expect(parsedData.name).to.equal(attendees[0].name);
+				expect(parsedData.emails).to.be.an("array");
+				expect(parsedData.emails).to.have.members(attendees[0].emails);
+				expect(parsedData.checked_in).to.be.true;
+				expect(parsedData.checked_in_date).to.be.a("string");
+				expect(parsedData.checked_in_by).to.be.a("string");
+				expect(parsedData.checked_in_by).to.equal(testUser.username);
+				expect(parsedData.id).to.be.a("string");
+				expect(parsedData.id).to.equal(attendees[0].id);
+				expect(parsedData.reverted).to.be.false;
+				resolve();
+			});
+		});
+	});
 });
