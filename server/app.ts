@@ -43,10 +43,10 @@ const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/";
 const UNIQUE_APP_ID = process.env.UNIQUE_APP_ID || "ultimate-checkin";
 const STATIC_ROOT = "../client";
 
-const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.join(__dirname, "package.json"), "utf8")).version;
-const VERSION_HASH = process.env.VERSION_HASH || require("git-rev-sync").short();
+const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")).version;
+const VERSION_HASH = require("git-rev-sync").short();
 
-let app = express();
+export let app = express();
 app.use(compression());
 let cookieParserInstance = cookieParser(undefined, {
 	"path": "/",
@@ -58,78 +58,12 @@ app.use(cookieParserInstance);
 
 (<any>mongoose).Promise = global.Promise;
 mongoose.connect(url.resolve(MONGO_URL, UNIQUE_APP_ID));
+export {mongoose};
 
-interface IUser {
-	username: string;
-	login: {
-		hash: string;
-		salt: string;
-	};
-	auth_keys: string[];
-}
-interface IUserMongoose extends IUser, mongoose.Document {}
-
-const User = mongoose.model<IUserMongoose>("User", new mongoose.Schema({
-	username: {
-		type: String,
-		required: true,
-		unique: true
-	},
-	login: {
-		hash: {
-			type: String,
-			required: true,
-		},
-		salt: {
-			type: String,
-			required: true,
-		}
-	},
-	auth_keys: [String]
-}));
-interface IAttendee {
-	id: string;
-	tag: string;
-	name: string;
-	emails: string[];
-	checked_in: boolean;
-	checked_in_date?: Date;
-	checked_in_by?: string;
-}
-interface IAttendeeMongoose extends IAttendee, mongoose.Document {}
-const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Schema({
-	id: {
-		type: String,
-		required: true,
-		unique: true
-	},
-	tag: {
-		type: String,
-		required: true
-	},
-	name: {
-		type: String,
-		required: true,
-		//unique: true
-	},
-	emails: {
-		type: [String],
-		required: true
-	},
-	checked_in: {
-		type: Boolean,
-		required: true,
-	},
-	checked_in_date: {
-		type: Date
-	},
-	checked_in_by: {
-		type: String
-	}
-}));
+import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee} from "./schema";
 
 // Promise version of crypto.pbkdf2()
-function pbkdf2Async (...params: any[]) {
+export function pbkdf2Async (...params: any[]) {
 	return new Promise<Buffer>((resolve, reject) => {
 		params.push(function (err: Error, derivedKey: Buffer) {
 			if (err) {
@@ -406,7 +340,7 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 			}
 			else {
 				// Content rows
-				if (!nameIndex || emailIndexes.length === 0) {
+				if (nameIndex === null || emailIndexes.length === 0) {
 					throw new Error("Invalid header names");
 				}
 				// Capitalize names
@@ -437,10 +371,12 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 		}
 	});
 	let hasErrored: boolean = false;
-	parser.on("error", err => {
+	parser.on("error", (err: Error) => {
 		hasErrored = true;
-		console.error(err);
-		response.status(500).json({
+		if (err.message !== "Invalid header names") {
+			console.error(err);
+		}
+		response.status(415).json({
 			"error": "Invalid header names or CSV"
 		});
 	});
@@ -448,7 +384,7 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 		if (hasErrored)
 			return;
 		if (attendeeData.length < 1) {
-			response.status(400).json({
+			response.status(415).json({
 				"error": "No entries to import"
 			});
 			return;
@@ -584,6 +520,12 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 		return;
 	}
 	let attendee = await Attendee.findOne({id: id});
+	if (!attendee) {
+		response.status(400).json({
+			"error": "Invalid attendee ID"
+		});
+		return;
+	}
 	if (shouldRevert) {
 		attendee.checked_in = false;
 		attendee.checked_in_by = undefined;
@@ -664,7 +606,7 @@ app.route("/login").get(async (request, response) => {
 		response.send(html);
 	});
 });
-app.use("/node_modules", serveStatic(path.resolve(__dirname, "node_modules")));
+app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
 
 // WebSocket server

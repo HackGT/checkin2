@@ -1,4 +1,5 @@
 declare let moment: any;
+declare let qwest: any; // Update with actual definitions later
 
 interface IAttendee {
 	reverted?: boolean;
