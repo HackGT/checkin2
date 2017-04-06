@@ -11,6 +11,8 @@ import * as compression from "compression";
 import * as bodyParser from "body-parser";
 import * as cookieParser from "cookie-parser";
 import * as multer from "multer";
+import * as reEscape from "escape-string-regexp";
+
 let postParser = bodyParser.urlencoded({
 	extended: false
 });
@@ -327,11 +329,11 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 				for (let i = 0; i < record.length; i++) {
 					let label: string = record[i];
 
-					if (label.match(new RegExp(`^${nameHeader}$`, "i"))) {
+					if (label.match(new RegExp(`^${reEscape(nameHeader)}$`, "i"))) {
 						nameIndex = i;
 					}
 					for (let emailHeader of emailHeaders) {
-						if (label.match(new RegExp(`^${emailHeader}$`, "i"))) {
+						if (label.match(new RegExp(`^${reEscape(emailHeader)}$`, "i"))) {
 							emailIndexes.push(i);
 						}
 					}
