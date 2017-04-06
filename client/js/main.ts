@@ -287,7 +287,7 @@ document.getElementById("add-update-user")!.addEventListener("click", (e) => {
 		}
 		[usernameInput, passwordInput].forEach(el => {
 			el.value = "";
-			el.nextElementSibling.classList.remove("mdc-textfield__label--float-above");
+			el.nextElementSibling!.classList.remove("mdc-textfield__label--float-above");
 		});
 		
 	}).catch((e, xhr, response) => {
