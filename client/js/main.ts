@@ -24,7 +24,7 @@ function delay (milliseconds: number) {
 
 function statusFormatter (time: Date, by: string = "unknown"): string {
 	// Escape possible HTML in username
-	by = by.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+	by = by.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
 	return `Checked in <abbr title="${moment(time).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
 }
@@ -169,7 +169,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 			attendeeList.querySelector(`#item-${attendee.id} > .actions > button`)!.addEventListener("click", checkIn);
 		}
 		tag = tag || "no tags found";
-		tag = tag.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+		tag = tag.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 		status.innerHTML = `Found ${response.length} attendee${response.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
 		(<any> window).mdc.autoInit();
 	}).catch((e, xhr, response) => {
@@ -287,7 +287,7 @@ document.getElementById("add-update-user")!.addEventListener("click", (e) => {
 		}
 		[usernameInput, passwordInput].forEach(el => {
 			el.value = "";
-			el.nextElementSibling.classList.remove("mdc-textfield__label--float-above");
+			el.nextElementSibling!.classList.remove("mdc-textfield__label--float-above");
 		});
 		
 	}).catch((e, xhr, response) => {
