@@ -49,8 +49,8 @@ function attachUserDeleteHandlers () {
 	for (let i = 0; i < deleteButtons.length; i++) {
 		deleteButtons[i].addEventListener("click", e => {
 			let source = (<HTMLButtonElement> e.target)!;
-			let username: string = source.parentElement!.parentElement!.querySelector(".username")!.textContent!;
-			let extraWarn: boolean = !!source.parentElement!.querySelector(".status")!.textContent;
+			let username: string = source.parentElement!.parentElement!.dataset.username!;
+			let extraWarn: boolean = !!source.parentElement!.querySelector(".status");
 			const extraWarnMessage = `**YOU ARE TRYING TO DELETE THE ACCOUNT THAT YOU ARE CURRENTLY LOGGED IN WITH. THIS WILL DELETE YOUR USER AND LOG YOU OUT.**`;
 
 			let shouldContinue: boolean = confirm(`${extraWarn ? extraWarnMessage + "\n\n": ""}Are you sure that you want to delete the user '${username}'?`);
@@ -61,7 +61,10 @@ function attachUserDeleteHandlers () {
 			qwest.delete("/api/user/update", {
 				username: username
 			}).then((xhr, response) => {
-				document.getElementById("users")!.innerHTML = response.userlist;
+				let toRemove = document.querySelector(`li[data-username="${username}"]`);
+				if (toRemove && toRemove.parentElement) {
+					toRemove.parentElement.removeChild(toRemove);
+				}
 				// Reattach button event handlers
 				attachUserDeleteHandlers();
 				
@@ -272,23 +275,13 @@ document.getElementById("add-update-user")!.addEventListener("click", (e) => {
 		username: username,
 		password: password
 	}).then((xhr, response) => {
-		document.getElementById("users")!.innerHTML = response.userlist;
-		// Reattach button event handlers
-		attachUserDeleteHandlers();
-
 		if (response.created) {
 			alert(`User '${username}' was successfully created`);
 		}
 		else {
 			alert(`Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`);
 		}
-		if (response.reauth) {
-			window.location.reload();
-		}
-		[usernameInput, passwordInput].forEach(el => {
-			el.value = "";
-			el.nextElementSibling!.classList.remove("mdc-textfield__label--float-above");
-		});
+		window.location.reload();
 		
 	}).catch((e, xhr, response) => {
 		alert(response.error);

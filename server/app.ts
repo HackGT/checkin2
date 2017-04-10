@@ -12,6 +12,7 @@ import * as bodyParser from "body-parser";
 import * as cookieParser from "cookie-parser";
 import * as multer from "multer";
 import * as reEscape from "escape-string-regexp";
+import * as Handlebars from "handlebars";
 
 let postParser = bodyParser.urlencoded({
 	extended: false
@@ -38,7 +39,6 @@ import * as mongoose from "mongoose";
 import * as csvParse from "csv-parse";
 import * as json2csv from "json2csv";
 import * as WebSocket from "ws";
-import * as cheerio from "cheerio";
 
 const PORT = parseInt(process.env.PORT) || 3000;
 const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/";
@@ -75,6 +75,17 @@ export function pbkdf2Async (...params: any[]) {
 			resolve(derivedKey);
 		});
 		crypto.pbkdf2.apply(null, params);
+	});
+}
+export function readFileAsync (filename: string): Promise<string> {
+	return new Promise<string>((resolve, reject) => {
+		fs.readFile(filename, "utf8", (err, data) => {
+			if (err) {
+				reject(err);
+				return;
+			}
+			resolve(data);
+		})
 	});
 }
 
@@ -142,29 +153,6 @@ function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
 		id: attendee.id
 	};
 }
-function generateUserList (currentUserName: string): Promise<string> {
-	return new Promise<string>(async (resolve, reject) => {
-		let users = await User.find().sort({ username: "asc" });
-		resolve(users.map((user) => {
-			let username = user.username.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-			return `
-				<li class="mdc-list-item">
-					<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
-					<span class="mdc-list-item__text">
-						<span class="mdc-list-item__text__primary mdc-typography--title username">${user.username}</span>
-						<span class="mdc-list-item__text__primary mdc-typography--body1">${user.auth_keys.length} active session${user.auth_keys.length === 1 ? "": "s"}</span>
-					</span>
-					<div class="actions">
-						<span class="mdc-typography--body2 status">${user.username === currentUserName ? "Active session" : ""}</span>
-						<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
-							Delete
-						</button>
-					</div>
-				</li>
-			`;
-		}).join("\n"));
-	});
-}
 
 let apiRouter = express.Router();
 // User routes
@@ -207,8 +195,7 @@ apiRouter.route("/user/update").put(authenticateWithReject, postParser, async (r
 		response.status(201).json({
 			"success": true,
 			"reauth": username === response.locals.username,
-			"created": userCreated,
-			"userlist": await generateUserList(response.locals.username)
+			"created": userCreated
 		});
 	}
 	catch (err) {
@@ -235,8 +222,7 @@ apiRouter.route("/user/update").put(authenticateWithReject, postParser, async (r
 		await User.remove({ "username": username });
 		response.status(201).json({
 			"success": true,
-			"reauth": username === response.locals.username,
-			"userlist": await generateUserList(response.locals.username)
+			"reauth": username === response.locals.username
 		});
 	}
 	catch (err) {
@@ -564,34 +550,32 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 
 app.use("/api", apiRouter);
 
-app.route("/").get(authenticateWithRedirect, (request, response) => {
-	fs.readFile(path.join(__dirname, STATIC_ROOT, "index.html"), { encoding: "utf8" }, async (err, html) => {
-		if (err) {
-			console.error(err);
-			response.status(500).send("An internal server error occurred");
-			return;
+const indexTemplate = Handlebars.compile(fs.readFileSync(path.join(__dirname, STATIC_ROOT, "index.html"), "utf8"));
+app.route("/").get(authenticateWithRedirect, async (request, response) => {
+	let attendees = await Attendee.find().sort({ tag: "asc" });
+	let tags: string[] = attendees.reduce((prev, current) => {
+		if (prev.indexOf(current.tag) === -1) {
+			// Escape possible HTML in tags
+			let tag: string = current.tag.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+			prev.push(tag);
 		}
-		let attendees = await Attendee.find().sort({ tag: "asc" });
-		let tags: string[] = attendees.reduce((prev, current) => {
-			if (prev.indexOf(current.tag) === -1) {
-				// Escape possible HTML in tags
-				let tag: string = current.tag.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-				prev.push(tag);
-			}
-			return prev;
-		}, <string[]> []);
-
-		let $ = cheerio.load(html);
-		$("#username").text(response.locals.username);
-		$("#version").text(`v${VERSION_NUMBER} @ ${VERSION_HASH}`);
-		for (let tag of tags) {
-			$(".tags").append(`<option>${tag}</option>`);
-		}
-		let userListHTML: string = await generateUserList(response.locals.username);
-		$("#users").append(userListHTML);
-
-		response.send($.html());
+		return prev;
+	}, <string[]> []);
+	let users = await User.find().sort({ username: "asc" });
+	let userInfo = users.map(user => {
+		return {
+			username: user.username,
+			activeSessions: `${user.auth_keys.length} active session${user.auth_keys.length === 1 ? "" : "s"}`,
+			isActiveSession: user.username === response.locals.username
+		};
 	});
+
+	response.send(indexTemplate({
+		username: response.locals.username,
+		version: `v${VERSION_NUMBER} @ ${VERSION_HASH}`,
+		tags,
+		userInfo
+	}));
 });
 app.route("/login").get(async (request, response) => {
 	if (request.cookies.auth) {
@@ -599,14 +583,13 @@ app.route("/login").get(async (request, response) => {
 		await User.update({ "auth_keys": authKey }, { $pull: { "auth_keys": authKey } }).exec();
 		response.clearCookie("auth");
 	}
-	fs.readFile(path.join(__dirname, STATIC_ROOT, "login.html"), { encoding: "utf8" }, (err, html) => {
-		if (err) {
-			console.error(err);
-			response.status(500).send("An internal server error occurred");
-			return;
-		}
-		response.send(html);
-	});
+	try {
+		response.send(await readFileAsync(path.join(__dirname, STATIC_ROOT, "login.html")));
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).send("An internal server error occurred");
+	}
 });
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
