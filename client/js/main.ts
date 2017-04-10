@@ -1,6 +1,68 @@
 declare let moment: any;
 declare let qwest: any; // Update with actual definitions later
 
+class State {
+	public linkID: string;
+	public sectionID: string;
+	public isDisplayed: boolean = false;
+	private link: HTMLAnchorElement;
+	private section: HTMLElement;
+	private readonly drawerSelectedClass = "mdc-temporary-drawer--selected";
+	constructor(linkID: string, sectionID: string) {
+		this.linkID = linkID;
+		this.sectionID = sectionID;
+		
+		let link = document.getElementById(linkID);
+		if (!link) {
+			throw new Error("Invalid link ID");
+		}
+		this.link = link as HTMLAnchorElement;
+		this.link.addEventListener("click", async e => {
+			await delay(10);
+			drawer.open = false;
+			this.show();
+		});
+
+		let section = document.getElementById(sectionID);
+		if (!section) {
+			throw new Error("Invalid section ID");
+		}
+		this.section = section as HTMLElement;
+	}
+	static hideAll(): void {
+		Object.keys(States).forEach(stateKey => States[stateKey].hide());
+	}
+	hide(): void {
+		this.isDisplayed = false;
+		this.link.classList.remove(this.drawerSelectedClass);
+		this.section.style.display = "none";
+	}
+	show(hideOthers: boolean = true): void {
+		if (hideOthers) State.hideAll();
+		this.isDisplayed = true;
+		this.link.classList.add(this.drawerSelectedClass);
+		this.section.style.display = "block";
+	}
+}
+const States: { [key: string]: State } = {
+	"checkin": new State("open-checkin", "checkin"),
+	"attendees": new State("open-attendees", "import"),
+	"users": new State("open-users", "manage-users")
+};
+
+// Set the correct state on page load
+function readURLHash() {
+	let state: State | undefined = States[window.location.hash.substr(1)];
+	if (state) {
+		state.show();
+	}
+	else {
+		States["checkin"].show();
+	}
+}
+readURLHash();
+window.addEventListener("hashchange", readURLHash);
+
 interface IAttendee {
 	reverted?: boolean;
 	id: string;
@@ -11,10 +73,6 @@ interface IAttendee {
 	checked_in_date?: Date;
 	checked_in_by?: string;
 }
-enum State {
-	CheckIn, Import, UserManagement
-}
-let currentState: State;
 
 function delay (milliseconds: number) {
 	return new Promise<void>(resolve => {
@@ -80,9 +138,6 @@ function attachUserDeleteHandlers () {
 	}
 }
 
-// ES6 is pretty cool
-let [enterCheckIn, enterImport, enterUserManagement] = ["enter-checkin", "enter-import", "enter-user-management"].map((id) => document.getElementById(id)!);
-
 let queryField = <HTMLInputElement> document.getElementById("query")!;
 queryField.addEventListener("keyup", e => {
 	loadAttendees();
@@ -93,8 +148,9 @@ checkedInFilterField.addEventListener("change", e => {
 });
 let tagSelector = <HTMLSelectElement> document.getElementById("tag-choose")!;
 tagSelector.addEventListener("change", e => {
-	if (currentState !== State.CheckIn)
-		enterState(State.CheckIn);
+	if (!States["checkin"].isDisplayed) {
+		States["checkin"].show();
+	}
 	drawer.open = false;
 	loadAttendees();
 });
@@ -179,34 +235,6 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 		status.textContent = "An error occurred";
 		alert(response.error);
 	});
-}
-async function enterState(state: State) {
-	currentState = state;
-	if (state === State.CheckIn) {
-		enterCheckIn.classList.add(drawerSelectedClass);
-		enterImport.classList.remove(drawerSelectedClass);
-		enterUserManagement.classList.remove(drawerSelectedClass);
-		document.getElementById("checkin")!.style.display = "block";
-		document.getElementById("import")!.style.display = "none";
-		document.getElementById("manage-users")!.style.display = "none";
-		loadAttendees();
-	}
-	if (state === State.Import) {
-		enterCheckIn.classList.remove(drawerSelectedClass);
-		enterImport.classList.add(drawerSelectedClass);
-		enterUserManagement.classList.remove(drawerSelectedClass);
-		document.getElementById("checkin")!.style.display = "none";
-		document.getElementById("import")!.style.display = "block";
-		document.getElementById("manage-users")!.style.display = "none";
-	}
-	if (state === State.UserManagement) {
-		enterCheckIn.classList.remove(drawerSelectedClass);
-		enterImport.classList.remove(drawerSelectedClass);
-		enterUserManagement.classList.add(drawerSelectedClass);
-		document.getElementById("checkin")!.style.display = "none";
-		document.getElementById("import")!.style.display = "none";
-		document.getElementById("manage-users")!.style.display = "block";
-	}
 }
 
 mdc.ripple.MDCRipple.attachTo(document.querySelector(".mdc-ripple-surface"));
@@ -295,7 +323,7 @@ const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
 function startWebSocketListener() {
 	const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
 	socket.addEventListener("message", (event) => {
-		if (currentState !== State.CheckIn)
+		if (!States["checkin"].isDisplayed)
 			return;
 		
 		let attendee: IAttendee = JSON.parse(event.data);
@@ -330,27 +358,10 @@ function startWebSocketListener() {
 startWebSocketListener();
 
 attachUserDeleteHandlers();
-enterState(State.CheckIn);
-const drawerSelectedClass = "mdc-temporary-drawer--selected";
-// setTimeout is necessary probably because the drawer is reshown upon any click event
-enterCheckIn.addEventListener("click", async (e) => {
-	enterState(State.CheckIn);
-	await delay(10);
-	drawer.open = false;
-});
-enterImport.addEventListener("click", async (e) => {
-	enterState(State.Import);
-	await delay(10);
-	drawer.open = false;
-});
-enterUserManagement.addEventListener("click", async (e) => {
-	enterState(State.UserManagement);
-	await delay(10);
-	drawer.open = false;
-});
 // Update check in relative times every minute the lazy way
 setInterval(() => {
-	if (currentState === State.CheckIn) {
+	if (States["checkin"].isDisplayed) {
 		loadAttendees();
 	}
 }, 1000 * 60);
+loadAttendees();
