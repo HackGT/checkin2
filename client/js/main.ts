@@ -192,45 +192,61 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 		"checkedin": checkedIn
 	}).then((xhr, response: IAttendee[]) => {
 		let attendeeList = document.getElementById("attendees")!;
-		// Remove current contents
-		while (attendeeList.firstChild) {
-			attendeeList.removeChild(attendeeList.firstChild);
-		}
-		// Load from template
 		let attendeeTemplate = <HTMLTemplateElement> document.getElementById("attendee-item")!;
-		for (let attendee of response) {
-			attendeeTemplate.content.querySelector("li")!.id = "item-" + attendee.id;
-			attendeeTemplate.content.querySelector("#name")!.textContent = attendee.name;
-			
-			let emails = attendee.emails.reduce((prev, current) => {
-				if (prev.indexOf(current) === -1) {
-					prev.push(current);
+		let numberOfExistingNodes = document.querySelectorAll("#attendees li").length;
+		if (!attendeeList.firstChild || numberOfExistingNodes < response.length) {
+			// First load, preallocate children
+			status.textContent = "Preallocating nodes...";
+			for (let i = numberOfExistingNodes; i < response.length; i++) {
+				let node = document.importNode(attendeeTemplate.content, true) as DocumentFragment;
+				node.querySelector("li")!.style.display = "none";
+				node.querySelector(".actions > button")!.addEventListener("click", checkIn);
+				attendeeList.appendChild(node);
+			}
+			(<any> window).mdc.autoInit();
+			console.warn(`Allocated ${response.length - numberOfExistingNodes} nodes due to insufficient number`);
+			status.textContent = "Loading...";
+		}
+
+		// Reuse nodes already loaded from template
+		let existingNodes = document.querySelectorAll("#attendees li") as NodeListOf<HTMLElement>;
+		for (let i = 0; i < existingNodes.length; i++) {
+			let attendee = response[i];
+			if (!!attendee) {
+				existingNodes[i].style.display = "";
+				
+				existingNodes[i].id = "item-" + attendee.id;
+				existingNodes[i].querySelector("#name")!.textContent = attendee.name;
+				
+				let emails = attendee.emails.reduce((prev, current) => {
+					if (prev.indexOf(current) === -1) {
+						prev.push(current);
+					}
+					return prev;
+				}, <string[]> []);
+				existingNodes[i].querySelector("#emails")!.textContent = emails.join(", ");
+				
+				let button = existingNodes[i].querySelector(".actions > button")!;
+				let status = existingNodes[i].querySelector(".actions > span.status")!;
+				if (attendee.checked_in_date) {
+					button.textContent = "Uncheck in";
+					button.classList.add("checked-in");
+					status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
 				}
-				return prev;
-			}, <string[]> []);
-			attendeeTemplate.content.querySelector("#emails")!.textContent = emails.join(", ");
-			
-			let button = attendeeTemplate.content.querySelector(".actions > button")!;
-			let status = attendeeTemplate.content.querySelector(".actions > span.status")!;
-			if (attendee.checked_in_date) {
-				button.textContent = "Uncheck in";
-				button.classList.add("checked-in");
-				status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+				else {
+					button.textContent = "Check in";
+					button.classList.remove("checked-in");
+					status.textContent = "";
+				}
 			}
 			else {
-				button.textContent = "Check in";
-				button.classList.remove("checked-in");
-				status.textContent = "";
+				existingNodes[i].style.display = "none";
+				existingNodes[i].id = "";
 			}
-
-			let attendeeItem = document.importNode(attendeeTemplate.content, true);
-			attendeeList.appendChild(attendeeItem);
-			attendeeList.querySelector(`#item-${attendee.id} > .actions > button`)!.addEventListener("click", checkIn);
 		}
 		tag = tag || "no tags found";
 		tag = tag.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 		status.innerHTML = `Found ${response.length} attendee${response.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
-		(<any> window).mdc.autoInit();
 	}).catch((e, xhr, response) => {
 		status.textContent = "An error occurred";
 		alert(response.error);
