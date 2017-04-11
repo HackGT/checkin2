@@ -531,7 +531,7 @@ describe("Data endpoints", () => {
 			tag: crypto.randomBytes(32).toString("hex"),
 			id: "", // Generated server-side
 			name: crypto.randomBytes(32).toString("hex"),
-			emails: [crypto.randomBytes(32).toString("hex")],
+			emails: [crypto.randomBytes(32).toString("hex") + "@example.com"],
 			checked_in: false,
 			checked_in_by: undefined,
 			checked_in_date: undefined
@@ -541,8 +541,11 @@ describe("Data endpoints", () => {
 		return request(app)
 			.put(`/api/data/tag/${testAttendee.tag}`)
 			.set("Cookie", testUser.cookie)
-			.field("name", testAttendee.name)
-			.field("emails", testAttendee.emails.join(","))
+			.type("form")
+			.send({
+				"name": testAttendee.name,
+				"email": testAttendee.emails.join(",")
+			})
 			.expect(201)
 			.expect("Content-Type", /json/)
 			.then(async request => {
