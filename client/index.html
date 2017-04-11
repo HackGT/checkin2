@@ -26,27 +26,25 @@
 
 				<header class="mdc-temporary-drawer__header">
 					<div class="mdc-temporary-drawer__header-content">
-						<span id="username">
-							<!-- Content filled in by server -->
-						</span>
-						<span id="version">
-							<!-- Content filled in by server -->
-						</span>
+						<span id="username">{{username}}</span>
+						<span id="version">{{version}}</span>
 					</div>
 				</header>
 
 				<nav id="icon-with-text-demo" class="mdc-temporary-drawer__content mdc-list">
-					<a class="mdc-list-item mdc-temporary-drawer--selected" href="#" id="enter-checkin">
+					<a class="mdc-list-item mdc-temporary-drawer--selected" href="#" id="open-checkin">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">format_list_bulleted</i>
 						Check in
 					</a>
 					<a class="mdc-list-item" href="#">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">assignment</i>
 						<select class="mdc-list-item tags" id="tag-choose">
-							<!-- Content filled in by server -->
+							{{#each tags}}
+								<option>{{this}}</option>
+							{{/each}}
 						</select>
 					</a>
-					<a class="mdc-list-item" href="#" id="enter-import">
+					<a class="mdc-list-item" href="#attendees" id="open-attendees">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">playlist_add</i>
 						Import attendees
 					</a>
@@ -54,10 +52,12 @@
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">delete_sweep</i>
 						<select class="mdc-list-item tags" id="tag-delete">
 							<option selected value="">Choose tag to delete</option>
-							<!-- Content filled in by server -->
+							{{#each tags}}
+								<option>{{this}}</option>
+							{{/each}}
 						</select>
 					</a>
-					<a class="mdc-list-item" href="#" id="enter-user-management">
+					<a class="mdc-list-item" href="#users" id="open-users">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">account_box</i>
 						Configure users
 					</a>
@@ -86,8 +86,7 @@
 							<em id="loading-status">Loading...</em>
 						</section>
 
-						<ul class="mdc-list mdc-list--two-line" id="attendees">
-						</ul>
+						<ul class="mdc-list mdc-list--two-line" id="attendees"></ul>
 					</div>
 				</div>
 			</section>
@@ -143,6 +142,23 @@
 						</section>
 
 						<ul class="mdc-list mdc-list mdc-list--two-line" id="users">
+							{{#each userInfo}}
+								<li class="mdc-list-item" data-username="{{this.username}}">
+									<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
+									<span class="mdc-list-item__text">
+										<span class="mdc-list-item__text__primary mdc-typography--title username">{{this.username}}</span>
+										<span class="mdc-list-item__text__primary mdc-typography--body1">{{this.activeSessions}}</span>
+									</span>
+									<div class="actions">
+										{{#if this.isActiveSession}}
+											<span class="mdc-typography--body2 status">Active session</span>
+										{{/if}}
+										<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
+											Delete
+										</button>
+									</div>
+								</li>
+							{{/each}}
 						</ul>
 					</div>
 				</div>

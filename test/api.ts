@@ -228,11 +228,10 @@ describe("User endpoints", () => {
 			.expect(201)
 			.expect("Content-Type", /json/)
 			.then(async request => {
-				expect(request.body).to.have.all.keys("success", "reauth", "created", "userlist");
+				expect(request.body).to.have.all.keys("success", "reauth", "created");
 				expect(request.body.success).to.be.true;
 				expect(request.body.reauth).to.be.true;
 				expect(request.body.created).to.be.false;
-				expect(request.body.userlist).to.be.a("string");
 
 				let updatedUser = await User.findOne({"username": testUser.username});
 				let {hash: newHash, salt: newSalt} = updatedUser.login;
@@ -270,11 +269,10 @@ describe("User endpoints", () => {
 			.expect(201)
 			.expect("Content-Type", /json/)
 			.then(async request => {
-				expect(request.body).to.have.all.keys("success", "reauth", "created", "userlist");
+				expect(request.body).to.have.all.keys("success", "reauth", "created");
 				expect(request.body.success).to.be.true;
 				expect(request.body.reauth).to.be.false;
 				expect(request.body.created).to.be.false;
-				expect(request.body.userlist).to.be.a("string");
 
 				let updatedUser = await User.findOne({"username": newUsername});
 				let {hash: newHash, salt: newSalt} = updatedUser.login;
@@ -303,11 +301,10 @@ describe("User endpoints", () => {
 			.expect(201)
 			.expect("Content-Type", /json/)
 			.then(async request => {
-				expect(request.body).to.have.all.keys("success", "reauth", "created", "userlist");
+				expect(request.body).to.have.all.keys("success", "reauth", "created");
 				expect(request.body.success).to.be.true;
 				expect(request.body.reauth).to.be.false;
 				expect(request.body.created).to.be.true;
-				expect(request.body.userlist).to.be.a("string");
 
 				let user = await User.findOne({"username": newUsername});
 				expect(user).to.exist;
@@ -339,10 +336,9 @@ describe("User endpoints", () => {
 			.expect(201)
 			.expect("Content-Type", /json/)
 			.then(async request => {
-				expect(request.body).to.have.all.keys("success", "reauth", "userlist");
+				expect(request.body).to.have.all.keys("success", "reauth");
 				expect(request.body.success).to.be.true;
 				expect(request.body.reauth).to.be.true;
-				expect(request.body.userlist).to.be.a("string");
 				expect(await User.findOne({"username": testUser.username})).to.not.exist;
 
 				// Return to original state
@@ -371,10 +367,9 @@ describe("User endpoints", () => {
 			.expect(201)
 			.expect("Content-Type", /json/)
 			.then(async request => {
-				expect(request.body).to.have.all.keys("success", "reauth", "userlist");
+				expect(request.body).to.have.all.keys("success", "reauth");
 				expect(request.body.success).to.be.true;
 				expect(request.body.reauth).to.be.false;
-				expect(request.body.userlist).to.be.a("string");
 				expect(await User.findOne({"username": newUsername})).to.not.exist;
 			});
 	});

@@ -1,6 +1,68 @@
 declare let moment: any;
 declare let qwest: any; // Update with actual definitions later
 
+class State {
+	public linkID: string;
+	public sectionID: string;
+	public isDisplayed: boolean = false;
+	private link: HTMLAnchorElement;
+	private section: HTMLElement;
+	private readonly drawerSelectedClass = "mdc-temporary-drawer--selected";
+	constructor(linkID: string, sectionID: string) {
+		this.linkID = linkID;
+		this.sectionID = sectionID;
+		
+		let link = document.getElementById(linkID);
+		if (!link) {
+			throw new Error("Invalid link ID");
+		}
+		this.link = link as HTMLAnchorElement;
+		this.link.addEventListener("click", async e => {
+			await delay(10);
+			drawer.open = false;
+			this.show();
+		});
+
+		let section = document.getElementById(sectionID);
+		if (!section) {
+			throw new Error("Invalid section ID");
+		}
+		this.section = section as HTMLElement;
+	}
+	static hideAll(): void {
+		Object.keys(States).forEach(stateKey => States[stateKey].hide());
+	}
+	hide(): void {
+		this.isDisplayed = false;
+		this.link.classList.remove(this.drawerSelectedClass);
+		this.section.style.display = "none";
+	}
+	show(hideOthers: boolean = true): void {
+		if (hideOthers) State.hideAll();
+		this.isDisplayed = true;
+		this.link.classList.add(this.drawerSelectedClass);
+		this.section.style.display = "block";
+	}
+}
+const States: { [key: string]: State } = {
+	"checkin": new State("open-checkin", "checkin"),
+	"attendees": new State("open-attendees", "import"),
+	"users": new State("open-users", "manage-users")
+};
+
+// Set the correct state on page load
+function readURLHash() {
+	let state: State | undefined = States[window.location.hash.substr(1)];
+	if (state) {
+		state.show();
+	}
+	else {
+		States["checkin"].show();
+	}
+}
+readURLHash();
+window.addEventListener("hashchange", readURLHash);
+
 interface IAttendee {
 	reverted?: boolean;
 	id: string;
@@ -11,10 +73,6 @@ interface IAttendee {
 	checked_in_date?: Date;
 	checked_in_by?: string;
 }
-enum State {
-	CheckIn, Import, UserManagement
-}
-let currentState: State;
 
 function delay (milliseconds: number) {
 	return new Promise<void>(resolve => {
@@ -49,8 +107,8 @@ function attachUserDeleteHandlers () {
 	for (let i = 0; i < deleteButtons.length; i++) {
 		deleteButtons[i].addEventListener("click", e => {
 			let source = (<HTMLButtonElement> e.target)!;
-			let username: string = source.parentElement!.parentElement!.querySelector(".username")!.textContent!;
-			let extraWarn: boolean = !!source.parentElement!.querySelector(".status")!.textContent;
+			let username: string = source.parentElement!.parentElement!.dataset.username!;
+			let extraWarn: boolean = !!source.parentElement!.querySelector(".status");
 			const extraWarnMessage = `**YOU ARE TRYING TO DELETE THE ACCOUNT THAT YOU ARE CURRENTLY LOGGED IN WITH. THIS WILL DELETE YOUR USER AND LOG YOU OUT.**`;
 
 			let shouldContinue: boolean = confirm(`${extraWarn ? extraWarnMessage + "\n\n": ""}Are you sure that you want to delete the user '${username}'?`);
@@ -61,7 +119,10 @@ function attachUserDeleteHandlers () {
 			qwest.delete("/api/user/update", {
 				username: username
 			}).then((xhr, response) => {
-				document.getElementById("users")!.innerHTML = response.userlist;
+				let toRemove = document.querySelector(`li[data-username="${username}"]`);
+				if (toRemove && toRemove.parentElement) {
+					toRemove.parentElement.removeChild(toRemove);
+				}
 				// Reattach button event handlers
 				attachUserDeleteHandlers();
 				
@@ -77,9 +138,6 @@ function attachUserDeleteHandlers () {
 	}
 }
 
-// ES6 is pretty cool
-let [enterCheckIn, enterImport, enterUserManagement] = ["enter-checkin", "enter-import", "enter-user-management"].map((id) => document.getElementById(id)!);
-
 let queryField = <HTMLInputElement> document.getElementById("query")!;
 queryField.addEventListener("keyup", e => {
 	loadAttendees();
@@ -90,8 +148,9 @@ checkedInFilterField.addEventListener("change", e => {
 });
 let tagSelector = <HTMLSelectElement> document.getElementById("tag-choose")!;
 tagSelector.addEventListener("change", e => {
-	if (currentState !== State.CheckIn)
-		enterState(State.CheckIn);
+	if (!States["checkin"].isDisplayed) {
+		States["checkin"].show();
+	}
 	drawer.open = false;
 	loadAttendees();
 });
@@ -133,77 +192,65 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 		"checkedin": checkedIn
 	}).then((xhr, response: IAttendee[]) => {
 		let attendeeList = document.getElementById("attendees")!;
-		// Remove current contents
-		while (attendeeList.firstChild) {
-			attendeeList.removeChild(attendeeList.firstChild);
-		}
-		// Load from template
 		let attendeeTemplate = <HTMLTemplateElement> document.getElementById("attendee-item")!;
-		for (let attendee of response) {
-			attendeeTemplate.content.querySelector("li")!.id = "item-" + attendee.id;
-			attendeeTemplate.content.querySelector("#name")!.textContent = attendee.name;
-			
-			let emails = attendee.emails.reduce((prev, current) => {
-				if (prev.indexOf(current) === -1) {
-					prev.push(current);
+		let numberOfExistingNodes = document.querySelectorAll("#attendees li").length;
+		if (!attendeeList.firstChild || numberOfExistingNodes < response.length) {
+			// First load, preallocate children
+			status.textContent = "Preallocating nodes...";
+			for (let i = numberOfExistingNodes; i < response.length; i++) {
+				let node = document.importNode(attendeeTemplate.content, true) as DocumentFragment;
+				node.querySelector("li")!.style.display = "none";
+				node.querySelector(".actions > button")!.addEventListener("click", checkIn);
+				attendeeList.appendChild(node);
+			}
+			(<any> window).mdc.autoInit();
+			console.warn(`Allocated ${response.length - numberOfExistingNodes} nodes due to insufficient number`);
+			status.textContent = "Loading...";
+		}
+
+		// Reuse nodes already loaded from template
+		let existingNodes = document.querySelectorAll("#attendees li") as NodeListOf<HTMLElement>;
+		for (let i = 0; i < existingNodes.length; i++) {
+			let attendee = response[i];
+			if (!!attendee) {
+				existingNodes[i].style.display = "";
+				
+				existingNodes[i].id = "item-" + attendee.id;
+				existingNodes[i].querySelector("#name")!.textContent = attendee.name;
+				
+				let emails = attendee.emails.reduce((prev, current) => {
+					if (prev.indexOf(current) === -1) {
+						prev.push(current);
+					}
+					return prev;
+				}, <string[]> []);
+				existingNodes[i].querySelector("#emails")!.textContent = emails.join(", ");
+				
+				let button = existingNodes[i].querySelector(".actions > button")!;
+				let status = existingNodes[i].querySelector(".actions > span.status")!;
+				if (attendee.checked_in_date) {
+					button.textContent = "Uncheck in";
+					button.classList.add("checked-in");
+					status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
 				}
-				return prev;
-			}, <string[]> []);
-			attendeeTemplate.content.querySelector("#emails")!.textContent = emails.join(", ");
-			
-			let button = attendeeTemplate.content.querySelector(".actions > button")!;
-			let status = attendeeTemplate.content.querySelector(".actions > span.status")!;
-			if (attendee.checked_in_date) {
-				button.textContent = "Uncheck in";
-				button.classList.add("checked-in");
-				status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+				else {
+					button.textContent = "Check in";
+					button.classList.remove("checked-in");
+					status.textContent = "";
+				}
 			}
 			else {
-				button.textContent = "Check in";
-				button.classList.remove("checked-in");
-				status.textContent = "";
+				existingNodes[i].style.display = "none";
+				existingNodes[i].id = "";
 			}
-
-			let attendeeItem = document.importNode(attendeeTemplate.content, true);
-			attendeeList.appendChild(attendeeItem);
-			attendeeList.querySelector(`#item-${attendee.id} > .actions > button`)!.addEventListener("click", checkIn);
 		}
 		tag = tag || "no tags found";
 		tag = tag.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 		status.innerHTML = `Found ${response.length} attendee${response.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
-		(<any> window).mdc.autoInit();
 	}).catch((e, xhr, response) => {
 		status.textContent = "An error occurred";
 		alert(response.error);
 	});
-}
-async function enterState(state: State) {
-	currentState = state;
-	if (state === State.CheckIn) {
-		enterCheckIn.classList.add(drawerSelectedClass);
-		enterImport.classList.remove(drawerSelectedClass);
-		enterUserManagement.classList.remove(drawerSelectedClass);
-		document.getElementById("checkin")!.style.display = "block";
-		document.getElementById("import")!.style.display = "none";
-		document.getElementById("manage-users")!.style.display = "none";
-		loadAttendees();
-	}
-	if (state === State.Import) {
-		enterCheckIn.classList.remove(drawerSelectedClass);
-		enterImport.classList.add(drawerSelectedClass);
-		enterUserManagement.classList.remove(drawerSelectedClass);
-		document.getElementById("checkin")!.style.display = "none";
-		document.getElementById("import")!.style.display = "block";
-		document.getElementById("manage-users")!.style.display = "none";
-	}
-	if (state === State.UserManagement) {
-		enterCheckIn.classList.remove(drawerSelectedClass);
-		enterImport.classList.remove(drawerSelectedClass);
-		enterUserManagement.classList.add(drawerSelectedClass);
-		document.getElementById("checkin")!.style.display = "none";
-		document.getElementById("import")!.style.display = "none";
-		document.getElementById("manage-users")!.style.display = "block";
-	}
 }
 
 mdc.ripple.MDCRipple.attachTo(document.querySelector(".mdc-ripple-surface"));
@@ -272,23 +319,13 @@ document.getElementById("add-update-user")!.addEventListener("click", (e) => {
 		username: username,
 		password: password
 	}).then((xhr, response) => {
-		document.getElementById("users")!.innerHTML = response.userlist;
-		// Reattach button event handlers
-		attachUserDeleteHandlers();
-
 		if (response.created) {
 			alert(`User '${username}' was successfully created`);
 		}
 		else {
 			alert(`Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`);
 		}
-		if (response.reauth) {
-			window.location.reload();
-		}
-		[usernameInput, passwordInput].forEach(el => {
-			el.value = "";
-			el.nextElementSibling!.classList.remove("mdc-textfield__label--float-above");
-		});
+		window.location.reload();
 		
 	}).catch((e, xhr, response) => {
 		alert(response.error);
@@ -302,7 +339,7 @@ const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
 function startWebSocketListener() {
 	const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
 	socket.addEventListener("message", (event) => {
-		if (currentState !== State.CheckIn)
+		if (!States["checkin"].isDisplayed)
 			return;
 		
 		let attendee: IAttendee = JSON.parse(event.data);
@@ -337,27 +374,10 @@ function startWebSocketListener() {
 startWebSocketListener();
 
 attachUserDeleteHandlers();
-enterState(State.CheckIn);
-const drawerSelectedClass = "mdc-temporary-drawer--selected";
-// setTimeout is necessary probably because the drawer is reshown upon any click event
-enterCheckIn.addEventListener("click", async (e) => {
-	enterState(State.CheckIn);
-	await delay(10);
-	drawer.open = false;
-});
-enterImport.addEventListener("click", async (e) => {
-	enterState(State.Import);
-	await delay(10);
-	drawer.open = false;
-});
-enterUserManagement.addEventListener("click", async (e) => {
-	enterState(State.UserManagement);
-	await delay(10);
-	drawer.open = false;
-});
 // Update check in relative times every minute the lazy way
 setInterval(() => {
-	if (currentState === State.CheckIn) {
+	if (States["checkin"].isDisplayed) {
 		loadAttendees();
 	}
 }, 1000 * 60);
+loadAttendees();
