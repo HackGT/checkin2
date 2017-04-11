@@ -259,13 +259,13 @@ document.querySelector("nav.toolbar > i:first-of-type")!.addEventListener("click
 	drawer.open = !drawer.open;
 });
 
-document.querySelector("#import button")!.addEventListener("click", (e) => {
+document.getElementById("import-attendees")!.addEventListener("click", e => {
 	let button = (<HTMLButtonElement> e.target)!;
 	button.disabled = true;
 
 	let form = new FormData();
 	let fileInput = <HTMLInputElement> document.querySelector(`#import input[type="file"]`)!;
-	let tagInput = <HTMLInputElement> document.getElementById("add-tag");
+	let tagInput = <HTMLInputElement> document.getElementById("import-tag");
 	let tag: string = tagInput.value.trim().toLowerCase();
 	let nameInput = <HTMLInputElement> document.getElementById("name-header");
 	let emailInput = <HTMLInputElement> document.getElementById("email-headers");
@@ -307,7 +307,7 @@ document.querySelector("#import button")!.addEventListener("click", (e) => {
 	});
 });
 
-document.getElementById("add-update-user")!.addEventListener("click", (e) => {
+document.getElementById("add-update-user")!.addEventListener("click", e => {
 	let button = (<HTMLButtonElement> e.target)!;
 	button.disabled = true;
 
@@ -327,6 +327,33 @@ document.getElementById("add-update-user")!.addEventListener("click", (e) => {
 		}
 		window.location.reload();
 		
+	}).catch((e, xhr, response) => {
+		alert(response.error);
+	}).complete(() => {
+		button.disabled = false;
+	});
+});
+
+document.getElementById("add-attendee")!.addEventListener("click", e => {
+	let button = (<HTMLButtonElement> e.target)!;
+	button.disabled = true;
+
+	let tagInput = <HTMLInputElement> document.getElementById("add-tag");
+	let nameInput = <HTMLInputElement> document.getElementById("add-name");
+	let emailInput = <HTMLInputElement> document.getElementById("add-email");
+
+	let form = new FormData();
+	form.append("name", nameInput.value.trim());
+	form.append("email", emailInput.value.replace(/, /g, ",").trim());
+
+	qwest.put(`/api/data/tag/${tagInput.value.trim()}`, 
+		form
+	).then(() => {
+		// Clear the form
+		[tagInput, nameInput, emailInput].forEach((el) => {
+			el.value = el.defaultValue;
+		});
+		alert("Successfully added new attendee");
 	}).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {
