@@ -432,7 +432,12 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async (request, response) => {
 	let tag: string = request.params.tag;
 	let name: string = request.body.name;
-	let emails: string[] = request.body.email ? request.body.email.split(",") : [];
+	let emails: string[] = request.body.email ? request.body.email.split(",").map(email => email.trim()) : [];
+	if (!name || !name.trim() || emails.length === 0) {
+		response.status(400).json({
+			"error": "Missing name or emails"
+		});
+	}
 
 	try {
 		await new Attendee({

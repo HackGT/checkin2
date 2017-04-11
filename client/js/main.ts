@@ -21,6 +21,9 @@ class State {
 			await delay(10);
 			drawer.open = false;
 			this.show();
+			if (States["checkin"] === this) {
+				loadAttendees();
+			}
 		});
 
 		let section = document.getElementById(sectionID);
@@ -42,6 +45,7 @@ class State {
 		this.isDisplayed = true;
 		this.link.classList.add(this.drawerSelectedClass);
 		this.section.style.display = "block";
+		window.scrollTo(0, 0);
 	}
 }
 const States: { [key: string]: State } = {
@@ -338,20 +342,24 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 	let button = (<HTMLButtonElement> e.target)!;
 	button.disabled = true;
 
-	let tagInput = <HTMLInputElement> document.getElementById("add-tag");
-	let nameInput = <HTMLInputElement> document.getElementById("add-name");
-	let emailInput = <HTMLInputElement> document.getElementById("add-email");
+	let ids = ["add-tag", "add-name", "add-email"];
+	let [tagInput, nameInput, emailInput] = ids.map(id => <HTMLInputElement> document.getElementById(id));
+	if (!tagInput.value.trim()) {
+		alert("Please enter a tag");
+		button.disabled = false;
+		return;
+	}
 
-	let form = new FormData();
-	form.append("name", nameInput.value.trim());
-	form.append("email", emailInput.value.replace(/, /g, ",").trim());
-
-	qwest.put(`/api/data/tag/${tagInput.value.trim()}`, 
-		form
-	).then(() => {
+	qwest.put(`/api/data/tag/${tagInput.value.trim()}`, {
+		"name": nameInput.value.trim(),
+		"email": emailInput.value.replace(/, /g, ",").trim()
+	}).then(() => {
 		// Clear the form
 		[tagInput, nameInput, emailInput].forEach((el) => {
 			el.value = el.defaultValue;
+		});
+		ids.forEach(id => {
+			document.querySelector(`label[for="${id}"]`)!.classList.remove("mdc-textfield__label--float-above");
 		});
 		alert("Successfully added new attendee");
 	}).catch((e, xhr, response) => {
