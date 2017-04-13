@@ -516,6 +516,50 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
+	it("PUT /api/data/tag/:tag (unauthenticated)", done => {
+		request(app)
+			.put("/api/data/tag/test")
+			.expect(401)
+			.expect("Content-Type", /json/)
+			.expect(request => {
+				expect(request.body).to.have.property("error");
+			})
+			.end(done);
+	});
+	it("PUT /api/data/tag/:tag (authenticated)", async () => {
+		let testAttendee: IAttendee = {
+			tag: crypto.randomBytes(32).toString("hex"),
+			id: "", // Generated server-side
+			name: crypto.randomBytes(32).toString("hex"),
+			emails: [crypto.randomBytes(32).toString("hex") + "@example.com"],
+			checked_in: false,
+			checked_in_by: undefined,
+			checked_in_date: undefined
+		};
+		expect(await Attendee.find({ "tag": testAttendee.tag })).to.have.length(0);
+
+		return request(app)
+			.put(`/api/data/tag/${testAttendee.tag}`)
+			.set("Cookie", testUser.cookie)
+			.type("form")
+			.send({
+				"name": testAttendee.name,
+				"email": testAttendee.emails.join(",")
+			})
+			.expect(201)
+			.expect("Content-Type", /json/)
+			.then(async request => {
+				expect(request.body).to.have.property("success");
+				expect(request.body.success).to.be.true;
+
+				let importedAttendees = await Attendee.find({ "tag": testAttendee.tag });
+				expect(importedAttendees).to.have.length(1);
+				expect(importedAttendees[0].name).to.equal(testAttendee.name);
+				expect(importedAttendees[0].emails).to.have.length(1);
+				expect(importedAttendees[0].emails[0]).to.equal(testAttendee.emails[0]);
+				await Attendee.find({ "tag": testAttendee.tag }).remove();
+			});
+	});
 	it("DELETE /api/data/tag/:tag (unauthenticated)", done => {
 		request(app)
 			.delete("/api/data/tag/test")

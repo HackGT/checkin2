@@ -429,7 +429,35 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 	}
 });
 
-apiRouter.route("/data/tag/:tag").delete(authenticateWithReject, async (request, response) => {
+apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async (request, response) => {
+	let tag: string = request.params.tag;
+	let name: string = request.body.name;
+	let emails: string[] = request.body.email ? request.body.email.split(",").map(email => email.trim()) : [];
+	if (!name || !name.trim() || emails.length === 0) {
+		response.status(400).json({
+			"error": "Missing name or emails"
+		});
+	}
+
+	try {
+		await new Attendee({
+			tag,
+			name,
+			emails,
+			checked_in: false,
+			id: crypto.randomBytes(16).toString("hex")
+		}).save();
+		response.status(201).json({
+			"success": true
+		});
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": "An error occurred while adding attendee"
+		});
+	}
+}).delete(authenticateWithReject, async (request, response) => {
 	let tag: string = request.params.tag;
 
 	try {
