@@ -625,8 +625,8 @@ app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
 // WebSocket server
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
-wss.on("connection", function(rawSocket) {
-	let request = (<express.Request> rawSocket.upgradeReq);
+wss.on("connection", function(rawSocket, _request) {
+	let request = _request as express.Request;
 	cookieParserInstance(request, null!, async (err) => {
 		let authKey = request.cookies.auth;
 		let user = await User.findOne({"auth_keys": authKey});

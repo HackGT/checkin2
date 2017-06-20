@@ -952,12 +952,12 @@ describe("Miscellaneous endpoints", () => {
 			ws.on("close", (code, message) => {
 				reject({ "message": "Connection was closed. Are you authenticated correctly?" });
 			});
-			ws.on("message", (data, flags) => {
+			ws.on("message", data => {
 				if (!shouldReceiveMessage) {
 					reject({ "message": "Got unexpected message before sending request", "data": data });
 					return;
 				}
-				let parsedData = JSON.parse(data);
+				let parsedData = JSON.parse(data as string);
 				expect(parsedData).to.be.an("object");
 				expect(parsedData.tag).to.be.a("string");
 				expect(parsedData.tag).to.equal(attendees[0].tag);
