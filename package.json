@@ -1,7 +1,7 @@
 {
-  "name": "check-in",
+  "name": "checkin2",
   "version": "1.2.1",
-  "description": "Check in for HackGT events",
+  "description": "Check-in for HackGT events",
   "main": "app.js",
   "scripts": {
     "test": "tsc && ./node_modules/mocha/bin/mocha",
@@ -53,10 +53,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/HackGT/Ultimate-Checkin.git"
+    "url": "git+https://github.com/HackGT/checkin2.git"
   },
   "bugs": {
-    "url": "https://github.com/HackGT/Ultimate-Checkin/issues"
+    "url": "https://github.com/HackGT/checkin2/issues"
   },
   "homepage": "https://checkin.hack.gt",
   "private": true
