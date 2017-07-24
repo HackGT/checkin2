@@ -41,8 +41,7 @@ import * as json2csv from "json2csv";
 import * as WebSocket from "ws";
 
 const PORT = parseInt(process.env.PORT) || 3000;
-const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/";
-const UNIQUE_APP_ID = process.env.UNIQUE_APP_ID || "checkin";
+const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/checkin";
 const STATIC_ROOT = "../client";
 
 const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")).version;
@@ -58,8 +57,8 @@ let cookieParserInstance = cookieParser(undefined, {
 });
 app.use(cookieParserInstance);
 
-(<any>mongoose).Promise = global.Promise;
-mongoose.connect(url.resolve(MONGO_URL, UNIQUE_APP_ID), {
+(mongoose as any).Promise = global.Promise;
+mongoose.connect(MONGO_URL, {
 	useMongoClient: true
 });
 export {mongoose};

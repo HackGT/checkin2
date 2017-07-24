@@ -30,8 +30,7 @@ A [Dockerfile](Dockerfile) is provided for convenience.
 Environment Variable | Description
 ---------------------|------------
 PORT | The port the check in system should run on (default: `3000`)
-MONGO_URL | The URL to the MongoDB server (default: `mongodb://localhost/`)
-UNIQUE_APP_ID | The MongoDB database name to store data in (default: `checkin`)
+MONGO_URL | The URL to the MongoDB server including the database (default: `mongodb://localhost/checkin`)
 
 On first start up, the server will automatically generate a default user with which to log in and add users and print the credentials to STOUT. **Make sure to delete this user or change its password from the default once you are done.**
 
