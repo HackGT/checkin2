@@ -417,6 +417,10 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 			attendee.checked_in_date = attendee.checked_in_date ? attendee.checked_in_date.toISOString() : "";
 			return attendee;
 		});
+		if (attendeesSimplified.length === 0) {
+			response.status(400).type("text/plain").end("No data to export");
+			return;
+		}
 		response.status(200).type("text/csv").attachment("export.csv");
 		response.write(json2csv({ data: attendeesSimplified, fields: Object.keys(attendeesSimplified[0])}));
 		response.end();
