@@ -59,7 +59,9 @@ let cookieParserInstance = cookieParser(undefined, {
 app.use(cookieParserInstance);
 
 (<any>mongoose).Promise = global.Promise;
-mongoose.connect(url.resolve(MONGO_URL, UNIQUE_APP_ID));
+mongoose.connect(url.resolve(MONGO_URL, UNIQUE_APP_ID), {
+	useMongoClient: true
+});
 export {mongoose};
 
 import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee} from "./schema";

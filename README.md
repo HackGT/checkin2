@@ -23,8 +23,8 @@ Check in status is kept synchronized across multiple open instances in real-time
 A [Dockerfile](Dockerfile) is provided for convenience.
 
     npm install # Install required dependencies
-    npm install -g typescript # Install the TypeScript compiler
-    tsc # Compile
+    npm run build # Compile
+    npm test # Optional: run tests
     npm start
 
 Environment Variable | Description
