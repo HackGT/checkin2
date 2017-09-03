@@ -8,7 +8,7 @@ export interface IUser {
 	};
 	auth_keys: string[];
 }
-export interface IUserMongoose extends IUser, mongoose.Document {}
+export type IUserMongoose = IUser & mongoose.Document;
 
 export const User = mongoose.model<IUserMongoose>("User", new mongoose.Schema({
 	username: {
@@ -38,7 +38,7 @@ export interface IAttendee {
 	checked_in_date?: Date;
 	checked_in_by?: string;
 }
-export interface IAttendeeMongoose extends IAttendee, mongoose.Document {}
+export type IAttendeeMongoose = IAttendee & mongoose.Document;
 
 export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoose.Schema({
 	id: {

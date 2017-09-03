@@ -212,7 +212,7 @@ describe("User endpoints", () => {
 	it("PUT /api/user/update (update current user)", async function () {
 		this.timeout(1000 * 5);
 
-		let user = await User.findOne({"username": testUser.username});
+		let user = await User.findOne({"username": testUser.username}) as IUserMongoose;
 		expect(user.login.hash).to.equal(cachedPassword.hashed);
 		expect(user.login.salt).to.equal(cachedPassword.salt);
 		expect(user.auth_keys).to.not.be.empty;
@@ -233,7 +233,7 @@ describe("User endpoints", () => {
 				expect(request.body.reauth).to.be.true;
 				expect(request.body.created).to.be.false;
 
-				let updatedUser = await User.findOne({"username": testUser.username});
+				let updatedUser = await User.findOne({"username": testUser.username}) as IUserMongoose;
 				let {hash: newHash, salt: newSalt} = updatedUser.login;
 				expect(newHash).to.not.equal(user.login.hash);
 				expect(newSalt).to.not.equal(user.login.salt);
@@ -274,7 +274,7 @@ describe("User endpoints", () => {
 				expect(request.body.reauth).to.be.false;
 				expect(request.body.created).to.be.false;
 
-				let updatedUser = await User.findOne({"username": newUsername});
+				let updatedUser = await User.findOne({"username": newUsername}) as IUserMongoose;
 				let {hash: newHash, salt: newSalt} = updatedUser.login;
 				expect(newHash).to.not.equal(cachedPassword.hashed);
 				expect(newSalt).to.not.equal(cachedPassword.salt);
@@ -306,7 +306,7 @@ describe("User endpoints", () => {
 				expect(request.body.reauth).to.be.false;
 				expect(request.body.created).to.be.true;
 
-				let user = await User.findOne({"username": newUsername});
+				let user = await User.findOne({"username": newUsername}) as IUserMongoose;
 				expect(user).to.exist;
 				expect(user.auth_keys).to.be.empty;
 
@@ -504,8 +504,33 @@ describe("Data endpoints", () => {
 			})
 			.end(done);
 	});
-	it("GET /api/data/export (authenticated)", done => {
+	it("GET /api/data/export (no data)", done => {
 		request(app)
+			.get("/api/data/export")
+			.set("Cookie", testUser.cookie)
+			.expect(400)
+			.expect("Content-Type", /text\/plain/)
+			.end(done);
+	});
+	it("GET /api/data/export (with users)", async () => {
+		let tag = crypto.randomBytes(16).toString("hex");
+		expect(await Attendee.find({ tag })).to.have.length(0);
+
+		const testAttendeeNumber = 25;
+		let testAttendees: IAttendeeMongoose[] = [];
+		for (let i = 0; i < testAttendeeNumber; i++) {
+			testAttendees.push(new Attendee({
+				tag,
+				name: crypto.randomBytes(16).toString("hex"),
+				emails: crypto.randomBytes(16).toString("hex"),
+				checked_in: Math.random() > 0.5,
+				id: crypto.randomBytes(16).toString("hex")
+			}));
+		}
+		await Attendee.insertMany(testAttendees);
+		expect(await Attendee.find({ tag })).to.have.length(testAttendeeNumber);
+
+		return request(app)
 			.get("/api/data/export")
 			.set("Cookie", testUser.cookie)
 			.expect(200)
@@ -514,7 +539,10 @@ describe("Data endpoints", () => {
 			.expect(request => {
 				expect(request.text.replace(/\n/g, ",").replace(/"/g, "").split(",")).to.include.members(["tag","name","emails","checked_in","checked_in_date","checked_in_by","id"]);
 			})
-			.end(done);
+			.then(async request => {
+				await Attendee.remove({ tag });
+				expect(await Attendee.find({ tag })).to.have.length(0);
+			});
 	});
 	it("PUT /api/data/tag/:tag (unauthenticated)", done => {
 		request(app)
@@ -734,7 +762,7 @@ describe("Miscellaneous endpoints", () => {
 			.end(done);
 	});
 	it("GET /api/search (check in status)", async () => {
-		let checkedInAttendee = await Attendee.findOne({"id": attendees[0].id});
+		let checkedInAttendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 		checkedInAttendee.checked_in = true;
 		checkedInAttendee.checked_in_by = testUser.username;
 		checkedInAttendee.checked_in_date = new Date();
@@ -777,7 +805,7 @@ describe("Miscellaneous endpoints", () => {
 				expect(checkedInAttendeeFound).to.be.true;
 
 				// Reset state
-				checkedInAttendee = await Attendee.findOne({"id": attendees[0].id});
+				checkedInAttendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 				checkedInAttendee.checked_in = false;
 				checkedInAttendee.checked_in_by = undefined;
 				checkedInAttendee.checked_in_date = undefined;
@@ -851,7 +879,7 @@ describe("Miscellaneous endpoints", () => {
 			.end(done);
 	});
 	it("POST /api/checkin (check in)", async () => {
-		let attendee = await Attendee.findOne({"id": attendees[0].id});
+		let attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 		expect(attendee).to.exist;
 		expect(attendee.checked_in).to.be.false;
 		expect(attendee.checked_in_by).to.not.exist;
@@ -871,7 +899,7 @@ describe("Miscellaneous endpoints", () => {
 				expect(request.body).to.have.property("success");
 				expect(request.body.success).to.be.true;
 
-				attendee = await Attendee.findOne({"id": attendees[0].id});
+				attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 				expect(attendee).to.exist;
 				expect(attendee.checked_in).to.be.true;
 				expect(attendee.checked_in_by).to.be.a("string");
@@ -885,7 +913,7 @@ describe("Miscellaneous endpoints", () => {
 			});
 	});
 	it("POST /api/checkin (revert check in)", async () => {
-		let attendee = await Attendee.findOne({"id": attendees[0].id});
+		let attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 		expect(attendee).to.exist;
 		attendee.checked_in = true;
 		attendee.checked_in_by = testUser.username;
@@ -906,7 +934,7 @@ describe("Miscellaneous endpoints", () => {
 				expect(request.body).to.have.property("success");
 				expect(request.body.success).to.be.true;
 
-				attendee = await Attendee.findOne({"id": attendees[0].id});
+				attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 				expect(attendee).to.exist;
 				expect(attendee.checked_in).to.be.false;
 				expect(attendee.checked_in_by).to.not.exist;
@@ -921,7 +949,7 @@ describe("Miscellaneous endpoints", () => {
 			let shouldReceiveMessage: boolean = false;
 			ws.on("open", async () => {
 				// Initiate check in request
-				let attendee = await Attendee.findOne({"id": attendees[0].id});
+				let attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 				expect(attendee).to.exist;
 				expect(attendee.checked_in).to.be.false;
 				expect(attendee.checked_in_by).to.not.exist;
@@ -939,7 +967,7 @@ describe("Miscellaneous endpoints", () => {
 						expect(request.body).to.have.property("success");
 						expect(request.body.success).to.be.true;
 
-						attendee = await Attendee.findOne({"id": attendees[0].id});
+						attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 						attendee.checked_in = false;
 						attendee.checked_in_by = undefined;
 						attendee.checked_in_date = undefined;

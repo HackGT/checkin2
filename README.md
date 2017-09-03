@@ -1,4 +1,4 @@
-# Ultimate Checkin
+# Checkin
 
 <a href="https://zenhub.com"><img src="https://raw.githubusercontent.com/ZenHubIO/support/master/zenhub-badge.png"></a>
 
@@ -23,15 +23,14 @@ Check in status is kept synchronized across multiple open instances in real-time
 A [Dockerfile](Dockerfile) is provided for convenience.
 
     npm install # Install required dependencies
-    npm install -g typescript # Install the TypeScript compiler
-    tsc # Compile
+    npm run build # Compile
+    npm test # Optional: run tests
     npm start
 
 Environment Variable | Description
 ---------------------|------------
 PORT | The port the check in system should run on (default: `3000`)
-MONGO_URL | The URL to the MongoDB server (default: `mongodb://localhost/`)
-UNIQUE_APP_ID | The MongoDB database name to store data in (default: `ultimate-checkin`)
+MONGO_URL | The URL to the MongoDB server including the database (default: `mongodb://localhost/checkin`)
 
 On first start up, the server will automatically generate a default user with which to log in and add users and print the credentials to STOUT. **Make sure to delete this user or change its password from the default once you are done.**
 
