@@ -213,9 +213,9 @@ describe("User endpoints", () => {
 		this.timeout(1000 * 5);
 
 		let user = await User.findOne({"username": testUser.username});
-		expect(user.login.hash).to.equal(cachedPassword.hashed);
-		expect(user.login.salt).to.equal(cachedPassword.salt);
-		expect(user.auth_keys).to.not.be.empty;
+		expect(user!.login.hash).to.equal(cachedPassword.hashed);
+		expect(user!.login.salt).to.equal(cachedPassword.salt);
+		expect(user!.auth_keys).to.not.be.empty;
 
 		return request(app)
 			.put("/api/user/update")
@@ -234,10 +234,10 @@ describe("User endpoints", () => {
 				expect(request.body.created).to.be.false;
 
 				let updatedUser = await User.findOne({"username": testUser.username});
-				let {hash: newHash, salt: newSalt} = updatedUser.login;
-				expect(newHash).to.not.equal(user.login.hash);
-				expect(newSalt).to.not.equal(user.login.salt);
-				expect(updatedUser.auth_keys).to.be.empty;
+				let {hash: newHash, salt: newSalt} = updatedUser!.login;
+				expect(newHash).to.not.equal(user!.login!.hash);
+				expect(newSalt).to.not.equal(user!.login!.salt);
+				expect(updatedUser!.auth_keys).to.be.empty;
 
 				// Return to original state
 				await removeTestUser();
@@ -275,10 +275,10 @@ describe("User endpoints", () => {
 				expect(request.body.created).to.be.false;
 
 				let updatedUser = await User.findOne({"username": newUsername});
-				let {hash: newHash, salt: newSalt} = updatedUser.login;
+				let {hash: newHash, salt: newSalt} = updatedUser!.login;
 				expect(newHash).to.not.equal(cachedPassword.hashed);
 				expect(newSalt).to.not.equal(cachedPassword.salt);
-				expect(updatedUser.auth_keys).to.be.empty;
+				expect(updatedUser!.auth_keys).to.be.empty;
 
 				// Return to original state
 				await User.remove({"username": newUsername});
@@ -308,7 +308,7 @@ describe("User endpoints", () => {
 
 				let user = await User.findOne({"username": newUsername});
 				expect(user).to.exist;
-				expect(user.auth_keys).to.be.empty;
+				expect(user!.auth_keys).to.be.empty;
 
 				// Return to original state
 				await User.remove({"username": newUsername});
@@ -735,10 +735,10 @@ describe("Miscellaneous endpoints", () => {
 	});
 	it("GET /api/search (check in status)", async () => {
 		let checkedInAttendee = await Attendee.findOne({"id": attendees[0].id});
-		checkedInAttendee.checked_in = true;
-		checkedInAttendee.checked_in_by = testUser.username;
-		checkedInAttendee.checked_in_date = new Date();
-		await checkedInAttendee.save();
+		checkedInAttendee!.checked_in = true;
+		checkedInAttendee!.checked_in_by = testUser.username;
+		checkedInAttendee!.checked_in_date = new Date();
+		await checkedInAttendee!.save();
 
 		return request(app)
 			.get("/api/search")
@@ -778,10 +778,10 @@ describe("Miscellaneous endpoints", () => {
 
 				// Reset state
 				checkedInAttendee = await Attendee.findOne({"id": attendees[0].id});
-				checkedInAttendee.checked_in = false;
-				checkedInAttendee.checked_in_by = undefined;
-				checkedInAttendee.checked_in_date = undefined;
-				await checkedInAttendee.save();
+				checkedInAttendee!.checked_in = false;
+				checkedInAttendee!.checked_in_by = undefined;
+				checkedInAttendee!.checked_in_date = undefined;
+				await checkedInAttendee!.save();
 			});
 	});
 	it("GET /api/search (tag)", done => {
@@ -853,9 +853,9 @@ describe("Miscellaneous endpoints", () => {
 	it("POST /api/checkin (check in)", async () => {
 		let attendee = await Attendee.findOne({"id": attendees[0].id});
 		expect(attendee).to.exist;
-		expect(attendee.checked_in).to.be.false;
-		expect(attendee.checked_in_by).to.not.exist;
-		expect(attendee.checked_in_date).to.not.exist;
+		expect(attendee!.checked_in).to.be.false;
+		expect(attendee!.checked_in_by).to.not.exist;
+		expect(attendee!.checked_in_date).to.not.exist;
 
 		return request(app)
 			.post("/api/checkin")
@@ -873,24 +873,24 @@ describe("Miscellaneous endpoints", () => {
 
 				attendee = await Attendee.findOne({"id": attendees[0].id});
 				expect(attendee).to.exist;
-				expect(attendee.checked_in).to.be.true;
-				expect(attendee.checked_in_by).to.be.a("string");
-				expect(attendee.checked_in_by).to.equal(testUser.username);
-				expect(attendee.checked_in_date).to.be.an.instanceOf(Date);
+				expect(attendee!.checked_in).to.be.true;
+				expect(attendee!.checked_in_by).to.be.a("string");
+				expect(attendee!.checked_in_by).to.equal(testUser.username);
+				expect(attendee!.checked_in_date).to.be.an.instanceOf(Date);
 
-				attendee.checked_in = false;
-				attendee.checked_in_by = undefined;
-				attendee.checked_in_date = undefined;
-				await attendee.save();
+				attendee!.checked_in = false;
+				attendee!.checked_in_by = undefined;
+				attendee!.checked_in_date = undefined;
+				await attendee!.save();
 			});
 	});
 	it("POST /api/checkin (revert check in)", async () => {
 		let attendee = await Attendee.findOne({"id": attendees[0].id});
 		expect(attendee).to.exist;
-		attendee.checked_in = true;
-		attendee.checked_in_by = testUser.username;
-		attendee.checked_in_date = new Date();
-		await attendee.save();
+		attendee!.checked_in = true;
+		attendee!.checked_in_by = testUser.username;
+		attendee!.checked_in_date = new Date();
+		await attendee!.save();
 
 		return request(app)
 			.post("/api/checkin")
@@ -908,9 +908,9 @@ describe("Miscellaneous endpoints", () => {
 
 				attendee = await Attendee.findOne({"id": attendees[0].id});
 				expect(attendee).to.exist;
-				expect(attendee.checked_in).to.be.false;
-				expect(attendee.checked_in_by).to.not.exist;
-				expect(attendee.checked_in_date).to.not.exist;
+				expect(attendee!.checked_in).to.be.false;
+				expect(attendee!.checked_in_by).to.not.exist;
+				expect(attendee!.checked_in_date).to.not.exist;
 			});
 	});
 	it("POST /api/checkin (WebSockets notifications)", async () => {
@@ -923,9 +923,9 @@ describe("Miscellaneous endpoints", () => {
 				// Initiate check in request
 				let attendee = await Attendee.findOne({"id": attendees[0].id});
 				expect(attendee).to.exist;
-				expect(attendee.checked_in).to.be.false;
-				expect(attendee.checked_in_by).to.not.exist;
-				expect(attendee.checked_in_date).to.not.exist;
+				expect(attendee!.checked_in).to.be.false;
+				expect(attendee!.checked_in_by).to.not.exist;
+				expect(attendee!.checked_in_date).to.not.exist;
 				shouldReceiveMessage = true;
 				request(app)
 					.post("/api/checkin")
@@ -940,10 +940,10 @@ describe("Miscellaneous endpoints", () => {
 						expect(request.body.success).to.be.true;
 
 						attendee = await Attendee.findOne({"id": attendees[0].id});
-						attendee.checked_in = false;
-						attendee.checked_in_by = undefined;
-						attendee.checked_in_date = undefined;
-						await attendee.save();
+						attendee!.checked_in = false;
+						attendee!.checked_in_by = undefined;
+						attendee!.checked_in_date = undefined;
+						await attendee!.save();
 					})
 					.catch(reason => {
 						reject({ "message": "Check in request failed. Are you authenticated correctly?", "raw": reason });
