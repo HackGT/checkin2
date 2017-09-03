@@ -54,7 +54,7 @@ let cookieParserInstance = cookieParser(undefined, {
 	"maxAge": 1000 * 60 * 60 * 24 * 30 * 6, // 6 months
 	"secure": false,
 	"httpOnly": true
-});
+} as cookieParser.CookieParseOptions);
 app.use(cookieParserInstance);
 
 (mongoose as any).Promise = global.Promise;
