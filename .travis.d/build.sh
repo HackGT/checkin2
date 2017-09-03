@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# HACKGPROJECT VERSION: 2bc55e5a25fe862aa51aebfc3136951b5c0fe13d
+# HACKGPROJECT VERSION: 18afeecdafdf3cbb40f6246bbb4d57d71508d74b
 set -euo pipefail
 PROJECT_TYPE="deployment"
-ORG_NAME="HackGT"
+ORG_NAME_CASE_PRESERVE="HackGT"
+ORG_NAME=$(echo "${ORG_NAME_CASE_PRESERVE}" | tr '[:upper:]' '[:lower:]')
 SOURCE_DIR=$(readlink -f "${BASH_SOURCE[0]}")
 SOURCE_DIR=$(dirname "$SOURCE_DIR")
 cd "${SOURCE_DIR}/.."
@@ -22,6 +23,7 @@ fi
 
 remote=$(git remote -v | grep -Pio "${ORG_NAME}"'/[a-zA-Z0-9-_\.]*' | head -1)
 image_name=$(basename "${remote%.*}")
+image_name=$(echo "$image_name" | tr '[:upper:]' '[:lower:]')
 
 build_project_source() {
     if [[ -f Dockerfile.build ]]; then
@@ -47,11 +49,23 @@ build_project_container() {
     $docker build -f Dockerfile --rm -t "$image_name" .
 }
 
+git_branch() {
+    if [[ ${TRAVIS_PULL_REQUEST_BRANCH} ]]; then
+        echo "${TRAVIS_PULL_REQUEST_BRANCH}"
+    else
+        echo "${TRAVIS_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}"
+    fi
+}
+
+git_branch_id() {
+    git_branch | sed 's/[^0-9a-zA-Z_-]/-/g'
+}
+
 publish_project_container() {
     local git_rev
     local branch
     git_rev=$(git rev-parse HEAD)
-    branch=${TRAVIS_BRANCH:-$(git rev-parse --abbrev-ref HEAD)}
+    branch=$(git_branch_id)
     local latest_tag_name="latest"
     local push_image_name="${DOCKER_ID_USER}/${image_name}"
     if [[ $branch != master ]]; then
@@ -76,16 +90,7 @@ trigger_biodomes_build() {
          -H "Travis-API-Version: 3" \
          -H "Authorization: token ${TRAVIS_TOKEN}" \
          -d "$body" \
-         https://api.travis-ci.org/repo/${ORG_NAME}%2Fbiodomes/requests
-}
-
-install_jekyll() {
-    gem install jekyll
-    bundle install
-}
-
-build_jekyll() {
-    bundle exec jekyll build
+         https://api.travis-ci.org/repo/${ORG_NAME_CASE_PRESERVE}%2Fbiodomes/requests
 }
 
 commit_to_branch() {
@@ -93,8 +98,8 @@ commit_to_branch() {
     local git_rev
     branch="${1:-gh-pages}"
     git_rev=$(git rev-parse --short HEAD)
-    git config user.name 'Michael Eden'
-    git config user.email 'themichaeleden@gmail.com'
+    git config user.name 'HackGBot'
+    git config user.email 'thehackgt@gmail.com'
     git remote remove origin
     git remote add origin \
         "https://${GH_TOKEN}@github.com/${ORG_NAME}/${image_name}.git"
