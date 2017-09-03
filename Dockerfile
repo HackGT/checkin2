@@ -7,6 +7,5 @@ WORKDIR /usr/src/checkin
 # Bundle app source
 COPY . /usr/src/checkin
 RUN npm install
-RUN npm install -g typescript
-RUN tsc
+RUN npm run build
 CMD ["npm", "start"]
