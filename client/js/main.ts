@@ -67,6 +67,16 @@ function readURLHash() {
 readURLHash();
 window.addEventListener("hashchange", readURLHash);
 
+interface ITagItem {
+	checked_in: boolean,
+	checked_in_date?: Date,
+	checked_in_by?: string
+}
+
+interface ITags {
+	[key: string]: ITagItem
+}
+
 interface IAttendee {
 	reverted?: boolean;
 	id: string;
@@ -76,6 +86,7 @@ interface IAttendee {
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
+	tags?: ITags
 }
 
 function delay (milliseconds: number) {
@@ -95,10 +106,12 @@ function checkIn (e: Event) {
 	let button = (<HTMLButtonElement> e.target)!;
 	let isCheckedIn: boolean = button.classList.contains("checked-in");
 	button.disabled = true;
+	let tag: string = tagSelector.value;
 	
 	qwest.post("/api/checkin", {
 		id: button.parentElement!.parentElement!.id.slice(5),
-		revert: isCheckedIn ? "true" : "false"
+		revert: isCheckedIn ? "true" : "false",
+		tag: tag
 	}).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {
@@ -232,10 +245,10 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 				
 				let button = existingNodes[i].querySelector(".actions > button")!;
 				let status = existingNodes[i].querySelector(".actions > span.status")!;
-				if (attendee.checked_in_date) {
+				if (attendee.tags[tag].checked_in_date) {
 					button.textContent = "Uncheck in";
 					button.classList.add("checked-in");
-					status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+					status.innerHTML = statusFormatter(attendee.tags[tag].checked_in_date, attendee.tags[tag].checked_in_by);
 				}
 				else {
 					button.textContent = "Check in";
@@ -372,6 +385,7 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 // Listen for updates
 const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
 function startWebSocketListener() {
+	let tag: string = tagSelector.value;
 	const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
 	socket.addEventListener("message", (event) => {
 		if (!States["checkin"].isDisplayed)
@@ -386,10 +400,10 @@ function startWebSocketListener() {
 		}
 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
-		if (!attendee.reverted && attendee.checked_in_date) {
+		if (!attendee.reverted && attendee.tags[tag].checked_in_date) {
 			button.textContent = "Uncheck in";
 			button.classList.add("checked-in");
-			status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+			status.innerHTML = statusFormatter(attendee.tags[tag].checked_in_date, attendee.tags[tag].checked_in_by);
 		}
 		else {
 			button.textContent = "Check in";
