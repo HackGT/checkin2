@@ -145,12 +145,8 @@ let authenticateWithRedirect = async function (request: express.Request, respons
 
 function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
 	return {
-		tag: attendee.tag,
 		name: attendee.name,
 		emails: attendee.emails,
-		checked_in: attendee.checked_in,
-		checked_in_date: attendee.checked_in_date,
-		checked_in_by: attendee.checked_in_by,
 		id: attendee.id,
 		tags: attendee.tags
 	};
@@ -356,10 +352,8 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 				}
 
 				attendeeData.push({
-					tag: tag,
 					name: name,
 					emails: emails,
-					checked_in: false,
 					id: crypto.randomBytes(16).toString("hex"),
 					tags: tags
 				});
@@ -480,7 +474,14 @@ apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async 
 	let tag: string = request.params.tag;
 
 	try {
-		await Attendee.find({"tag": tag}).remove();
+		let query = {};
+		query["tags." + tag] = {$exists: true};
+		let unset = {};
+		unset["tags." + tag] = 1;
+		//remove from the tags object
+		await Attendee.update(query, {$unset: unset}, {multi: true});
+		// remove attendees that now have no tags
+		await Attendee.remove({'tags': {}});
 		response.status(200).json({
 			"success": true
 		});
