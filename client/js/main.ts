@@ -51,7 +51,8 @@ class State {
 const States: { [key: string]: State } = {
 	"checkin": new State("open-checkin", "checkin"),
 	"attendees": new State("open-attendees", "import"),
-	"users": new State("open-users", "manage-users")
+	"users": new State("open-users", "manage-users"),
+	"tags": new State("open-tags", "edit-tags")
 };
 
 // Set the correct state on page load
@@ -79,6 +80,7 @@ interface ITags {
 
 interface IAttendee {
 	reverted?: boolean;
+	updatedTag?: string,
 	id: string;
 	name: string;
 	emails: string[];
@@ -383,20 +385,90 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 	});
 });
 
+let tagQueryField= <HTMLInputElement> document.getElementById("tag-attendees-query")!;
+tagQueryField.addEventListener("keyup", e => {
+	let query: string = tagQueryField.value;
+	let datalist = document.getElementById("autocomplete-attendees")!;
+
+	qwest.get("/api/search", {
+		q: query
+	}).then((xhr, response: IAttendee[]) => {
+		let currentChoices = Array.prototype.slice.call(document.querySelectorAll("#autocomplete-attendees option"));
+		currentChoices = currentChoices.map(option => { return option.value; });
+		let newChoices: IAttendee[] = response.filter(attendee => { return currentChoices.indexOf(attendee.id) === -1; });
+		for (let i = 0; i < newChoices.length; i++) {
+			let option = document.createElement("option");
+			option.value = newChoices[i].id;
+			option.textContent = newChoices[i].name;
+			datalist.appendChild(option);
+		}
+	}).catch((e, xhr, response) => {
+		alert(response.error);
+	});
+});
+
+document.getElementById("add-new-tag")!.addEventListener("click", e => {
+	let button = (<HTMLButtonElement> e.target)!;
+	button.disabled = true;
+
+	let ids = ["new-tag-name", "tag-attendees-query"];
+	let [tagInput, attendeeInput] = ids.map(id => <HTMLInputElement> document.getElementById(id));
+	if (!tagInput.value.trim()) {
+		alert("Please enter a tag");
+		button.disabled = false;
+		return;
+	}
+
+	let tag: string = tagInput.value.trim().toLowerCase();
+	qwest.put(`/api/data/addTag/${tag}`, {
+		currentTag: attendeeInput.value.indexOf("tag: ") === 0 ? attendeeInput.value.replace("tag: ", "") : "",
+		id: attendeeInput.value.indexOf("tag: ") !== 0 ? attendeeInput.value : ""
+	}).then((xhr, response) => {
+		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => { return el.textContent; });
+		//Add to tag selectors
+		if (tags.indexOf(tag) === -1) {
+			let tagsList = document.querySelectorAll("select.tags"); 
+			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+				let option = document.createElement("option");
+				option.textContent = tag;
+				el.appendChild(option);
+			});
+		}
+
+		// Clear the form
+		[tagInput, attendeeInput].forEach((el) => {
+			el.value = el.defaultValue;
+		});
+
+		ids.forEach(id => {
+			document.querySelector(`label[for="${id}"]`)!.classList.remove("mdc-textfield__label--float-above");
+		});
+		alert("Successfully added tag to attendee(s)!");
+	}).catch((e, xhr, response) => {
+		alert(response.error);
+	}).complete(() => {
+		button.disabled = false;
+	});	
+});
+
 // Listen for updates
 const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
 function startWebSocketListener() {
-	let tag: string = tagSelector.value;
 	const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
 	socket.addEventListener("message", (event) => {
 		if (!States["checkin"].isDisplayed)
 			return;
-		
+
+		let tag: string = tagSelector.value;
 		let attendee: IAttendee = JSON.parse(event.data);
 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
 		if (!button) {
 			// This attendee belongs to a tag that isn't currently being shown
 			// This message can safely be ignored; the user list will be updated when switching tags
+			return;
+		}
+		if (tag != attendee.updatedTag) {
+			// Check if the currently displayed tag is the tag that was just updated
 			return;
 		}
 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;

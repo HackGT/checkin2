@@ -48,6 +48,10 @@
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">playlist_add</i>
 						Add attendees
 					</a>
+					<a class="mdc-list-item" href="#tags" id="open-tags">
+						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">mode_edit</i>
+						Edit tags
+					</a>					
 					<a class="mdc-list-item" href="#">
 						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">delete_sweep</i>
 						<select class="mdc-list-item tags" id="tag-delete">
@@ -188,6 +192,35 @@
 								</li>
 							{{/each}}
 						</ul>
+					</div>
+				</div>
+			</section>
+			<section id="edit-tags" style="display: none;">
+				<div class="card">
+					<div class="card-content">
+						<section class="center">
+							<h1 class="mdc-typography--headline">Edit Tags</h1>
+							<p>Add new tags or existing tags users</p>
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="text" id="new-tag-name" list="autocomplete-tags">
+								<datalist id="autocomplete-tags">
+									{{#each tags}}
+										<option value="{{this}}"></option>
+									{{/each}}
+								</datalist>
+								<label class="mdc-textfield__label" for="new-tag-name">Tag</label>
+							</div>
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="text" id="tag-attendees-query" list="autocomplete-attendees">
+								<datalist id="autocomplete-attendees">
+									{{#each tags}}
+										<option value="tag: {{this}}">Attendees with {{this}} tag</option>
+									{{/each}}
+								</datalist>
+								<label class="mdc-textfield__label" for="tag-attendees-query">Attendees (search by name, email, or tag)</label>
+							</div>
+							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-new-tag">Add</button>
+						</section>
 					</div>
 				</div>
 			</section>

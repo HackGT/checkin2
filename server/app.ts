@@ -530,9 +530,11 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 		return 0;
 	});
 	// Filter by tag specified
-	filteredAttendees = filteredAttendees.filter(attendee => {
-		return attendee.tags.hasOwnProperty(tag);
-	});
+	if (tag) {
+		filteredAttendees = filteredAttendees.filter(attendee => {
+			return attendee.tags.hasOwnProperty(tag);
+		});
+	}
 	// Filter by check in status if specified
 	if (checkinStatus) {
 		let checkedIn: boolean = checkinStatus === "true";
@@ -588,6 +590,7 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 		await attendee.save();
 		let updateData = JSON.stringify({
 			...simplifyAttendee(attendee),
+			updatedTag: tag,
 			reverted: shouldRevert
 		});
 		wss.clients.forEach(function each(client) {
@@ -603,6 +606,48 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 		console.error(e);
 		response.status(500).json({
 			"error": "An error occurred while processing check in"
+		});
+	}
+});
+
+apiRouter.route("/data/addTag/:tag").put(authenticateWithReject, postParser, async (request, response) => {
+	let tag: string = request.params.tag;
+	let currentTag: string = request.body.currentTag || "";
+	let id: string = request.body.id || "";
+	if (!(id || currentTag)) {
+		response.status(400).json({
+			"error": "Must provide attendee ID or existing tag"
+		});
+		return;
+	}
+	let query = {};
+	if (currentTag) {
+		query["tags." + currentTag] = {$exists: true};
+	}
+	if (id) {
+		query = {id: id};
+	}
+	let attendees = await Attendee.find(query);
+	if (!attendees.length) {
+		response.status(400).json({
+			"error": "Invalid tag or attendee ID"
+		});
+		return;
+	}
+	// Only add tag to attendees that currently don't already have the tag
+	query["tags." + tag] = {$exists: false};
+	let update: ITags = {};
+	update["tags." + tag] = {checked_in: false};
+	try {
+		await Attendee.update(query, update, {multi: true});
+		response.status(200).json({
+			"success": true
+		});
+	}
+	catch (e) {
+		console.log(e);
+		response.status(500).json({
+			"error": "An error occurred while adding tag to attendees"
 		});
 	}
 });
