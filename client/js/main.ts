@@ -388,8 +388,12 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 // Add options for attendees that we can add tags to
 let tagQueryField= <HTMLInputElement> document.getElementById("tag-attendees-query")!;
 tagQueryField.addEventListener("keyup", e => {
-	let query: string = tagQueryField.value;
+	let query: string = tagQueryField.value.trim();
 	let datalist = document.getElementById("autocomplete-attendees")!;
+
+	if (query.length === 0) {
+		return;
+	}
 
 	qwest.get("/api/search", {
 		q: query
