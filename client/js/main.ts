@@ -394,12 +394,13 @@ tagQueryField.addEventListener("keyup", e => {
 		q: query
 	}).then((xhr, response: IAttendee[]) => {
 		let currentChoices = Array.prototype.slice.call(document.querySelectorAll("#autocomplete-attendees option"));
-		currentChoices = currentChoices.map(option => { return option.value; });
+		currentChoices = currentChoices.map(option => { return option.dataset.id; });
 		let newChoices: IAttendee[] = response.filter(attendee => { return currentChoices.indexOf(attendee.id) === -1; });
 		for (let i = 0; i < newChoices.length; i++) {
 			let option = document.createElement("option");
-			option.value = newChoices[i].id;
-			option.textContent = newChoices[i].name;
+			option.value = newChoices[i].name;
+			option.textContent = newChoices[i].emails.join(", ");
+			option.dataset.id = newChoices[i].id;
 			datalist.appendChild(option);
 		}
 	}).catch((e, xhr, response) => {
@@ -419,10 +420,22 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		return;
 	}
 
+	let attendeeVal: string = attendeeInput.value.trim();
+	let selected =  <HTMLElement>document.querySelector("#autocomplete-attendees option[value='"+ attendeeVal +"']");
+
+	if (!selected) {
+		alert("Please choose a valid option for attendees.");
+		button.disabled = false;
+		return;
+	}
+
+	let attendeeTag: string = selected.dataset.tag || "";
+	let attendeeId: string = selected.dataset.id || "";
+
 	let tag: string = tagInput.value.trim().toLowerCase();
 	qwest.put(`/api/data/addTag/${tag}`, {
-		currentTag: attendeeInput.value.indexOf("tag: ") === 0 ? attendeeInput.value.replace("tag: ", "") : "",
-		id: attendeeInput.value.indexOf("tag: ") !== 0 ? attendeeInput.value : ""
+		currentTag: attendeeTag,
+		id: attendeeId
 	}).then((xhr, response) => {
 		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => { return el.textContent; });
 		//Add to tag selectors

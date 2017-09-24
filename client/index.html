@@ -214,7 +214,7 @@
 								<input class="mdc-textfield__input" type="text" id="tag-attendees-query" list="autocomplete-attendees">
 								<datalist id="autocomplete-attendees">
 									{{#each tags}}
-										<option value="tag: {{this}}">Attendees with {{this}} tag</option>
+										<option value="Attendees with {{this}} tag" data-tag="{{this}}"></option>
 									{{/each}}
 								</datalist>
 								<label class="mdc-textfield__label" for="tag-attendees-query">Attendees (search by name, email, or tag)</label>
