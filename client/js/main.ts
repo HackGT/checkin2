@@ -385,6 +385,7 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 	});
 });
 
+// Add options for attendees that we can add tags to
 let tagQueryField= <HTMLInputElement> document.getElementById("tag-attendees-query")!;
 tagQueryField.addEventListener("keyup", e => {
 	let query: string = tagQueryField.value;
@@ -408,6 +409,7 @@ tagQueryField.addEventListener("keyup", e => {
 	});
 });
 
+// Add tags to users
 document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	let button = (<HTMLButtonElement> e.target)!;
 	button.disabled = true;
@@ -420,6 +422,7 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		return;
 	}
 
+	// Match input value to tag/id
 	let attendeeVal: string = attendeeInput.value.trim();
 	let selected =  <HTMLElement>document.querySelector("#autocomplete-attendees option[value='"+ attendeeVal +"']");
 
@@ -438,7 +441,7 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		id: attendeeId
 	}).then((xhr, response) => {
 		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => { return el.textContent; });
-		//Add to tag selectors
+		// Add to tag selectors
 		if (tags.indexOf(tag) === -1) {
 			let tagsList = document.querySelectorAll("select.tags"); 
 			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
