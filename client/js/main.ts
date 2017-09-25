@@ -317,6 +317,12 @@ document.getElementById("import-attendees")!.addEventListener("click", e => {
 					tagOption.textContent = curr;
 					el.appendChild(tagOption);
 				});
+				// Add to the selector in the edit tag panel
+				let editTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
+				let tagOption = document.createElement("option");
+				tagOption.textContent = `Attendees with ${curr} tag`;
+				tagOption.value = curr;
+				editTagSelect.appendChild(tagOption);
 			}
 		}
 		alert("Successfully imported attendees");
@@ -370,6 +376,29 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 		"name": nameInput.value.trim(),
 		"email": emailInput.value.replace(/, /g, ",").trim()
 	}).then(() => {
+		// Get current list of tags
+		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => {
+			return el.textContent;
+		});
+		// Add new tags to the options list
+		let newTags: string[] = tagInput.value.trim().split(",").map((t) => { return t.trim().toLowerCase(); });
+		for (let i = 0; i < newTags.length; i++) {
+			let curr: string = newTags[i];
+			if (tags.indexOf(curr) === -1) {
+				let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
+				Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+					let tagOption = document.createElement("option");
+					tagOption.textContent = curr;
+					el.appendChild(tagOption);
+				});
+				// Add to the selector in the edit tag panel
+				let editTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
+				let tagOption = document.createElement("option");
+				tagOption.textContent = `Attendees with ${curr} tag`;
+				tagOption.value = curr;
+				editTagSelect.appendChild(tagOption);
+			}
+		}
 		// Clear the form
 		[tagInput, nameInput, emailInput].forEach((el) => {
 			el.value = el.defaultValue;
@@ -385,64 +414,28 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 	});
 });
 
-// Add options for attendees that we can add tags to
-let tagQueryField= <HTMLInputElement> document.getElementById("tag-attendees-query")!;
-tagQueryField.addEventListener("keyup", e => {
-	let query: string = tagQueryField.value.trim();
-	let datalist = document.getElementById("autocomplete-attendees")!;
-
-	if (query.length === 0) {
-		return;
-	}
-
-	qwest.get("/api/search", {
-		q: query
-	}).then((xhr, response: IAttendee[]) => {
-		let currentChoices = Array.prototype.slice.call(document.querySelectorAll("#autocomplete-attendees option"));
-		currentChoices = currentChoices.map(option => { return option.dataset.id; });
-		let newChoices: IAttendee[] = response.filter(attendee => { return currentChoices.indexOf(attendee.id) === -1; });
-		for (let i = 0; i < newChoices.length; i++) {
-			let option = document.createElement("option");
-			option.value = newChoices[i].name;
-			option.textContent = newChoices[i].emails.join(", ");
-			option.dataset.id = newChoices[i].id;
-			datalist.appendChild(option);
-		}
-	}).catch((e, xhr, response) => {
-		alert(response.error);
-	});
-});
-
 // Add tags to users
 document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	let button = (<HTMLButtonElement> e.target)!;
 	button.disabled = true;
 
-	let ids = ["new-tag-name", "tag-attendees-query"];
-	let [tagInput, attendeeInput] = ids.map(id => <HTMLInputElement> document.getElementById(id));
-	if (!tagInput.value.trim()) {
-		alert("Please enter a tag");
+	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
+	let currentTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
+	
+	let currentTag:string = currentTagSelect.options[currentTagSelect.selectedIndex].value;
+	if (!currentTag) {
+		alert("Please select a valid tag");
 		button.disabled = false;
-		return;
+		return; 
 	}
-
-	// Match input value to tag/id
-	let attendeeVal: string = attendeeInput.value.trim();
-	let selected =  <HTMLElement>document.querySelector("#autocomplete-attendees option[value='"+ attendeeVal +"']");
-
-	if (!selected) {
-		alert("Please choose a valid option for attendees.");
-		button.disabled = false;
-		return;
-	}
-
-	let attendeeTag: string = selected.dataset.tag || "";
-	let attendeeId: string = selected.dataset.id || "";
-
 	let tag: string = tagInput.value.trim().toLowerCase();
+	if (!tag) {
+		alert("Please enter a tag name");
+		button.disabled = false;
+		return;
+	}
 	qwest.put(`/api/data/addTag/${tag}`, {
-		currentTag: attendeeTag,
-		id: attendeeId
+		currentTag: currentTag
 	}).then((xhr, response) => {
 		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => { return el.textContent; });
 		// Add to tag selectors
@@ -456,13 +449,11 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		}
 
 		// Clear the form
-		[tagInput, attendeeInput].forEach((el) => {
-			el.value = el.defaultValue;
-		});
+		tagInput.value = tagInput.defaultValue;
+		currentTagSelect.options[0].selected = true;
 
-		ids.forEach(id => {
-			document.querySelector(`label[for="${id}"]`)!.classList.remove("mdc-textfield__label--float-above");
-		});
+		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
+
 		alert("Successfully added tag to attendee(s)!");
 	}).catch((e, xhr, response) => {
 		alert(response.error);

@@ -103,7 +103,7 @@
 
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
 								<input class="mdc-textfield__input" type="text" id="import-tag">
-								<label class="mdc-textfield__label" for="import-tag">Tags for this import (comma delimited)</label>
+								<label class="mdc-textfield__label" for="import-tag">Tag(s) for this import (comma delimited)</label>
 							</div>
 							
 							<input class="mdc-textfield__input" type="file" name="import">
@@ -135,7 +135,7 @@
 										<option value="{{this}}"></option>
 									{{/each}}
 								</datalist>
-								<label class="mdc-textfield__label" for="add-tag">Tags (comma delimited)</label>
+								<label class="mdc-textfield__label" for="add-tag">Tag(s) (comma delimited)</label>
 							</div>
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
 								<input class="mdc-textfield__input" type="text" id="add-name">
@@ -199,8 +199,8 @@
 				<div class="card">
 					<div class="card-content">
 						<section class="center">
-							<h1 class="mdc-typography--headline">Edit Tags</h1>
-							<p>Add new tags or existing tags users</p>
+							<h1 class="mdc-typography--headline">Add Tags</h1>
+							<p>Add tags to groups of attendees</p>
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
 								<input class="mdc-textfield__input" type="text" id="new-tag-name" list="autocomplete-tags">
 								<datalist id="autocomplete-tags">
@@ -210,15 +210,12 @@
 								</datalist>
 								<label class="mdc-textfield__label" for="new-tag-name">Tag</label>
 							</div>
-							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="tag-attendees-query" list="autocomplete-attendees">
-								<datalist id="autocomplete-attendees">
-									{{#each tags}}
-										<option value="Attendees with {{this}} tag" data-tag="{{this}}"></option>
-									{{/each}}
-								</datalist>
-								<label class="mdc-textfield__label" for="tag-attendees-query">Attendees (search by name, email, or tag)</label>
-							</div>
+							<select class="mdc-select" id="current-tag" role="listbox">
+								<option selected disabled hidden>Select attendees</option>
+							    {{#each tags}}
+							    	<option value="{{this}}">Attendees with {{this}} tag</option>
+							    {{/each}}
+							</select>
 							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-new-tag">Add</button>
 						</section>
 					</div>

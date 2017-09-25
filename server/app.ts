@@ -610,32 +610,20 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 	}
 });
 
-// Endpoint for adding tags to existing attendees
+// Endpoint for adding tags to existing groups of attendees
 apiRouter.route("/data/addTag/:tag").put(authenticateWithReject, postParser, async (request, response) => {
 	let tag: string = request.params.tag;
-	let currentTag: string = request.body.currentTag || "";
-	let id: string = request.body.id || "";
-	if (!(id || currentTag)) {
+	let currentTag: string = request.body.currentTag;
+	if (!currentTag) {
 		response.status(400).json({
-			"error": "Must provide attendee ID or existing tag"
+			"error": "Must provide existing tag"
 		});
 		return;
 	}
 	let query = {};
-	if (currentTag) {
-		query["tags." + currentTag] = {$exists: true};
-	}
-	if (id) {
-		query = {id: id};
-	}
-	let attendees = await Attendee.find(query);
-	if (!attendees.length) {
-		response.status(400).json({
-			"error": "Invalid tag or attendee ID"
-		});
-		return;
-	}
-	// Only add tag to attendees that currently don't already have the tag
+	query["tags." + currentTag] = {$exists: true};
+
+	// Only add tag to attendees that don't already have the tag
 	query["tags." + tag] = {$exists: false};
 	let update: ITags = {};
 	update["tags." + tag] = {checked_in: false};
