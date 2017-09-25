@@ -478,7 +478,7 @@ function startWebSocketListener() {
 			// This message can safely be ignored; the user list will be updated when switching tags
 			return;
 		}
-		if (tag != attendee.updatedTag) {
+		if (tag !== attendee.updatedTag) {
 			// Check if the currently displayed tag is the tag that was just updated
 			return;
 		}

@@ -453,10 +453,8 @@ apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async 
 
 	try {
 		await new Attendee({
-			tag,
 			name,
 			emails,
-			checked_in: false,
 			id: crypto.randomBytes(16).toString("hex"),
 			tags: tags
 		}).save();
