@@ -411,12 +411,20 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 });
 
 apiRouter.route("/data/export").get(authenticateWithReject, async (request, response) => {
+	let tag: string = request.body.tag;
+	if (!tag) {
+		response.status(400).json({
+			"error": "Missing tag for export"
+		});
+	}
+	let query = {};
+	query["tags." + tag] = {$exists: true};
 	try {
-		let attendees: IAttendeeMongoose[] = await Attendee.find();
+		let attendees: IAttendeeMongoose[] = await Attendee.find(query);
 		let attendeesSimplified: any[] = attendees.map(simplifyAttendee).map((attendee: any) => {
 			attendee.emails = attendee.emails.join(", ");
-			attendee.checked_in = attendee.checked_in ? "Checked in" : "";
-			attendee.checked_in_date = attendee.checked_in_date ? attendee.checked_in_date.toISOString() : "";
+			attendee.checked_in = attendee.tags[tag].checked_in ? "Checked in" : "";
+			attendee.checked_in_date = attendee.tags[tag].checked_in_date ? attendee.tags[tag].checked_in_date.toISOString() : "";
 			return attendee;
 		});
 		if (attendeesSimplified.length === 0) {
