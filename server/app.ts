@@ -411,22 +411,23 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 });
 
 apiRouter.route("/data/export").get(authenticateWithReject, async (request, response) => {
-	let tag: string = request.body.tag;
-	if (!tag) {
-		response.status(400).json({
-			"error": "Missing tag for export"
-		});
-	}
-	let query = {};
-	query["tags." + tag] = {$exists: true};
 	try {
-		let attendees: IAttendeeMongoose[] = await Attendee.find(query);
-		let attendeesSimplified: any[] = attendees.map(simplifyAttendee).map((attendee: any) => {
-			attendee.emails = attendee.emails.join(", ");
-			attendee.checked_in = attendee.tags[tag].checked_in ? "Checked in" : "";
-			attendee.checked_in_date = attendee.tags[tag].checked_in_date ? attendee.tags[tag].checked_in_date.toISOString() : "";
-			return attendee;
-		});
+		let attendees: IAttendeeMongoose[] = await Attendee.find();
+		let attendeesSimplified: any[] = [].concat.apply([], attendees.map(simplifyAttendee).map((attendee: any) => {
+			let id = attendee.id;
+			let emails = attendee.emails.join(", ");
+			let name = attendee.name;
+			return Object.keys(attendee.tags).map(t => {
+				return {
+					id: id,
+					name: name,
+					emails: emails,
+					tag: t,
+					checked_in: attendee.tags[t].checked_in ? "Checked in" : "",
+					checked_in_date: attendee.tags[t].checked_in_date? attendee.tags[t].checked_in_date.toISOString() : ""
+				}
+			});
+		}));
 		if (attendeesSimplified.length === 0) {
 			response.status(400).type("text/plain").end("No data to export");
 			return;
@@ -542,7 +543,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 		});
 	}
 	// Filter by check in status if specified
-	if (checkinStatus) {
+	if (tag && checkinStatus) {
 		let checkedIn: boolean = checkinStatus === "true";
 		filteredAttendees = filteredAttendees.filter(attendee => {
 			return attendee.tags[tag].checked_in === checkedIn;
