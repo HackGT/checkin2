@@ -479,14 +479,20 @@ apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async 
 	}
 }).delete(authenticateWithReject, async (request, response) => {
 	let tag: string = request.params.tag;
-	let query = {};
-	query["tags." + tag] = {$exists: true};
-	let unset = {};
-	unset["tags." + tag] = 1;
 
 	try {
 		// Remove tag from the attendees
-		await Attendee.update(query, {$unset: unset}, {multi: true});
+		await Attendee.update({
+			["tags." + tag]: {
+				$exists: true
+			}
+		}, {
+			$unset: {
+				["tags." + tag]: 1
+			}
+		}, {
+			multi: true
+		});
 		// Remove attendees that now have no tags
 		await Attendee.remove({'tags': {}});
 		response.status(200).json({
@@ -627,15 +633,21 @@ apiRouter.route("/data/addTag/:tag").put(authenticateWithReject, postParser, asy
 		});
 		return;
 	}
-	let query = {};
-	query["tags." + currentTag] = {$exists: true};
-
-	// Only add tag to attendees that don't already have the tag
-	query["tags." + tag] = {$exists: false};
-	let update: ITags = {};
-	update["tags." + tag] = {checked_in: false};
 	try {
-		await Attendee.update(query, update, {multi: true});
+		await Attendee.update({
+			["tags." + currentTag]: {
+				$exists: true
+			},
+			["tags." + tag]: {
+				$exists: false
+			},
+		}, {
+			["tags." + tag]: {
+				checked_in: false
+			}
+		}, {
+			multi: true
+		});
 		response.status(200).json({
 			"success": true
 		});

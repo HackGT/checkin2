@@ -562,16 +562,19 @@ describe("Data endpoints", () => {
 	});
 	it("PUT /api/data/tag/:tag (authenticated)", async () => {
 		let tag: string = crypto.randomBytes(32).toString("hex");
-		let tagObj: ITags = {};
-		let tagQuery = {};
-		tagObj["tags." + tag] = { 
-			checked_in: false,
-			checked_in_date: undefined,
-			checked_in_by: undefined 
+		let tagQuery = {
+			["tags." + tag]: {
+				$exists: true
+			}
 		};
-		tagQuery["tags." + tag] = {$exists: true};
 		let testAttendee: IAttendee = {
-			tags: tagObj,
+			tags: {
+				[tag]: {
+					checked_in: false,
+					checked_in_date: undefined,
+					checked_in_by: undefined
+				}
+			},
 			id: "", // Generated server-side
 			name: crypto.randomBytes(32).toString("hex"),
 			emails: [crypto.randomBytes(32).toString("hex") + "@example.com"],
@@ -597,6 +600,8 @@ describe("Data endpoints", () => {
 				expect(importedAttendees[0].name).to.equal(testAttendee.name);
 				expect(importedAttendees[0].emails).to.have.length(1);
 				expect(importedAttendees[0].emails[0]).to.equal(testAttendee.emails[0]);
+				expect(importedAttendees[0].tags).to.be.a("object");
+				expect(importedAttendees[0].tags).to.have.all.keys(tag);
 				await Attendee.find(tagQuery).remove();
 			});
 	});
@@ -616,20 +621,28 @@ describe("Data endpoints", () => {
 		const testAttendeeNumber = 25;
 		let testAttendees: IAttendeeMongoose[] = [];
 		for (let i = 0; i < testAttendeeNumber * 2; i++) {
-			let tagObj: ITags = {};
-			tagObj[(i < testAttendeeNumber ? tag : tag2)] = { checked_in: false };
 			testAttendees.push(new Attendee({
-				tags: tagObj,
+				tags: {
+					[i < testAttendeeNumber ? tag : tag2]: {
+						checked_in: false
+					}
+				},
 				name: crypto.randomBytes(16).toString("hex"),
 				emails: crypto.randomBytes(16).toString("hex"),
 				id: crypto.randomBytes(16).toString("hex")
 			}));
 		}
 		await Attendee.insertMany(testAttendees);
-		let tagQuery = {};
-		tagQuery["tags." + tag] = {$exists: true};
-		let tag2Query = {};
-		tag2Query["tags." + tag2] = {$exists: true};
+		let tagQuery = {
+			["tags." + tag]: {
+				$exists: true
+			}
+		};
+		let tag2Query = {
+			["tags." + tag2]: {
+				$exists: true
+			}
+		};
 		expect(await Attendee.find(tagQuery)).to.have.length(testAttendeeNumber);
 		expect(await Attendee.find(tag2Query)).to.have.length(testAttendeeNumber);
 
