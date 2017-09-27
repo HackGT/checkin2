@@ -1,3 +1,5 @@
+import * as qwest from "qwest";
+
 declare let mdc: any;
 mdc.autoInit();
 
