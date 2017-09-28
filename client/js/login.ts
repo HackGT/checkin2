@@ -1,6 +1,4 @@
-import * as qwest from "qwest";
-
-declare let mdc: any;
+/// <reference types="qwest" />
 mdc.autoInit();
 
 document.addEventListener("keydown", e => {
