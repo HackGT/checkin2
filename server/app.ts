@@ -413,21 +413,30 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 apiRouter.route("/data/export").get(authenticateWithReject, async (request, response) => {
 	try {
 		let attendees: IAttendeeMongoose[] = await Attendee.find();
-		let attendeesSimplified: any[] = [].concat.apply([], attendees.map(simplifyAttendee).map((attendee: any) => {
+		let attendeesSimplified: {
+			id: string;
+			name: string;
+			emails: string;
+			tag: string;
+			checked_in: string;
+			checked_in_date: string;
+		 }[] = [];
+		for (let attendee of attendees.map(simplifyAttendee)) {
 			let id = attendee.id;
 			let emails = attendee.emails.join(", ");
 			let name = attendee.name;
-			return Object.keys(attendee.tags).map(t => {
-				return {
+			Object.keys(attendee.tags).forEach(tag => {
+				let checkedInDate = attendee.tags[tag].checked_in_date;
+				attendeesSimplified.push({
 					id: id,
 					name: name,
 					emails: emails,
-					tag: t,
-					checked_in: attendee.tags[t].checked_in ? "Checked in" : "",
-					checked_in_date: attendee.tags[t].checked_in_date? attendee.tags[t].checked_in_date.toISOString() : ""
-				}
+					tag: tag,
+					checked_in: attendee.tags[tag].checked_in ? "Checked in" : "",
+					checked_in_date: checkedInDate ? checkedInDate.toISOString() : ""
+				});
 			});
-		}));
+		}
 		if (attendeesSimplified.length === 0) {
 			response.status(400).type("text/plain").end("No data to export");
 			return;
