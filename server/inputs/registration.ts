@@ -12,7 +12,7 @@ export class Registration {
 
 	constructor(opts: IRegistrationOpts) {
 		this.url = opts.url;
-		this.key = opts.key;
+		this.key = new Buffer(opts.key).toString("base64");
 	}
 
 	async user(id: string, selection_set: string[]) {
@@ -51,13 +51,12 @@ export class Registration {
 	}
 
 	async query(query: string, variables?: { [name: string]: string }): Promise<GQL.IQuery> {
-		const key = new Buffer(this.key).toString("base64");
 		const response: GQL.IGraphQLResponseRoot = await request({
 			uri: this.url,
 			method: "POST",
 			json: true,
 			headers: {
-				Authorization: `Basic ${key}`
+				Authorization: `Basic ${this.key}`
 			},
 			body: {
 				query,
