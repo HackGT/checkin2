@@ -51,7 +51,8 @@ class State {
 const States: { [key: string]: State } = {
 	"checkin": new State("open-checkin", "checkin"),
 	"attendees": new State("open-attendees", "import"),
-	"users": new State("open-users", "manage-users")
+	"users": new State("open-users", "manage-users"),
+	"tags": new State("open-tags", "edit-tags")
 };
 
 // Set the correct state on page load
@@ -67,15 +68,23 @@ function readURLHash() {
 readURLHash();
 window.addEventListener("hashchange", readURLHash);
 
+interface ITagItem {
+	checked_in: boolean,
+	checked_in_date?: Date,
+	checked_in_by?: string
+}
+
+interface ITags {
+	[key: string]: ITagItem
+}
+
 interface IAttendee {
 	reverted?: boolean;
+	updatedTag?: string,
 	id: string;
-	tag: string;
 	name: string;
 	emails: string[];
-	checked_in: boolean;
-	checked_in_date?: Date;
-	checked_in_by?: string;
+	tags: ITags
 }
 
 function delay (milliseconds: number) {
@@ -95,10 +104,12 @@ function checkIn (e: Event) {
 	let button = (<HTMLButtonElement> e.target)!;
 	let isCheckedIn: boolean = button.classList.contains("checked-in");
 	button.disabled = true;
+	let tag: string = tagSelector.value;
 	
 	qwest.post("/api/checkin", {
 		id: button.parentElement!.parentElement!.id.slice(5),
-		revert: isCheckedIn ? "true" : "false"
+		revert: isCheckedIn ? "true" : "false",
+		tag: tag
 	}).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {
@@ -232,10 +243,11 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 				
 				let button = existingNodes[i].querySelector(".actions > button")!;
 				let status = existingNodes[i].querySelector(".actions > span.status")!;
-				if (attendee.checked_in_date) {
+				let date = attendee.tags[tag].checked_in_date;
+				if (date) {
 					button.textContent = "Uncheck in";
 					button.classList.add("checked-in");
-					status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+					status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
 				}
 				else {
 					button.textContent = "Check in";
@@ -255,6 +267,29 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 		status.textContent = "An error occurred";
 		alert(response.error);
 	});
+}
+
+function updateTagSelectors(newTags: string[]) {
+	// Get current list of tags
+	let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => {
+		return el.textContent;
+	});
+	for (let curr of newTags) {
+		if (tags.indexOf(curr) === -1) {
+			let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
+			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+				let tagOption = document.createElement("option");
+				tagOption.textContent = curr;
+				el.appendChild(tagOption);
+			});
+			// Add to the selector in the edit tag panel
+			let editTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
+			let tagOption = document.createElement("option");
+			tagOption.textContent = `Attendees with ${curr} tag`;
+			tagOption.value = curr;
+			editTagSelect.appendChild(tagOption);
+		}
+	}
 }
 
 mdc.ripple.MDCRipple.attachTo(document.querySelector(".mdc-ripple-surface"));
@@ -290,19 +325,9 @@ document.getElementById("import-attendees")!.addEventListener("click", e => {
 		[fileInput, tagInput, nameInput, emailInput].forEach((el) => {
 			el.value = el.defaultValue;
 		});
-		// Get current list of tags
-		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => {
-			return el.textContent;
-		});
 		// Add new tags to the options list
-		if (tags.indexOf(tag) === -1) {
-			let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
-			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
-				let tagOption = document.createElement("option");
-				tagOption.textContent = tag;
-				el.appendChild(tagOption);
-			});
-		}
+		let newTags: string[] = tag.toLowerCase().split(/, */);
+		updateTagSelectors(newTags);
 		alert("Successfully imported attendees");
 	}).catch((e, xhr, response) => {
 		alert(response.error);
@@ -354,6 +379,9 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 		"name": nameInput.value.trim(),
 		"email": emailInput.value.replace(/, /g, ",").trim()
 	}).then(() => {
+		// Add new tags to the options list
+		let newTags: string[] = tagInput.value.toLowerCase().split(/, */)
+		updateTagSelectors(newTags);
 		// Clear the form
 		[tagInput, nameInput, emailInput].forEach((el) => {
 			el.value = el.defaultValue;
@@ -369,6 +397,54 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 	});
 });
 
+// Add tags to users
+document.getElementById("add-new-tag")!.addEventListener("click", e => {
+	let button = e.target as HTMLButtonElement;
+	button.disabled = true;
+
+	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
+	let currentTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
+	
+	let currentTag: string = currentTagSelect.options[currentTagSelect.selectedIndex].value;
+	if (!currentTag) {
+		alert("Please select a valid tag");
+		button.disabled = false;
+		return; 
+	}
+	let tag: string = tagInput.value.trim().toLowerCase();
+	if (!tag) {
+		alert("Please enter a tag name");
+		button.disabled = false;
+		return;
+	}
+	qwest.put(`/api/data/addTag/${tag}`, {
+		currentTag: currentTag
+	}).then((xhr, response) => {
+		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => el.textContent );
+		// Add to tag selectors
+		if (tags.indexOf(tag) === -1) {
+			let tagsList = document.querySelectorAll("select.tags"); 
+			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+				let option = document.createElement("option");
+				option.textContent = tag;
+				el.appendChild(option);
+			});
+		}
+
+		// Clear the form
+		tagInput.value = tagInput.defaultValue;
+		currentTagSelect.options[0].selected = true;
+
+		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
+
+		alert("Successfully added tag to attendee(s)!");
+	}).catch((e, xhr, response) => {
+		alert(response.error);
+	}).complete(() => {
+		button.disabled = false;
+	});	
+});
+
 // Listen for updates
 const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
 function startWebSocketListener() {
@@ -376,7 +452,8 @@ function startWebSocketListener() {
 	socket.addEventListener("message", (event) => {
 		if (!States["checkin"].isDisplayed)
 			return;
-		
+
+		let tag: string = tagSelector.value;
 		let attendee: IAttendee = JSON.parse(event.data);
 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
 		if (!button) {
@@ -384,12 +461,17 @@ function startWebSocketListener() {
 			// This message can safely be ignored; the user list will be updated when switching tags
 			return;
 		}
+		if (tag !== attendee.updatedTag) {
+			// Check if the currently displayed tag is the tag that was just updated
+			return;
+		}
 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
-		if (!attendee.reverted && attendee.checked_in_date) {
+		let date = attendee.tags[tag].checked_in_date;
+		if (date) {
 			button.textContent = "Uncheck in";
 			button.classList.add("checked-in");
-			status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+			status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
 		}
 		else {
 			button.textContent = "Check in";

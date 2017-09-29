@@ -63,7 +63,7 @@ mongoose.connect(MONGO_URL, {
 });
 export {mongoose};
 
-import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee} from "./schema";
+import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee, ITags} from "./schema";
 
 // Promise version of crypto.pbkdf2()
 export function pbkdf2Async (...params: any[]) {
@@ -145,13 +145,10 @@ let authenticateWithRedirect = async function (request: express.Request, respons
 
 function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
 	return {
-		tag: attendee.tag,
 		name: attendee.name,
 		emails: attendee.emails,
-		checked_in: attendee.checked_in,
-		checked_in_date: attendee.checked_in_date,
-		checked_in_by: attendee.checked_in_by,
-		id: attendee.id
+		id: attendee.id,
+		tags: attendee.tags
 	};
 }
 
@@ -304,6 +301,11 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 		});
 		return;
 	}
+	let tagNames: string[] = tag.toLowerCase().split(/, */);
+	let tags: ITags = {};
+	for (let i = 0; i < tagNames.length; i++) {
+		tags[tagNames[i]] = {checked_in: false};
+	}
 	tag = tag.trim().toLowerCase();
 	nameHeader = nameHeader.trim();
 	let emailHeaders: string[] = emailHeadersRaw.split(",").map((header) => { return header.trim(); });
@@ -350,11 +352,10 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 				}
 
 				attendeeData.push({
-					tag: tag,
 					name: name,
 					emails: emails,
-					checked_in: false,
-					id: crypto.randomBytes(16).toString("hex")
+					id: crypto.randomBytes(16).toString("hex"),
+					tags: tags
 				});
 			}
 		}
@@ -412,12 +413,30 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 apiRouter.route("/data/export").get(authenticateWithReject, async (request, response) => {
 	try {
 		let attendees: IAttendeeMongoose[] = await Attendee.find();
-		let attendeesSimplified: any[] = attendees.map(simplifyAttendee).map((attendee: any) => {
-			attendee.emails = attendee.emails.join(", ");
-			attendee.checked_in = attendee.checked_in ? "Checked in" : "";
-			attendee.checked_in_date = attendee.checked_in_date ? attendee.checked_in_date.toISOString() : "";
-			return attendee;
-		});
+		let attendeesSimplified: {
+			id: string;
+			name: string;
+			emails: string;
+			tag: string;
+			checked_in: string;
+			checked_in_date: string;
+		 }[] = [];
+		for (let attendee of attendees.map(simplifyAttendee)) {
+			let id = attendee.id;
+			let emails = attendee.emails.join(", ");
+			let name = attendee.name;
+			Object.keys(attendee.tags).forEach(tag => {
+				let checkedInDate = attendee.tags[tag].checked_in_date;
+				attendeesSimplified.push({
+					id: id,
+					name: name,
+					emails: emails,
+					tag: tag,
+					checked_in: attendee.tags[tag].checked_in ? "Checked in" : "",
+					checked_in_date: checkedInDate ? checkedInDate.toISOString() : ""
+				});
+			});
+		}
 		if (attendeesSimplified.length === 0) {
 			response.status(400).type("text/plain").end("No data to export");
 			return;
@@ -444,13 +463,18 @@ apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async 
 		});
 	}
 
+	let tagNames = tag.toLowerCase().split(/, */);
+	let tags: ITags = {}
+	for (let i = 0; i < tagNames.length; i++) {
+		tags[tagNames[i]] = {checked_in: false};
+	}
+
 	try {
 		await new Attendee({
-			tag,
 			name,
 			emails,
-			checked_in: false,
-			id: crypto.randomBytes(16).toString("hex")
+			id: crypto.randomBytes(16).toString("hex"),
+			tags: tags
 		}).save();
 		response.status(201).json({
 			"success": true
@@ -466,7 +490,20 @@ apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async 
 	let tag: string = request.params.tag;
 
 	try {
-		await Attendee.find({"tag": tag}).remove();
+		// Remove tag from the attendees
+		await Attendee.update({
+			["tags." + tag]: {
+				$exists: true
+			}
+		}, {
+			$unset: {
+				["tags." + tag]: 1
+			}
+		}, {
+			multi: true
+		});
+		// Remove attendees that now have no tags
+		await Attendee.remove({'tags': {}});
 		response.status(200).json({
 			"success": true
 		});
@@ -514,17 +551,17 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 		if (aLastName > bLastName) return 1;
 		return 0;
 	});
-	// Filter by check in status if specified
-	if (checkinStatus) {
-		let checkedIn: boolean = checkinStatus === "true";
-		filteredAttendees = filteredAttendees.filter(attendee => {
-			return attendee.checked_in === checkedIn;
-		});
-	}
-	// Filter by tag if specified
+	// Filter by tag specified
 	if (tag) {
 		filteredAttendees = filteredAttendees.filter(attendee => {
-			return attendee.tag === tag;
+			return attendee.tags.hasOwnProperty(tag);
+		});
+	}
+	// Filter by check in status if specified
+	if (tag && checkinStatus) {
+		let checkedIn: boolean = checkinStatus === "true";
+		filteredAttendees = filteredAttendees.filter(attendee => {
+			return attendee.tags[tag].checked_in === checkedIn;
 		});
 	}
 	// Map to remove mongoose attributes
@@ -534,6 +571,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (request, response) => {
 	let id: string = request.body.id || "";
 	let shouldRevert: boolean = request.body.revert === "true";
+	let tag: string = request.body.tag;
 	if (!id) {
 		response.status(400).json({
 			"error": "Missing attendee ID"
@@ -547,21 +585,34 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 		});
 		return;
 	}
+	if (!tag) {
+		response.status(400).json({
+			"error": "Must specify tag"
+		});
+		return;
+	}
+	if (!attendee.tags.hasOwnProperty(tag)) {
+		response.status(400).json({
+			"error": "Incorrect tag"
+		});
+		return;
+	}
 	if (shouldRevert) {
-		attendee.checked_in = false;
-		attendee.checked_in_by = undefined;
-		attendee.checked_in_date = undefined;
+		attendee.tags[tag].checked_in = false;
+		attendee.tags[tag].checked_in_by = undefined;
+		attendee.tags[tag].checked_in_date = undefined;
 	}
 	else {
-		attendee.checked_in = true;
-		attendee.checked_in_by = response.locals.username;
-		attendee.checked_in_date = new Date();
+		attendee.tags[tag].checked_in = true;
+		attendee.tags[tag].checked_in_by = response.locals.username;
+		attendee.tags[tag].checked_in_date = new Date();
 	}
-
+	attendee.markModified("tags");
 	try {
 		await attendee.save();
 		let updateData = JSON.stringify({
 			...simplifyAttendee(attendee),
+			updatedTag: tag,
 			reverted: shouldRevert
 		});
 		wss.clients.forEach(function each(client) {
@@ -581,19 +632,54 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 	}
 });
 
+// Endpoint for adding tags to existing groups of attendees
+apiRouter.route("/data/addTag/:tag").put(authenticateWithReject, postParser, async (request, response) => {
+	let tag: string = request.params.tag;
+	let currentTag: string = request.body.currentTag;
+	if (!currentTag) {
+		response.status(400).json({
+			"error": "Must provide existing tag"
+		});
+		return;
+	}
+	try {
+		await Attendee.update({
+			["tags." + currentTag]: {
+				$exists: true
+			},
+			["tags." + tag]: {
+				$exists: false
+			},
+		}, {
+			["tags." + tag]: {
+				checked_in: false
+			}
+		}, {
+			multi: true
+		});
+		response.status(200).json({
+			"success": true
+		});
+	}
+	catch (e) {
+		console.log(e);
+		response.status(500).json({
+			"error": "An error occurred while adding tag to attendees"
+		});
+	}
+});
+
 app.use("/api", apiRouter);
 
 const indexTemplate = Handlebars.compile(fs.readFileSync(path.join(__dirname, STATIC_ROOT, "index.html"), "utf8"));
 app.route("/").get(authenticateWithRedirect, async (request, response) => {
-	let attendees = await Attendee.find().sort({ tag: "asc" });
+	let attendees = await Attendee.find();
 	let tags: string[] = attendees.reduce((prev, current) => {
-		if (prev.indexOf(current.tag) === -1) {
-			// Escape possible HTML in tags
-			let tag: string = current.tag.replace("&", "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-			prev.push(tag);
-		}
+		let tagsToAdd: string[] = Object.keys(current.tags).filter(t => prev.indexOf(t) === -1);
+		prev = prev.concat(tagsToAdd);
 		return prev;
 	}, <string[]> []);
+	tags.sort((a, b) => a.localeCompare(b));
 	let users = await User.find().sort({ username: "asc" });
 	let userInfo = users.map(user => {
 		return {

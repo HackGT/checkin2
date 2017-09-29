@@ -469,7 +469,10 @@ describe("Data endpoints", () => {
 	});
 	it("POST /api/data/import (valid)", async () => {
 		let tag = crypto.randomBytes(16).toString("hex");
-		expect(await Attendee.find({"tag": tag})).to.have.length(0);
+		let tagQuery = {};
+		tagQuery["tags." + tag] = {$exists: true};
+
+		expect(await Attendee.find(tagQuery)).to.have.length(0);
 
 		return request(app)
 			.post("/api/data/import")
@@ -484,14 +487,14 @@ describe("Data endpoints", () => {
 				expect(request.body).to.have.property("success");
 				expect(request.body.success).to.be.true;
 
-				let importedAttendees = await Attendee.find({"tag": tag});
+				let importedAttendees = await Attendee.find(tagQuery);
 				expect(importedAttendees).to.have.length(5);
 				for (let attendee of importedAttendees) {
 					expect(attendee.name).to.match(/^Test \d$/);
 					expect(attendee.emails).to.have.length(1);
 					expect(attendee.emails[0]).to.match(/^test\d@example\.com$/);
 				}
-				await Attendee.find({"tag": tag}).remove();
+				await Attendee.find(tagQuery).remove();
 			});
 	});
 	it("GET /api/data/export (unauthenticated)", done => {
@@ -514,21 +517,24 @@ describe("Data endpoints", () => {
 	});
 	it("GET /api/data/export (with users)", async () => {
 		let tag = crypto.randomBytes(16).toString("hex");
-		expect(await Attendee.find({ tag })).to.have.length(0);
+		let tagQuery = {};
+		tagQuery["tags." + tag] = {$exists: true};
+		expect(await Attendee.find(tagQuery)).to.have.length(0);
 
 		const testAttendeeNumber = 25;
 		let testAttendees: IAttendeeMongoose[] = [];
 		for (let i = 0; i < testAttendeeNumber; i++) {
+			let tagObj: ITags = {};
+			tagObj[tag] = {checked_in: Math.random() > 0.5};
 			testAttendees.push(new Attendee({
-				tag,
 				name: crypto.randomBytes(16).toString("hex"),
 				emails: crypto.randomBytes(16).toString("hex"),
-				checked_in: Math.random() > 0.5,
+				tags: tagObj,
 				id: crypto.randomBytes(16).toString("hex")
 			}));
 		}
 		await Attendee.insertMany(testAttendees);
-		expect(await Attendee.find({ tag })).to.have.length(testAttendeeNumber);
+		expect(await Attendee.find(tagQuery)).to.have.length(testAttendeeNumber);
 
 		return request(app)
 			.get("/api/data/export")
@@ -537,11 +543,11 @@ describe("Data endpoints", () => {
 			.expect("Content-Type", /text\/csv/)
 			.expect("Content-Disposition", "attachment; filename=\"export.csv\"")
 			.expect(request => {
-				expect(request.text.replace(/\n/g, ",").replace(/"/g, "").split(",")).to.include.members(["tag","name","emails","checked_in","checked_in_date","checked_in_by","id"]);
+				expect(request.text.replace(/\n/g, ",").replace(/"/g, "").split(",")).to.include.members(["tag","name","emails","id", "checked_in", "checked_in_date"]);
 			})
 			.then(async request => {
-				await Attendee.remove({ tag });
-				expect(await Attendee.find({ tag })).to.have.length(0);
+				await Attendee.remove(tagQuery);
+				expect(await Attendee.find(tagQuery)).to.have.length(0);
 			});
 	});
 	it("PUT /api/data/tag/:tag (unauthenticated)", done => {
@@ -555,19 +561,28 @@ describe("Data endpoints", () => {
 			.end(done);
 	});
 	it("PUT /api/data/tag/:tag (authenticated)", async () => {
+		let tag: string = crypto.randomBytes(32).toString("hex");
+		let tagQuery = {
+			["tags." + tag]: {
+				$exists: true
+			}
+		};
 		let testAttendee: IAttendee = {
-			tag: crypto.randomBytes(32).toString("hex"),
+			tags: {
+				[tag]: {
+					checked_in: false,
+					checked_in_date: undefined,
+					checked_in_by: undefined
+				}
+			},
 			id: "", // Generated server-side
 			name: crypto.randomBytes(32).toString("hex"),
 			emails: [crypto.randomBytes(32).toString("hex") + "@example.com"],
-			checked_in: false,
-			checked_in_by: undefined,
-			checked_in_date: undefined
 		};
-		expect(await Attendee.find({ "tag": testAttendee.tag })).to.have.length(0);
+		expect(await Attendee.find(tagQuery)).to.have.length(0);
 
 		return request(app)
-			.put(`/api/data/tag/${testAttendee.tag}`)
+			.put(`/api/data/tag/${tag}`)
 			.set("Cookie", testUser.cookie)
 			.type("form")
 			.send({
@@ -580,12 +595,14 @@ describe("Data endpoints", () => {
 				expect(request.body).to.have.property("success");
 				expect(request.body.success).to.be.true;
 
-				let importedAttendees = await Attendee.find({ "tag": testAttendee.tag });
+				let importedAttendees = await Attendee.find(tagQuery);
 				expect(importedAttendees).to.have.length(1);
 				expect(importedAttendees[0].name).to.equal(testAttendee.name);
 				expect(importedAttendees[0].emails).to.have.length(1);
 				expect(importedAttendees[0].emails[0]).to.equal(testAttendee.emails[0]);
-				await Attendee.find({ "tag": testAttendee.tag }).remove();
+				expect(importedAttendees[0].tags).to.be.a("object");
+				expect(importedAttendees[0].tags).to.have.all.keys(tag);
+				await Attendee.find(tagQuery).remove();
 			});
 	});
 	it("DELETE /api/data/tag/:tag (unauthenticated)", done => {
@@ -605,16 +622,29 @@ describe("Data endpoints", () => {
 		let testAttendees: IAttendeeMongoose[] = [];
 		for (let i = 0; i < testAttendeeNumber * 2; i++) {
 			testAttendees.push(new Attendee({
-				tag: i < testAttendeeNumber ? tag : tag2,
+				tags: {
+					[i < testAttendeeNumber ? tag : tag2]: {
+						checked_in: false
+					}
+				},
 				name: crypto.randomBytes(16).toString("hex"),
 				emails: crypto.randomBytes(16).toString("hex"),
-				checked_in: false,
 				id: crypto.randomBytes(16).toString("hex")
 			}));
 		}
 		await Attendee.insertMany(testAttendees);
-		expect(await Attendee.find({"tag": tag})).to.have.length(testAttendeeNumber);
-		expect(await Attendee.find({"tag": tag2})).to.have.length(testAttendeeNumber);
+		let tagQuery = {
+			["tags." + tag]: {
+				$exists: true
+			}
+		};
+		let tag2Query = {
+			["tags." + tag2]: {
+				$exists: true
+			}
+		};
+		expect(await Attendee.find(tagQuery)).to.have.length(testAttendeeNumber);
+		expect(await Attendee.find(tag2Query)).to.have.length(testAttendeeNumber);
 
 		return request(app)
 			.delete(`/api/data/tag/${tag}`)
@@ -625,10 +655,10 @@ describe("Data endpoints", () => {
 				expect(request.body).to.have.property("success");
 				expect(request.body.success).to.be.true;
 
-				expect(await Attendee.find({"tag": tag})).to.have.length(0);
-				expect(await Attendee.find({"tag": tag2})).to.have.length(testAttendeeNumber);
+				expect(await Attendee.find(tagQuery)).to.have.length(0);
+				expect(await Attendee.find(tag2Query)).to.have.length(testAttendeeNumber);
 
-				await Attendee.remove({"tag": tag2});
+				await Attendee.remove(tag2Query);
 			});
 	});
 });
@@ -646,19 +676,28 @@ describe("Miscellaneous endpoints", () => {
 			crypto.randomBytes(16).toString("hex"),
 			crypto.randomBytes(16).toString("hex")
 		];
+
+		let tagObj: ITags = {};
 		for (let tagIndex = 0; tagIndex < testTags.length; tagIndex++) {
-			for (let i = 0; i < attendeeCount; i++) {
-				attendees.push(new Attendee({
-					tag: testTags[tagIndex],
-					name: crypto.randomBytes(16).toString("hex"),
-					emails: crypto.randomBytes(16).toString("hex"),
-					checked_in: false,
-					id: crypto.randomBytes(16).toString("hex")
-				}));
-			}
+			tagObj[testTags[tagIndex]] = {checked_in: false};
 		}
+
+		for (let i = 0; i < attendeeCount; i++) {
+			attendees.push(new Attendee({
+				tags: tagObj,
+				name: crypto.randomBytes(16).toString("hex"),
+				emails: crypto.randomBytes(16).toString("hex"),
+				id: crypto.randomBytes(16).toString("hex")
+			}));
+		}
+
 		await Attendee.insertMany(attendees);
-		expect(await Attendee.find({"tag": testTags})).to.have.length(testTags.length * attendeeCount);
+
+		let tagQuery = {};
+		for (let i = 0; i < testTags.length; i++) {
+			tagQuery["tags." + testTags[i]] = {$exists: true};
+		}
+		expect(await Attendee.find(tagQuery)).to.have.length(attendeeCount);
 	});
 	after(async function() {
 		this.timeout(1000 * 30);
@@ -668,7 +707,11 @@ describe("Miscellaneous endpoints", () => {
 			return attendee.id;
 		});
 		await Attendee.remove({"id": ids});
-		expect(await Attendee.find({"tag": testTags})).to.have.length(0);
+		let tagQuery = {};
+		for (let i = 0; i < testTags.length; i++) {
+			tagQuery["tags." + testTags[i]] = {$exists: true};
+		}
+		expect(await Attendee.find(tagQuery)).to.have.length(0);
 	});
 
 	it("GET /api/search (unauthenticated)", done => {
@@ -690,18 +733,12 @@ describe("Miscellaneous endpoints", () => {
 			.expect(request => {
 				// Assertions here are more general because the returned attendees might include non-testing users
 				expect(request.body).to.be.an("array");
-				expect(request.body).to.have.length.of.at.least(testTags.length * attendeeCount);
+				expect(request.body).to.have.length.of.at.least(attendeeCount);
 				for (let result of request.body) {
-					expect(result).to.contain.all.keys(["tag", "name", "emails", "checked_in", "id"]);
-					expect(result.tag).to.be.a("string");
+					expect(result).to.contain.all.keys(["tags", "name", "emails", "id"]);
+					expect(result.tags).to.be.a("object");
 					expect(result.name).to.be.a("string");
 					expect(result.emails).to.be.an("array");
-					expect(result.checked_in).to.be.a("boolean");
-					if (result.checked_in) {
-						expect(result).to.have.contain.keys(["checked_in_date", "checked_in_by"]);
-						expect(result.checked_in_date).to.be.a("string");
-						expect(result.checked_in_by).to.be.a("string");
-					}
 					expect(result.id).to.be.a("string");
 				}
 			})
@@ -720,15 +757,13 @@ describe("Miscellaneous endpoints", () => {
 				expect(request.body).to.be.an("array");
 				expect(request.body).to.have.length(1);
 				let result = request.body[0];
-				expect(result).to.have.all.keys(["tag", "name", "emails", "checked_in", "id"]);
-				expect(result.tag).to.be.a("string");
-				expect(result.tag).to.equal(attendees[0].tag);
+				expect(result).to.have.all.keys(["tags", "name", "emails", "id"]);
+				expect(result.tags).to.be.a("object");
+				expect(result.tags).to.deep.equal(attendees[0].tags);
 				expect(result.name).to.be.a("string");
 				expect(result.name).to.equal(attendees[0].name);
 				expect(result.emails).to.be.an("array");
 				expect(result.emails).to.have.members(attendees[0].emails);
-				expect(result.checked_in).to.be.a("boolean");
-				expect(result.checked_in).to.be.false;
 				expect(result.id).to.be.a("string");
 				expect(result.id).to.equal(attendees[0].id);
 			})
@@ -747,15 +782,13 @@ describe("Miscellaneous endpoints", () => {
 				expect(request.body).to.be.an("array");
 				expect(request.body).to.have.length(1);
 				let result = request.body[0];
-				expect(result).to.have.all.keys(["tag", "name", "emails", "checked_in", "id"]);
-				expect(result.tag).to.be.a("string");
-				expect(result.tag).to.equal(attendees[0].tag);
+				expect(result).to.have.all.keys(["tags", "name", "emails", "id"]);
+				expect(result.tags).to.be.a("object");
+				expect(result.tags).to.deep.equal(attendees[0].tags);
 				expect(result.name).to.be.a("string");
 				expect(result.name).to.equal(attendees[0].name);
 				expect(result.emails).to.be.an("array");
 				expect(result.emails).to.have.members(attendees[0].emails);
-				expect(result.checked_in).to.be.a("boolean");
-				expect(result.checked_in).to.be.false;
 				expect(result.id).to.be.a("string");
 				expect(result.id).to.equal(attendees[0].id);
 			})
@@ -763,15 +796,20 @@ describe("Miscellaneous endpoints", () => {
 	});
 	it("GET /api/search (check in status)", async () => {
 		let checkedInAttendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
-		checkedInAttendee.checked_in = true;
-		checkedInAttendee.checked_in_by = testUser.username;
-		checkedInAttendee.checked_in_date = new Date();
+		let testTag = Object.keys(checkedInAttendee.tags)[0];
+		checkedInAttendee.tags[testTag] = {
+			checked_in: true,
+			checked_in_by: testUser.username,
+			checked_in_date: new Date()
+		}
+		checkedInAttendee.markModified('tags');
 		await checkedInAttendee.save();
 
 		return request(app)
 			.get("/api/search")
 			.set("Cookie", testUser.cookie)
 			.query({
+				"tag": testTag,
 				"checkedin": "true"
 			})
 			.expect(200)
@@ -781,34 +819,33 @@ describe("Miscellaneous endpoints", () => {
 				expect(request.body).to.have.length.of.at.least(1);
 				let checkedInAttendeeFound = false;
 				for (let attendee of request.body) {
-					expect(attendee).to.contain.all.keys(["tag", "name", "emails", "checked_in", "id"]);
-					expect(attendee.tag).to.be.a("string");
+					expect(attendee).to.contain.all.keys(["tags", "name", "emails", "id"]);
+					expect(attendee.tags).to.be.a("object");
 					expect(attendee.name).to.be.a("string");
 					expect(attendee.emails).to.be.an("array");
-					expect(attendee.checked_in).to.be.a("boolean");
-					if (attendee.checked_in) {
-						expect(attendee).to.have.contain.keys(["checked_in_date", "checked_in_by"]);
-						expect(attendee.checked_in_date).to.be.a("string");
-						expect(attendee.checked_in_by).to.be.a("string");
+					if (attendee.tags[testTag].checked_in) {
+						expect(attendee.tags[testTag]).to.have.contain.keys(["checked_in_date", "checked_in_by"]);
+						expect(attendee.tags[testTag].checked_in_date).to.be.a("string");
+						expect(attendee.tags[testTag].checked_in_by).to.be.a("string");
 					}
 					expect(attendee.id).to.be.a("string");
 
 					if (attendee.id === attendees[0].id) {
 						checkedInAttendeeFound = true;
-						expect(attendee.tag).to.equal(attendees[0].tag);
+						expect(attendee.tags[testTag].checked_in).to.equal(true);
+						expect(attendee.tags[testTag].checked_in_by).to.equal(testUser.username);
 						expect(attendee.name).to.equal(attendees[0].name);
 						expect(attendee.emails).to.have.members(attendees[0].emails);
-						expect(attendee.checked_in).to.be.true;
-						expect(attendee.checked_in_by).to.equal(testUser.username);
 					}
 				}
 				expect(checkedInAttendeeFound).to.be.true;
-
+				
 				// Reset state
 				checkedInAttendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
-				checkedInAttendee.checked_in = false;
-				checkedInAttendee.checked_in_by = undefined;
-				checkedInAttendee.checked_in_date = undefined;
+				checkedInAttendee.tags[testTag].checked_in = false;
+				checkedInAttendee.tags[testTag].checked_in_by = undefined;
+				checkedInAttendee.tags[testTag].checked_in_date = undefined;
+				checkedInAttendee.markModified('tags');
 				await checkedInAttendee.save();
 			});
 	});
@@ -825,12 +862,11 @@ describe("Miscellaneous endpoints", () => {
 				expect(request.body).to.be.an("array");
 				expect(request.body).to.have.length(attendeeCount);
 				for (let result of request.body) {
-					expect(result).to.have.all.keys(["tag", "name", "emails", "checked_in", "id"]);
-					expect(result.tag).to.be.a("string");
+					expect(result).to.have.all.keys(["tags", "name", "emails", "id"]);
+					expect(result.tags).to.be.a("object");
+					expect(result.tags).to.include.all.keys([testTags[0]]);
 					expect(result.name).to.be.a("string");
 					expect(result.emails).to.be.an("array");
-					expect(result.checked_in).to.be.a("boolean");
-					expect(result.checked_in).to.be.false;
 					expect(result.id).to.be.a("string");
 				}
 			})
@@ -881,9 +917,10 @@ describe("Miscellaneous endpoints", () => {
 	it("POST /api/checkin (check in)", async () => {
 		let attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 		expect(attendee).to.exist;
-		expect(attendee.checked_in).to.be.false;
-		expect(attendee.checked_in_by).to.not.exist;
-		expect(attendee.checked_in_date).to.not.exist;
+		let testTag = Object.keys(attendee.tags)[0];
+		expect(attendee.tags[testTag].checked_in).to.be.false;
+		expect(attendee.tags[testTag].checked_in_by).to.not.exist;
+		expect(attendee.tags[testTag].checked_in_date).to.not.exist;
 
 		return request(app)
 			.post("/api/checkin")
@@ -891,7 +928,8 @@ describe("Miscellaneous endpoints", () => {
 			.type("form")
 			.send({
 				id: attendees[0].id,
-				revert: ""
+				revert: "",
+				tag: testTag
 			})
 			.expect(200)
 			.expect("Content-Type", /json/)
@@ -901,23 +939,26 @@ describe("Miscellaneous endpoints", () => {
 
 				attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 				expect(attendee).to.exist;
-				expect(attendee.checked_in).to.be.true;
-				expect(attendee.checked_in_by).to.be.a("string");
-				expect(attendee.checked_in_by).to.equal(testUser.username);
-				expect(attendee.checked_in_date).to.be.an.instanceOf(Date);
+				expect(attendee.tags[testTag].checked_in).to.be.true;
+				expect(attendee.tags[testTag].checked_in_by).to.be.a("string");
+				expect(attendee.tags[testTag].checked_in_by).to.equal(testUser.username);
+				expect(attendee.tags[testTag].checked_in_date).to.be.an.instanceOf(Date);
 
-				attendee.checked_in = false;
-				attendee.checked_in_by = undefined;
-				attendee.checked_in_date = undefined;
+				attendee.tags[testTag].checked_in = false;
+				attendee.tags[testTag].checked_in_by = undefined;
+				attendee.tags[testTag].checked_in_date = undefined;
+				attendee.markModified('tags');
 				await attendee.save();
 			});
 	});
 	it("POST /api/checkin (revert check in)", async () => {
 		let attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 		expect(attendee).to.exist;
-		attendee.checked_in = true;
-		attendee.checked_in_by = testUser.username;
-		attendee.checked_in_date = new Date();
+		let testTag = Object.keys(attendee.tags)[0];
+		attendee.tags[testTag].checked_in = true;
+		attendee.tags[testTag].checked_in_by = testUser.username;
+		attendee.tags[testTag].checked_in_date = new Date();
+		attendee.markModified('tags');
 		await attendee.save();
 
 		return request(app)
@@ -926,7 +967,8 @@ describe("Miscellaneous endpoints", () => {
 			.type("form")
 			.send({
 				id: attendees[0].id,
-				revert: "true"
+				revert: "true",
+				tag: testTag
 			})
 			.expect(200)
 			.expect("Content-Type", /json/)
@@ -936,9 +978,9 @@ describe("Miscellaneous endpoints", () => {
 
 				attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 				expect(attendee).to.exist;
-				expect(attendee.checked_in).to.be.false;
-				expect(attendee.checked_in_by).to.not.exist;
-				expect(attendee.checked_in_date).to.not.exist;
+				expect(attendee.tags[testTag].checked_in).to.be.false;
+				expect(attendee.tags[testTag].checked_in_by).to.not.exist;
+				expect(attendee.tags[testTag].checked_in_date).to.not.exist;
 			});
 	});
 	it("POST /api/checkin (WebSockets notifications)", async () => {
@@ -951,9 +993,10 @@ describe("Miscellaneous endpoints", () => {
 				// Initiate check in request
 				let attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
 				expect(attendee).to.exist;
-				expect(attendee.checked_in).to.be.false;
-				expect(attendee.checked_in_by).to.not.exist;
-				expect(attendee.checked_in_date).to.not.exist;
+				let testTag: string = testTags[0];
+				expect(attendee.tags[testTag].checked_in).to.be.false;
+				expect(attendee.tags[testTag].checked_in_by).to.not.exist;
+				expect(attendee.tags[testTag].checked_in_date).to.not.exist;
 				shouldReceiveMessage = true;
 				request(app)
 					.post("/api/checkin")
@@ -961,16 +1004,18 @@ describe("Miscellaneous endpoints", () => {
 					.type("form")
 					.send({
 						id: attendees[0].id,
-						revert: ""
+						revert: "",
+						tag: testTag
 					})
 					.then(async request => {
 						expect(request.body).to.have.property("success");
 						expect(request.body.success).to.be.true;
 
 						attendee = await Attendee.findOne({"id": attendees[0].id}) as IAttendeeMongoose;
-						attendee.checked_in = false;
-						attendee.checked_in_by = undefined;
-						attendee.checked_in_date = undefined;
+						attendee.tags[testTag].checked_in = false;
+						attendee.tags[testTag].checked_in_by = undefined;
+						attendee.tags[testTag].checked_in_date = undefined;
+						attendee.markModified('tags');
 						await attendee.save();
 					})
 					.catch(reason => {
@@ -985,18 +1030,19 @@ describe("Miscellaneous endpoints", () => {
 					reject({ "message": "Got unexpected message before sending request", "data": data });
 					return;
 				}
+				let testTag: string = testTags[0];
 				let parsedData = JSON.parse(data as string);
 				expect(parsedData).to.be.an("object");
-				expect(parsedData.tag).to.be.a("string");
-				expect(parsedData.tag).to.equal(attendees[0].tag);
+				expect(parsedData.tags).to.be.a("object");
+				expect(parsedData.tags).to.include.all.keys([testTag]);
+				expect(parsedData.tags[testTag].checked_in).to.equal(true);
+				expect(parsedData.tags[testTag].checked_in_by).to.be.a("string");
+				expect(parsedData.tags[testTag].checked_in_by).to.equal(testUser.username);
+				expect(parsedData.tags[testTag].checked_in_date).to.be.a("string");
 				expect(parsedData.name).to.be.a("string");
 				expect(parsedData.name).to.equal(attendees[0].name);
 				expect(parsedData.emails).to.be.an("array");
 				expect(parsedData.emails).to.have.members(attendees[0].emails);
-				expect(parsedData.checked_in).to.be.true;
-				expect(parsedData.checked_in_date).to.be.a("string");
-				expect(parsedData.checked_in_by).to.be.a("string");
-				expect(parsedData.checked_in_by).to.equal(testUser.username);
 				expect(parsedData.id).to.be.a("string");
 				expect(parsedData.id).to.equal(attendees[0].id);
 				expect(parsedData.reverted).to.be.false;
