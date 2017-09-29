@@ -1,11 +1,18 @@
 /// <reference path="../../apis/registration.d.ts" />
-import * as qwest from "qwest";
+import * as request from "request-promise-native";
+
+interface IRegistrationOpts {
+	url: string;
+	key: string;
+}
 
 export class Registration {
-	uri: string;
+	url: string;
+	key: string;
 
-	constructor(uri: string) {
-		this.uri = uri;
+	constructor(opts: IRegistrationOpts) {
+		this.url = opts.url;
+		this.key = opts.key;
 	}
 
 	async user(id: string, selection_set: string[]) {
@@ -44,9 +51,18 @@ export class Registration {
 	}
 
 	async query(query: string, variables?: { [name: string]: string }): Promise<GQL.IQuery> {
-		const response: GQL.IGraphQLResponseRoot = await qwest.post(this.uri, {
-			query,
-			variables: variables || {}
+		const key = new Buffer(this.key).toString("base64");
+		const response: GQL.IGraphQLResponseRoot = await request({
+			uri: this.url,
+			method: "POST",
+			json: true,
+			headers: {
+				Authorization: `Basic ${key}`
+			},
+			body: {
+				query,
+				variables: variables || {}
+			}
 		});
 		if (response.data) {
 			return response.data;
