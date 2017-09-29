@@ -29,14 +29,21 @@ export const User = mongoose.model<IUserMongoose>("User", new mongoose.Schema({
 	auth_keys: [String]
 }));
 
-export interface IAttendee {
-	id: string;
-	tag: string;
-	name: string;
-	emails: string[];
+export interface ITagItem {
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
+}
+
+export interface ITags {
+	[key: string]: ITagItem;
+}
+
+export interface IAttendee {
+	id: string;
+	name: string;
+	emails: string[];
+	tags: ITags;
 }
 export type IAttendeeMongoose = IAttendee & mongoose.Document;
 
@@ -45,10 +52,6 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 		type: String,
 		required: true,
 		unique: true
-	},
-	tag: {
-		type: String,
-		required: true
 	},
 	name: {
 		type: String,
@@ -59,14 +62,8 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 		type: [String],
 		required: true
 	},
-	checked_in: {
-		type: Boolean,
-		required: true,
-	},
-	checked_in_date: {
-		type: Date
-	},
-	checked_in_by: {
-		type: String
+	tags: {
+		type: mongoose.Schema.Types.Mixed,
+		required: true
 	}
 }));

@@ -164,3 +164,7 @@ abbr {
 		display: none;
 	}
 }
+button#add-new-tag {
+	width: initial;
+	margin-top: 10px;
+}
