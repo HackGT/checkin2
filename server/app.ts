@@ -301,7 +301,7 @@ apiRouter.route("/data/import").post(authenticateWithReject, uploadHandler.singl
 		});
 		return;
 	}
-	let tagNames: string[] = tag.split(",").map((t) => { return t.trim().toLowerCase(); });
+	let tagNames: string[] = tag.toLowerCase().split(/, */);
 	let tags: ITags = {};
 	for (let i = 0; i < tagNames.length; i++) {
 		tags[tagNames[i]] = {checked_in: false};
@@ -463,7 +463,7 @@ apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async 
 		});
 	}
 
-	let tagNames = tag.split(",").map((t) => { return t.trim().toLowerCase(); });
+	let tagNames = tag.toLowerCase().split(/, */);
 	let tags: ITags = {}
 	for (let i = 0; i < tagNames.length; i++) {
 		tags[tagNames[i]] = {checked_in: false};
@@ -607,7 +607,7 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 		attendee.tags[tag].checked_in_by = response.locals.username;
 		attendee.tags[tag].checked_in_date = new Date();
 	}
-	attendee.markModified('tags');
+	attendee.markModified("tags");
 	try {
 		await attendee.save();
 		let updateData = JSON.stringify({
@@ -675,11 +675,11 @@ const indexTemplate = Handlebars.compile(fs.readFileSync(path.join(__dirname, ST
 app.route("/").get(authenticateWithRedirect, async (request, response) => {
 	let attendees = await Attendee.find();
 	let tags: string[] = attendees.reduce((prev, current) => {
-		let tagsToAdd: string[] = Object.keys(current.tags).filter((t) => { return prev.indexOf(t) === -1; });
+		let tagsToAdd: string[] = Object.keys(current.tags).filter(t => prev.indexOf(t) === -1);
 		prev = prev.concat(tagsToAdd);
 		return prev;
 	}, <string[]> []);
-	tags.sort();
+	tags.sort((a, b) => a.localeCompare(b));
 	let users = await User.find().sort({ username: "asc" });
 	let userInfo = users.map(user => {
 		return {

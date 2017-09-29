@@ -269,6 +269,29 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	});
 }
 
+function updateTagSelectors(newTags: string[]) {
+	// Get current list of tags
+	let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => {
+		return el.textContent;
+	});
+	for (let curr of newTags) {
+		if (tags.indexOf(curr) === -1) {
+			let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
+			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+				let tagOption = document.createElement("option");
+				tagOption.textContent = curr;
+				el.appendChild(tagOption);
+			});
+			// Add to the selector in the edit tag panel
+			let editTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
+			let tagOption = document.createElement("option");
+			tagOption.textContent = `Attendees with ${curr} tag`;
+			tagOption.value = curr;
+			editTagSelect.appendChild(tagOption);
+		}
+	}
+}
+
 mdc.ripple.MDCRipple.attachTo(document.querySelector(".mdc-ripple-surface"));
 let drawer = new mdc.drawer.MDCTemporaryDrawer(document.querySelector(".mdc-temporary-drawer"));
 document.querySelector("nav.toolbar > i:first-of-type")!.addEventListener("click", () => {
@@ -302,29 +325,9 @@ document.getElementById("import-attendees")!.addEventListener("click", e => {
 		[fileInput, tagInput, nameInput, emailInput].forEach((el) => {
 			el.value = el.defaultValue;
 		});
-		// Get current list of tags
-		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => {
-			return el.textContent;
-		});
 		// Add new tags to the options list
-		let newTags: string[] = tag.split(",").map((t) => { return t.trim().toLowerCase(); });
-		for (let i = 0; i < newTags.length; i++) {
-			let curr: string = newTags[i];
-			if (tags.indexOf(curr) === -1) {
-				let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
-				Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
-					let tagOption = document.createElement("option");
-					tagOption.textContent = curr;
-					el.appendChild(tagOption);
-				});
-				// Add to the selector in the edit tag panel
-				let editTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
-				let tagOption = document.createElement("option");
-				tagOption.textContent = `Attendees with ${curr} tag`;
-				tagOption.value = curr;
-				editTagSelect.appendChild(tagOption);
-			}
-		}
+		let newTags: string[] = tag.toLowerCase().split(/, */);
+		updateTagSelectors(newTags);
 		alert("Successfully imported attendees");
 	}).catch((e, xhr, response) => {
 		alert(response.error);
@@ -376,29 +379,9 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 		"name": nameInput.value.trim(),
 		"email": emailInput.value.replace(/, /g, ",").trim()
 	}).then(() => {
-		// Get current list of tags
-		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => {
-			return el.textContent;
-		});
 		// Add new tags to the options list
-		let newTags: string[] = tagInput.value.trim().split(",").map((t) => { return t.trim().toLowerCase(); });
-		for (let i = 0; i < newTags.length; i++) {
-			let curr: string = newTags[i];
-			if (tags.indexOf(curr) === -1) {
-				let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
-				Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
-					let tagOption = document.createElement("option");
-					tagOption.textContent = curr;
-					el.appendChild(tagOption);
-				});
-				// Add to the selector in the edit tag panel
-				let editTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
-				let tagOption = document.createElement("option");
-				tagOption.textContent = `Attendees with ${curr} tag`;
-				tagOption.value = curr;
-				editTagSelect.appendChild(tagOption);
-			}
-		}
+		let newTags: string[] = tagInput.value.toLowerCase().split(/, */)
+		updateTagSelectors(newTags);
 		// Clear the form
 		[tagInput, nameInput, emailInput].forEach((el) => {
 			el.value = el.defaultValue;
@@ -416,13 +399,13 @@ document.getElementById("add-attendee")!.addEventListener("click", e => {
 
 // Add tags to users
 document.getElementById("add-new-tag")!.addEventListener("click", e => {
-	let button = (<HTMLButtonElement> e.target)!;
+	let button = e.target as HTMLButtonElement;
 	button.disabled = true;
 
 	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
 	let currentTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
 	
-	let currentTag:string = currentTagSelect.options[currentTagSelect.selectedIndex].value;
+	let currentTag: string = currentTagSelect.options[currentTagSelect.selectedIndex].value;
 	if (!currentTag) {
 		alert("Please select a valid tag");
 		button.disabled = false;
@@ -437,7 +420,7 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	qwest.put(`/api/data/addTag/${tag}`, {
 		currentTag: currentTag
 	}).then((xhr, response) => {
-		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => { return el.textContent; });
+		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => el.textContent );
 		// Add to tag selectors
 		if (tags.indexOf(tag) === -1) {
 			let tagsList = document.querySelectorAll("select.tags"); 
