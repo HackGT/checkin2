@@ -276,8 +276,8 @@ function updateTagSelectors(newTags: string[]) {
 	});
 	for (let curr of newTags) {
 		if (tags.indexOf(curr) === -1) {
-			let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
-			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+			const tagsList = document.querySelectorAll("select.tags");
+			Array.prototype.slice.call(tagsList).forEach((el: HTMLSelectElement) => {
 				let tagOption = document.createElement("option");
 				tagOption.textContent = curr;
 				el.appendChild(tagOption);
