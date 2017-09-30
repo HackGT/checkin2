@@ -2,6 +2,7 @@ FROM node:8-alpine
 MAINTAINER Ryan Petschek <petschekr@gmail.com>
 
 RUN apk update && apk add \
+    git \
     expect \
     bash \
     curl
