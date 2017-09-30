@@ -7,9 +7,9 @@ schema {
 # The root mutation type, use it to change things
 type Mutation {
   # Check-in a user by specifying the tag name
-  check_in(user: ID!, tag: String!): User
+  check_in(user: ID!, tag: String!): UserAndTags
   # Check-out a user by specifying the tag name
-  check_out(user: ID!, tag: String!): User
+  check_out(user: ID!, tag: String!): UserAndTags
 }
 
 # The root query type, use to query data
@@ -19,9 +19,9 @@ type Query {
   # Retrieve user through a user ID or through the token passed to
   # Query. Leave id empty if you'd like to view the currently logged in
   # user.
-  user(id: ID!): User
+  user(id: ID!): UserAndTags
   # Search through a user's name and email through regex
-  search_user(search: String!, offset: Int!, n: Int!): [User!]!
+  search_user(search: String!, offset: Int!, n: Int!): [UserAndTags!]!
   # All possible question branches
   question_branches: [String!]!
   # All possible question names, or names of question in a branch
@@ -30,7 +30,14 @@ type Query {
 
 # The root subscription type, all subscribes go through here
 type Subscription {
-  tag_change: User!
+  tag_change: UserAndTags!
+}
+
+type UserAndTags {
+  # Tags associated with a user
+  tags: [TagState!]!
+  # Registration info about the user
+  user: UserInfo!
 }
 
 # Information about checkin tags
@@ -39,19 +46,15 @@ type Tag {
   name: String!
 }
 
-type UserTag {
+type TagState {
   tag: Tag!
-  time: String!
   checked_in: Boolean!
 }
 
 # Registration info about the user
-type User {
+type UserInfo {
   # User ID, valid across the entire system
   id: ID!
-
-  # Tags associated with a user
-  tags: [UserTag!]!
 
   # User's full name
   name: String!
