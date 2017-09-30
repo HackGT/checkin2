@@ -12,8 +12,10 @@ import * as cookieParser from "cookie-parser";
 import * as multer from "multer";
 import * as Handlebars from "handlebars";
 import reEscape = require("escape-string-regexp");
+import { Registration } from "./inputs/registration";
 import { config } from "./config";
 import { authenticateWithReject, authenticateWithRedirect } from "./middleware";
+import { setupRoutes as setupGraphQlRoutes } from "./graphql";
 
 let postParser = bodyParser.urlencoded({
 	extended: false
@@ -691,6 +693,15 @@ app.route("/login").get(async (request, response) => {
 });
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
+
+// Test Registration
+const registration = new Registration({
+	url: "https://registration-graphql-v2.pr.hack.gt/graphql",
+	key: config.secrets.adminKey
+});
+
+// Connect GraphQL API
+setupGraphQlRoutes(app, registration);
 
 // WebSocket server
 const server = http.createServer(app);

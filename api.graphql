@@ -1,0 +1,133 @@
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription,
+}
+
+# The root mutation type, use it to change things
+type Mutation {
+  # Check-in a user by specifying the tag name
+  check_in(user: ID!, tag: String!): User
+  # Check-out a user by specifying the tag name
+  check_out(user: ID!, tag: String!): User
+}
+
+# The root query type, use to query data
+type Query {
+  # Get a list of unique tags currently available to set.
+  tags: [Tag!]!
+  # Retrieve user through a user ID or through the token passed to
+  # Query. Leave id empty if you'd like to view the currently logged in
+  # user.
+  user(id: ID!): User
+  # Search through a user's name and email through regex
+  search_user(search: String!, offset: Int!, n: Int!): [User!]!
+  # All possible question branches
+  question_branches: [String!]!
+  # All possible question names, or names of question in a branch
+  question_names(branch: String): [String!]
+}
+
+# The root subscription type, all subscribes go through here
+type Subscription {
+  tag_change: User!
+}
+
+# Information about checkin tags
+type Tag {
+  # The unique name of the tag (not human label)
+  name: String!
+}
+
+type UserTag {
+  tag: Tag!
+  time: String!
+  checked_in: Boolean!
+}
+
+# Registration info about the user
+type User {
+  # User ID, valid across the entire system
+  id: ID!
+
+  # Tags associated with a user
+  tags: [UserTag!]!
+
+  # User's full name
+  name: String!
+  # User's email
+  email: String!
+  # If the user's email is a verified email
+  email_verified: Boolean!
+
+  # If the user has applied to the event
+  applied: Boolean!
+  # If the user has been accepted to the event
+  accepted: Boolean!
+  # If the user has been accepted and notified of his or her acceptance
+  accepted_and_notified: Boolean!
+  # If the user has indicated that he or she is attending
+  attending: Boolean!
+
+  # A users application phase answers
+  # null if user has not filled out this phase
+  application: Branch
+
+  # A users confirmation phase answers
+  # null if user has not filled out this phase
+  confirmation: Branch
+
+  # Get the answer to one of the questions asked of this user.
+  # If branch is not given, find this question name in any branch.
+  question(name: String!): FormItem
+
+  # What team, if any, is the user a part of?
+  team: Team
+}
+
+# A filled out form (application / confirmation form)
+type Branch {
+  # What type of application did the user fill out (mentor, participant, etc.)
+  # when going through the form?
+  type: String!
+  # A key-value list of questions and answers from the confirmation application
+  data: [FormItem!]!
+  # Start of application as some RFC's date string
+  start_time: String
+  # Submit time of application as some RFC's date string
+  submit_time: String
+}
+
+# Application teams
+type Team {
+  # ID of the Team
+  id: ID!
+}
+
+# Entries to various forms (application, confirmation, etc.)
+type FormItem {
+  # Name of the question / form item
+  name: String!
+  # Type of form item (textbox, checkbox, phone no.)
+  type: String!
+  # Value (if just one string)
+  value: String
+  # Values (if many selections are applicable, like checkbox)
+  values: [String!]
+  # File if type contains a file
+  file: File
+}
+
+# Uploaded file
+type File {
+  # The original name of the uploaded file
+  original_name: String!
+  # The file's encoding
+  encoding: String!
+  # The file's mimetype
+  mimetype: String!
+  # The path to the file in S3
+  path: String!
+  # The size of the file in bytes
+  size: Int!
+}
