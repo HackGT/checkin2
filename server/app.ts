@@ -12,6 +12,8 @@ import * as cookieParser from "cookie-parser";
 import * as multer from "multer";
 import * as Handlebars from "handlebars";
 import reEscape = require("escape-string-regexp");
+import { config } from "./config";
+import { authenticateWithReject, authenticateWithRedirect } from "./middleware";
 
 let postParser = bodyParser.urlencoded({
 	extended: false
@@ -39,8 +41,8 @@ import * as csvParse from "csv-parse";
 import * as json2csv from "json2csv";
 import * as WebSocket from "ws";
 
-const PORT = parseInt(process.env.PORT) || 3000;
-const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/checkin";
+const PORT = config.server.port;
+const MONGO_URL = config.server.mongo;
 const STATIC_ROOT = "../client";
 
 const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")).version;
@@ -116,31 +118,6 @@ Created default user
 **Delete this user after you have used it to set up your account**
 	`);
 })();
-
-let authenticateWithReject = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
-	let authKey = request.cookies.auth;
-	let user = await User.findOne({"auth_keys": authKey});
-	if (!user) {
-		response.status(401).json({
-			"error": "You must log in to access this endpoint"
-		});
-	}
-	else {
-		response.locals.username = user.username;
-		next();
-	}
-};
-let authenticateWithRedirect = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
-	let authKey = request.cookies.auth;
-	let user = await User.findOne({"auth_keys": authKey});
-	if (!user) {
-		response.redirect("/login");
-	}
-	else {
-		response.locals.username = user.username;
-		next();
-	}
-};
 
 function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
 	return {
@@ -714,7 +691,6 @@ app.route("/login").get(async (request, response) => {
 });
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
-
 
 // WebSocket server
 const server = http.createServer(app);
