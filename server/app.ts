@@ -63,7 +63,7 @@ mongoose.connect(MONGO_URL, {
 });
 export {mongoose};
 
-import {User, IAttendee, IAttendeeMongoose, Attendee, ITags} from "./schema";
+import {User, IAttendee, IAttendeeMongoose, Attendee, ITags, TagsList} from "./schema";
 
 // Promise version of crypto.pbkdf2()
 export function pbkdf2Async (...params: any[]) {
@@ -116,7 +116,19 @@ Created default user
 	Password: ${DEFAULT_PASSWORD}
 **Delete this user after you have used it to set up your account**
 	`);
+
+	// Add default tags 
+	let defaultTagsList = new TagsList({
+		tags: ["hackgt", "breakfast", "lunch", "dinner", "visited-microsoft"]
+	});
+	await defaultTagsList.save();
 })();
+
+// Test Registration
+const registration = new Registration({
+	url: "https://registration-graphql-v2.pr.hack.gt/graphql",
+	key: process.env.ADMIN_KEY_SECRET!
+});
 
 let authenticateWithReject = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
 	let authKey = request.cookies.auth;
@@ -521,29 +533,86 @@ apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async 
 
 apiRouter.route("/search").get(authenticateWithReject, async (request, response) => {
 	let query: string = request.query.q || "";
-	let queryRegExp = new RegExp(query, "i");
+//  	let queryRegExp = new RegExp(query, "i");
 	let checkinStatus: string = request.query.checkedin || "";
 	let tag: string = request.query.tag || "";
 	tag = tag.toLowerCase();
-	// Search through name and both emails
-	let filteredAttendees: IAttendeeMongoose[];
+
+	// Load attendees from registration
+	let registrationAttendees;
 	try {
-		filteredAttendees = await Attendee.find().or([
-			{
-				"name": { $regex: queryRegExp }
-			},
-			{
-				"emails": { $regex: queryRegExp }
-			}
-		]).exec();
+		registrationAttendees = await registration.searchUsers(query);
 	}
 	catch (err) {
-		console.error(err);
+		console.log(err);
 		response.status(500).json({
-			"error": "An error occurred while getting attendee data"
+			"error": "An error occurred while getting attendee data from registration"
 		});
 		return;
 	}
+
+	if (registrationAttendees.length == 0) {
+		response.json([]);
+		return;
+	}
+
+	// Get attendees that are also in check in
+	let registrationIds: string[] = registrationAttendees.map(attendee => attendee.id);
+	let filteredAttendees: IAttendee[] = await Attendee.find({ 
+		id: {
+			$in: registrationIds
+		},
+		["tags." + tag]: {
+			$exists: true
+		} 
+	}).sort({ id: "asc" });
+
+	// Merge with registration information
+	// TODO: get the registration users in batches
+	if (filteredAttendees.length < registrationAttendees.length) {
+		let regAttendeesSorted = registrationAttendees.sort((a, b) => { return a.id.localeCompare(b.id); });
+
+		let i = 0;
+		let j = 0;
+
+		while (i < regAttendeesSorted.length && j < filteredAttendees.length) {
+			if (regAttendeesSorted[i].id == filteredAttendees[j].id) {
+				i++;
+				j++;
+			} else if (regAttendeesSorted[i].id < filteredAttendees[j].id) {
+				let curr = regAttendeesSorted[i];
+				let attendee: IAttendee = {
+					id: curr.id as string,
+					name: curr.name as string,
+					emails: [curr.email] as string[],
+					tags: {
+						[tag]: {
+							checked_in: false
+						}
+					}
+				}
+				filteredAttendees.push(attendee);
+				i++;
+			} 
+		}
+
+		while (i < regAttendeesSorted.length) {
+			let curr = regAttendeesSorted[i];
+			let attendee: IAttendee = {
+				id: curr.id as string,
+				name: curr.name as string,
+				emails: [curr.email] as string[],
+				tags: {
+					[tag]: {
+						checked_in: false
+					}
+				}
+			}
+			filteredAttendees.push(attendee);
+			i++; 
+		}
+	}
+
 	// Sort by last name
 	filteredAttendees = filteredAttendees.sort((a, b) => {
 		var aName = a.name.split(" ");
@@ -554,7 +623,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 		if (aLastName > bLastName) return 1;
 		return 0;
 	});
-	// Filter by tag specified
+
 	if (tag) {
 		filteredAttendees = filteredAttendees.filter(attendee => {
 			return attendee.tags.hasOwnProperty(tag);
@@ -581,25 +650,62 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 		});
 		return;
 	}
-	let attendee = await Attendee.findOne({id: id});
-	if (!attendee) {
-		response.status(400).json({
-			"error": "Invalid attendee ID"
-		});
-		return;
-	}
 	if (!tag) {
 		response.status(400).json({
 			"error": "Must specify tag"
 		});
 		return;
 	}
-	if (!attendee.tags.hasOwnProperty(tag)) {
+	let attendee = await Attendee.findOne({id: id});
+
+	if (!attendee) {
+		// Add attendee from registration to check in
+		let registrationAttendee;
+		try {
+			registrationAttendee = await registration.user(id, ["name", "email"]);
+		}
+		catch (err) {
+			console.log(err);
+			response.status(500).json({
+				"error": "An error occurred while finding this attendee."
+			});
+			return;
+		}
+
+		if (!registrationAttendee) {
+			response.status(400).json({
+				"error": "Invalid id"
+			});
+			return;
+		}
+
+		attendee = await new Attendee({
+			id: id,
+			emails: [registrationAttendee.email],
+			name: registrationAttendee.name,
+			tags: {
+				[tag]: {
+					checked_in: false
+				}
+			}
+		}).save();
+	}
+
+	let tagsList = await TagsList.findOne();
+	let tags: string[] = tagsList ? tagsList.tags : [];
+	if (tags.indexOf(tag) === -1) {
 		response.status(400).json({
 			"error": "Incorrect tag"
 		});
 		return;
 	}
+
+	if (!attendee.tags.hasOwnProperty(tag)) {
+		attendee.tags[tag] = {
+			checked_in: false
+		};
+	}
+
 	if (shouldRevert) {
 		attendee.tags[tag].checked_in = false;
 		attendee.tags[tag].checked_in_by = undefined;
@@ -676,13 +782,13 @@ app.use("/api", apiRouter);
 
 const indexTemplate = Handlebars.compile(fs.readFileSync(path.join(__dirname, STATIC_ROOT, "index.html"), "utf8"));
 app.route("/").get(authenticateWithRedirect, async (request, response) => {
-	let attendees = await Attendee.find();
-	let tags: string[] = attendees.reduce((prev, current) => {
-		let tagsToAdd: string[] = Object.keys(current.tags).filter(t => prev.indexOf(t) === -1);
-		prev = prev.concat(tagsToAdd);
-		return prev;
-	}, <string[]> []);
-	tags.sort((a, b) => a.localeCompare(b));
+	let tagsList = await TagsList.findOne();
+	let tags: string[];
+	if (!tagsList) {
+		tags = [];
+	} else {
+		tags = tagsList.tags;
+	}
 	let users = await User.find().sort({ username: "asc" });
 	let userInfo = users.map(user => {
 		return {
@@ -715,16 +821,6 @@ app.route("/login").get(async (request, response) => {
 });
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
-
-// Test Registration
-const registration = new Registration({
-	url: "https://registration-graphql-v2.pr.hack.gt/graphql",
-	key: process.env.ADMIN_KEY_SECRET!
-});
-registration.question_branches().then(branches => {
-	console.log(branches);
-});
-
 
 // WebSocket server
 const server = http.createServer(app);

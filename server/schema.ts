@@ -51,7 +51,7 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 	id: {
 		type: String,
 		required: true,
-		unique: true
+		//unique: true
 	},
 	name: {
 		type: String,
@@ -64,6 +64,20 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 	},
 	tags: {
 		type: mongoose.Schema.Types.Mixed,
+		required: true
+	}
+}));
+
+// Master list of available tags
+export interface ITagsList {
+	tags: string[]
+}
+
+export type ITagsListMongoose = ITagsList & mongoose.Document;
+
+export const TagsList = mongoose.model<ITagsListMongoose>("TagsList", new mongoose.Schema({
+	tags: {
+		type: [String],
 		required: true
 	}
 }));

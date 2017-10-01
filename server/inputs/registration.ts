@@ -25,7 +25,7 @@ export class Registration {
 		}`);
 		return result.user;
 	}
-
+	
 	async question_branches() {
 		const result = await this.query(`{ question_branches }`);
 		return result.question_branches;
@@ -42,6 +42,32 @@ export class Registration {
 		}
 		else {
 			result = await this.query(`{ question_names }`);
+		}
+	}
+
+	async searchUsers(query: string) {
+		let result; 
+		query = query.trim()
+
+		if (query.length > 0) {
+			result = await this.query(`{
+				search(search: $query, n: 25, offset: 0) {
+					id
+					name
+					email
+				}
+			}`)
+			return result.search_user;
+		} else {
+			// Empty query will return all users
+			result = await this.query(`{ 
+				users(n: 25) {
+					id
+					name
+					email
+				}
+			}`);
+			return result.users;
 		}
 	}
 
