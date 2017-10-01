@@ -16,18 +16,13 @@ export class Registration {
 	}
 
 	async user(id: string, selection_set: string[]) {
-		const vars = selection_set.map((_, i) => `$select_${i}`).join(" ");
-		const var_map: {[selection: string]: string} = {};
-
-		selection_set.forEach((selection, i, _) => {
-			var_map[`$select_${i}`] = selection;
-		}, {});
+		let vars: string = selection_set.join(' ');
 
 		const result = await this.query(`{
-			user(id: $id) {
+			user(id: "${id}") {
 				${vars}
 			}
-		}`, var_map);
+		}`);
 		return result.user;
 	}
 
