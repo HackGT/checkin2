@@ -56,7 +56,7 @@ async function getLoggedInUser(request: express.Request): Promise<{
 
 	const auth = request.headers.authorization;
 
-	if (auth && typeof auth === "string") {
+	if (auth && typeof auth === "string" && auth.indexOf(" ") > -1) {
 		const key = new Buffer(auth.split(" ")[1], "base64").toString();
 		if (key === config.secrets.adminKey) {
 			return {
