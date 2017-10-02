@@ -66,7 +66,7 @@ mongoose.connect(MONGO_URL, {
 });
 export {mongoose};
 
-import {User, IAttendee, IAttendeeMongoose, Attendee, ITags, TagsList} from "./schema";
+import {User, IAttendee, IAttendeeMongoose, Attendee, ITags, Tag} from "./schema";
 
 // Promise version of crypto.pbkdf2()
 export function pbkdf2Async (...params: any[]) {
@@ -120,11 +120,11 @@ Created default user
 **Delete this user after you have used it to set up your account**
 	`);
 
-	// Add default list of tags 
-	let defaultTagsList = new TagsList({
-		tags: ["hackgt", "breakfast", "lunch", "dinner", "visited-microsoft"]
+	// Add default tag
+	let defaultTag = new Tag({
+		name: "hackgt"
 	});
-	await defaultTagsList.save();
+	await defaultTag.save();
 })();
 
 function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
@@ -660,8 +660,8 @@ app.use("/api", apiRouter);
 
 const indexTemplate = Handlebars.compile(fs.readFileSync(path.join(__dirname, STATIC_ROOT, "index.html"), "utf8"));
 app.route("/").get(authenticateWithRedirect, async (request, response) => {
-	let tagsList = await TagsList.findOne();
-	let tags: string[] = tagsList ? tagsList.tags : [];
+	let allTags = await Tag.find().sort({ name: "asc" });
+	let tags: string[] = allTags.map(t => t.name);
 	let users = await User.find().sort({ username: "asc" });
 	let userInfo = users.map(user => {
 		return {

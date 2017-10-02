@@ -6,7 +6,7 @@ import * as express from "express";
 import { graphqlExpress, graphiqlExpress } from "graphql-server-express";
 import { makeExecutableSchema } from "graphql-tools";
 import { PubSub } from "graphql-subscriptions";
-import { Attendee, TagsList } from "./schema";
+import { Attendee, Tag } from "./schema";
 import { authenticateWithRedirect, authenticateWithReject } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
@@ -47,13 +47,7 @@ function resolver(registration: Registration): IResolver {
 			 * Get a list of unique tags currently available to set.
 			 */
 			tags: async (prev, args, ctx) => {
-				const tagslist = await TagsList.findOne();
-				const tags: string[] = tagslist ? tagslist.tags : [];
-				return tags.map(tag => {
-					return {
-						name: tag
-					};
-				});
+				return Tag.find();
 			},
 			/**
 			 * Retrieve user through a user ID or through the token passed to
