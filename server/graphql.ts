@@ -5,7 +5,6 @@ import * as bodyParser from "body-parser";
 import * as express from "express";
 import { graphqlExpress, graphiqlExpress } from "graphql-server-express";
 import { makeExecutableSchema } from "graphql-tools";
-import { PubSub } from "graphql-subscriptions";
 import { Attendee, Tag } from "./schema";
 import { authenticateWithRedirect, authenticateWithReject } from "./middleware";
 import { schema as types } from "./graphql.types";
@@ -13,17 +12,7 @@ import { Registration } from "./inputs/registration";
 
 const typeDefs = fs.readFileSync(path.resolve(__dirname, "../api.graphql"), "utf8");
 
-const pubsub = new PubSub();
-
-export enum Events {
-	TAG_CHANGE
-}
-
 type Ctx = express.Request;
-
-interface ISubscription<Args> {
-	subscribe: types.GraphqlField<Args, AsyncIterator<any>, Ctx>;
-}
 
 interface IResolver {
 	Query: types.Query<Ctx>;
@@ -32,9 +21,6 @@ interface IResolver {
 		user: types.GraphqlField<{}, types.UserInfo<Ctx>, Ctx>;
 	};
 	Mutation: types.Mutation<Ctx>;
-	Subscription: {
-		tag_change: ISubscription<undefined>;
-	}
 }
 
 /**
@@ -54,19 +40,25 @@ function resolver(registration: Registration): IResolver {
 			 * Query. Leave id empty if you'd like to view the currently logged in
 			 * user.
 			 */
-			user: registration.forward<types.UserAndTags<Ctx>>("user"),
+			user: registration.forward<types.UserAndTags<Ctx>>({
+				path: "user.user",
+				include: ["id"]
+			}),
 			/**
 			 * Search through a user's name and email through regex
 			 */
-			search_user: registration.forward<types.UserAndTags<Ctx>[]>("user"),
+			search_user: registration.forward<types.UserAndTags<Ctx>[]>({
+				path: "search_user.user",
+				include: ["id"]
+			}),
 			/**
 			 * All possible question branches
 			 */
-			question_branches: registration.forward<string[]>(),
+			question_branches: registration.forward<string[]>({}),
 			/**
 			 * All possible question names, or names of question in a branch
 			 */
-			question_names: registration.forward<string[] | undefined>()
+			question_names: registration.forward<string[] | undefined>({})
 		},
 		UserAndTags: {
 			user: (prev, args, ctx) => {
@@ -77,7 +69,6 @@ function resolver(registration: Registration): IResolver {
 			 */
 			tags: async (prev, args, ctx) => {
 				// TODO: index users by registration's ID or create a UUID field
-				// TODO: change `forward` to always query for the ID
 				const attendee = await Attendee.findOne({
 					id: prev.id
 				});
@@ -106,13 +97,6 @@ function resolver(registration: Registration): IResolver {
 			 */
 			check_out: async (prev, args, ctx) => {
 				return null as any; // TODO: Implement
-			}
-		},
-		Subscription: {
-			tag_change: {
-				subscribe: () => {
-					return pubsub.asyncIterator(Events[Events.TAG_CHANGE]);
-				}
 			}
 		}
 	};

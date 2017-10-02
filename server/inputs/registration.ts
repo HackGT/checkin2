@@ -71,36 +71,81 @@ export class Registration {
 	/**
 	 * Utility
 	 */
-	forward<Q>(child?: string, appendId = true): Q {
-		const findChild = (queue: graphql.SelectionNode[]) => {
-			while (queue.length > 0) {
-				const field = queue.pop();
-				if (field && field.kind === "Field") {
-					if (field.name.value === child) {
-						return field;
-					}
-					if (field.selectionSet) {
-						queue.unshift(...field.selectionSet.selections);
+	forward<Q>(opts: {
+		path?: string;
+		include?: string[];
+		head?: string;
+	}): Q {
+		const findBody = (query: string, nodes: graphql.SelectionNode[]) => {
+			let field;
+
+			if (opts.path) {
+				const components = opts.path.split(".");
+				let found = true;
+
+				while (components.length > 0 && found) {
+					found = false;
+					for (let node of nodes) {
+						if (node.kind === "Field"
+							&& node.name.value === components[0]
+						   ) {
+							if (node.selectionSet) {
+								found = true;
+								field = node;
+								components.shift();
+								nodes = node.selectionSet.selections;
+							}
+						}
 					}
 				}
 			}
-			return false;
+			else {
+				field = nodes.find(f => f.kind === "Field") as graphql.FieldNode;
+			}
+
+			if (!field || !field.selectionSet || !field.selectionSet.loc) {
+				return null;
+			}
+
+			return query.slice(field.selectionSet.loc.start, field.selectionSet.loc.end);
 		};
-		const stichChild = (query: string, root: graphql.FieldNode, found: graphql.FieldNode) => {
-			if (!found.loc) {
-				throw new Error(`Cannot find location info on ${child}.`);
+
+		const augmentBody = (body: string) => {
+			if (opts.include) {
+				return body.replace(/\s*?\{/, "$& " + opts.include.join(" ") + " ");
 			}
-			if (!found.selectionSet) {
-				return query.slice(found.loc.start, found.loc.end);
+			return body;
+		}
+
+		const pathToObject = (components: string[], item: any) => {
+			const reduced: any = {};
+			components.reduce((obj, component, i) => {
+				if (i + 1 === components.length) {
+					obj[component] = item;
+				}
+				else {
+					obj[component] = {};
+				}
+				return obj[component];
+			}, reduced);
+			return reduced;
+		};
+
+		const findHead = (query: string, head: graphql.SelectionNode) => {
+			if (opts.head) {
+				return opts.head;
 			}
-			if (!root.selectionSet || !found.selectionSet || !found.selectionSet.loc
-				|| !root.loc || !root.selectionSet.loc)
-			{
-				throw new Error(`Cannot find location info on root or found selection.`);
+			else if (head.kind === "Field" && head.loc
+					 && head.selectionSet && head.selectionSet.loc
+					) {
+				return query.slice(head.loc.start, head.selectionSet.loc.start);
 			}
-			const head = query.slice(root.loc.start, root.selectionSet.loc.start);
-			const select = query.slice(found.selectionSet.loc.start, found.selectionSet.loc.end);
-			return `${head} ${select}`;
+			else if (head.kind === "Field" && head.loc) {
+				return query.slice(head.loc.start, head.loc.end);
+			}
+			else {
+				throw new Error(`Cannot find location info on root: ${JSON.stringify(head)}.`);
+			}
 		};
 
 		const inner_forward = async (
@@ -110,42 +155,38 @@ export class Registration {
 				console.warn("More than one field node");
 				console.warn(JSON.stringify(schema));
 			}
-			const field = schema.fieldNodes[0];
-			const selections = (field && field.selectionSet && field.selectionSet.selections) || [];
 			const query = req.body.query;
+			if (!query) {
+				console.warn("No query detected for schema " + JSON.stringify(schema));
+				return null;
+			}
 
-			let todo;
-			if (child) {
-				const found = findChild(selections.slice());
-				if (!found) {
-					throw new Error(`Cannot find child selection ${child}.`);
-				}
-				todo = stichChild(query, field, found);
+			let body = findBody(query, schema.fieldNodes);
+			if (!body) {
+				body = "";
 			}
-			else {
-				if (!field.loc) {
-					console.error(child, JSON.stringify(schema));
-					throw new Error("No location info on field.");
-				}
-				todo = query.slice(field.loc.start, field.loc.end);
-			}
+			body = augmentBody(body);
+			const head = findHead(query, schema.fieldNodes[0]);
+			const todo = `${head} ${body}`;
 
 			const result: {[key: string]: any} = await this.query(`{ ${todo} }`);
+			const data = result[Object.keys(result)[0]];
 
-			if (child && result[schema.fieldName] instanceof Array) {
-				return result[schema.fieldName].map((item: any) => {
-					return {
-						[child]: item,
-					};
-				});
-			}
-			else if (child) {
-				return {
-					[child]: (result as {[key: string]: any})[child],
-				};
+			if (opts.path) {
+				const components = opts.path.split(".");
+				components.shift();
+
+				if (data instanceof Array) {
+					return data.map((item: any) => {
+						return pathToObject(components, item);
+					});
+				}
+				else {
+					return pathToObject(components, data);
+				}
 			}
 			else {
-				return result[schema.fieldName];
+				return data;
 			}
 		};
 		return inner_forward as any as Q;
