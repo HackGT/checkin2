@@ -16,7 +16,7 @@ export class Registration {
 	}
 
 	async user(id: string, selection_set: string[]) {
-		let vars: string = selection_set.join(' ');
+		const vars = selection_set.join(' ');
 
 		const result = await this.query(`{
 			user(id: "${id}") {
@@ -27,14 +27,13 @@ export class Registration {
 	}
 
 	async question_branches() {
-		const result = await this.query(`{ question_branches }`);
-		return result.question_branches;
+		return (await this.query(`{ question_branches }`)).question_branches;
 	}
 
 	async question_names(branch?: string) {
 		let result;
 		if (branch) {
-			result = await this.query(`{
+			result = await this.query(`query Branch($branch: String!) {
 				question_names(branch: $branch)
 			}`, {
 				branch
@@ -43,6 +42,7 @@ export class Registration {
 		else {
 			result = await this.query(`{ question_names }`);
 		}
+		return result.question_names;
 	}
 
 	async query(query: string, variables?: { [name: string]: string }): Promise<GQL.IQuery> {
