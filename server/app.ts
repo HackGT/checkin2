@@ -697,7 +697,7 @@ app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
 
 // Test Registration
 const registration = new Registration({
-	url: "https://registration-graphql-v2.pr.hack.gt/graphql",
+	url: config.inputs.registration,
 	key: config.secrets.adminKey
 });
 

@@ -3,6 +3,9 @@ export interface IConfig {
 		port: number;
 		mongo: string;
 	},
+	inputs: {
+		registration: string;
+	},
 	secrets: {
 		adminKey: string;
 	}
@@ -12,6 +15,9 @@ export const config: IConfig = {
 	server: {
 		port: envOrDefault("PORT", 3000, parseInt),
 		mongo: envOrDefault("MONGO_URL", "mongodb://localhost/checkin")
+	},
+	inputs: {
+		registration: envOrDefault("REGISTRATION_GRAPHQL", "https://registration.dev.hack.gt/graphql")
 	},
 	secrets: {
 		adminKey: env("ADMIN_KEY_SECRET")
