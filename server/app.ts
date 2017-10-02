@@ -94,37 +94,38 @@ export function readFileAsync (filename: string): Promise<string> {
 }
 
 // Check for number of users and create default account if none
-const DEFAULT_USERNAME = "admin";
-const DEFAULT_PASSWORD = "admin";
 (async () => {
-	let users = await User.find();
-	if (users.length !== 0)
-		return;
+	// Create default user if there are none.
+	if (!(await User.findOne())) {
+		let salt = crypto.randomBytes(32);
+		let passwordHashed = await pbkdf2Async(config.app.default_admin.password,
+											   salt, 500000, 128, "sha256");
 
-	let salt = crypto.randomBytes(32);
-	let passwordHashed = await pbkdf2Async(DEFAULT_PASSWORD, salt, 500000, 128, "sha256");
+		let defaultUser = new User({
+			username: config.app.default_admin.username,
+			login: {
+				hash: passwordHashed.toString("hex"),
+				salt: salt.toString("hex")
+			},
+			auth_keys: []
+		});
+		await defaultUser.save();
+		console.info(`
+			Created default user
+			Username: ${config.app.default_admin.username}
+			Password: ${config.app.default_admin.password}
+			**Delete this user after you have used it to set up your account**
+		`);
+	}
 
-	let defaultUser = new User({
-		username: DEFAULT_USERNAME,
-		login: {
-			hash: passwordHashed.toString("hex"),
-			salt: salt.toString("hex")
-		},
-		auth_keys: []
-	});
-	await defaultUser.save();
-	console.info(`
-Created default user
-	Username: ${DEFAULT_USERNAME}
-	Password: ${DEFAULT_PASSWORD}
-**Delete this user after you have used it to set up your account**
-	`);
-
-	// Add default tag
-	let defaultTag = new Tag({
-		name: "hackgt"
-	});
-	await defaultTag.save();
+	// Add default list of tags if there are none.
+	if (!(await Tag.findOne())) {
+		// Add default tag
+		let defaultTag = new Tag({
+			name: "hackgt"
+		});
+		await defaultTag.save();
+	}
 })();
 
 function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {

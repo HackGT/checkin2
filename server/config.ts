@@ -6,6 +6,12 @@ export interface IConfig {
 	inputs: {
 		registration: string;
 	},
+	app: {
+		default_admin: {
+			username: string;
+			password: string;
+		}
+	}
 	secrets: {
 		adminKey: string;
 	}
@@ -18,6 +24,12 @@ export const config: IConfig = {
 	},
 	inputs: {
 		registration: envOrDefault("REGISTRATION_GRAPHQL", "https://registration.dev.hack.gt/graphql")
+	},
+	app: {
+		default_admin: {
+			username: envOrDefault("DEFAULT_ADMIN_USER", "admin"),
+			password: envOrDefault("DEFAULT_ADMIN_PASS", "admin"),
+		}
 	},
 	secrets: {
 		adminKey: env("ADMIN_KEY_SECRET")
