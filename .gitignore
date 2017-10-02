@@ -43,3 +43,6 @@ jspm_packages
 apis/*
 
 *.types.ts
+
+# just emacs things
+.#*
