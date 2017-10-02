@@ -67,3 +67,17 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 		required: true
 	}
 }));
+
+// Master list of available tags
+export interface ITagsList {
+	tags: string[];
+}
+
+export type ITagsListMongoose = ITagsList & mongoose.Document;
+
+export const TagsList = mongoose.model<ITagsListMongoose>("TagsList", new mongoose.Schema({
+	tags: {
+		type: [String],
+		required: true
+	}
+}));
