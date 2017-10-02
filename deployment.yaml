@@ -1,5 +1,6 @@
 git:
     branch: master
-
+secrets:
+  - ADMIN_KEY_SECRET
 wants:
     mongo: true

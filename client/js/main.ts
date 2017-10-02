@@ -1,5 +1,5 @@
+declare let mdc: any;
 declare let moment: any;
-declare let qwest: any; // Update with actual definitions later
 
 class State {
 	public linkID: string;
@@ -11,7 +11,7 @@ class State {
 	constructor(linkID: string, sectionID: string) {
 		this.linkID = linkID;
 		this.sectionID = sectionID;
-		
+
 		let link = document.getElementById(linkID);
 		if (!link) {
 			throw new Error("Invalid link ID");
@@ -105,7 +105,7 @@ function checkIn (e: Event) {
 	let isCheckedIn: boolean = button.classList.contains("checked-in");
 	button.disabled = true;
 	let tag: string = tagSelector.value;
-	
+
 	qwest.post("/api/checkin", {
 		id: button.parentElement!.parentElement!.id.slice(5),
 		revert: isCheckedIn ? "true" : "false",
@@ -140,7 +140,7 @@ function attachUserDeleteHandlers () {
 				}
 				// Reattach button event handlers
 				attachUserDeleteHandlers();
-				
+
 				if (response.reauth) {
 					window.location.reload();
 				}
@@ -229,10 +229,10 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 			let attendee = response[i];
 			if (!!attendee) {
 				existingNodes[i].style.display = "";
-				
+
 				existingNodes[i].id = "item-" + attendee.id;
 				existingNodes[i].querySelector("#name")!.textContent = attendee.name;
-				
+
 				let emails = attendee.emails.reduce((prev, current) => {
 					if (prev.indexOf(current) === -1) {
 						prev.push(current);
@@ -240,7 +240,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 					return prev;
 				}, <string[]> []);
 				existingNodes[i].querySelector("#emails")!.textContent = emails.join(", ");
-				
+
 				let button = existingNodes[i].querySelector(".actions > button")!;
 				let status = existingNodes[i].querySelector(".actions > span.status")!;
 				let date = attendee.tags[tag].checked_in_date;
@@ -276,8 +276,8 @@ function updateTagSelectors(newTags: string[]) {
 	});
 	for (let curr of newTags) {
 		if (tags.indexOf(curr) === -1) {
-			let tagsList = <NodeListOf<HTMLSelectElement>> document.querySelectorAll("select.tags");
-			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+			const tagsList = document.querySelectorAll("select.tags");
+			Array.prototype.slice.call(tagsList).forEach((el: HTMLSelectElement) => {
 				let tagOption = document.createElement("option");
 				tagOption.textContent = curr;
 				el.appendChild(tagOption);
@@ -355,7 +355,7 @@ document.getElementById("add-update-user")!.addEventListener("click", e => {
 			alert(`Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`);
 		}
 		window.location.reload();
-		
+
 	}).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {
@@ -404,7 +404,7 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 
 	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
 	let currentTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
-	
+
 	let currentTag: string = currentTagSelect.options[currentTagSelect.selectedIndex].value;
 	if (!currentTag) {
 		alert("Please select a valid tag");
@@ -423,8 +423,8 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => el.textContent );
 		// Add to tag selectors
 		if (tags.indexOf(tag) === -1) {
-			let tagsList = document.querySelectorAll("select.tags"); 
-			Array.prototype.slice.call(document.querySelectorAll("select.tags")).forEach((el: HTMLSelectElement) => {
+			const tagsList = document.querySelectorAll("select.tags");
+			Array.prototype.slice.call(tagsList).forEach((el: HTMLSelectElement) => {
 				let option = document.createElement("option");
 				option.textContent = tag;
 				el.appendChild(option);

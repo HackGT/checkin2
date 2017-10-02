@@ -1,6 +1,5 @@
 import * as fs from "fs";
 import * as path from "path";
-import * as url from "url";
 import * as os from "os";
 import * as crypto from "crypto";
 import * as http from "http";
@@ -11,8 +10,8 @@ import * as compression from "compression";
 import * as bodyParser from "body-parser";
 import * as cookieParser from "cookie-parser";
 import * as multer from "multer";
-import * as reEscape from "escape-string-regexp";
 import * as Handlebars from "handlebars";
+import reEscape = require("escape-string-regexp");
 
 let postParser = bodyParser.urlencoded({
 	extended: false
@@ -63,7 +62,7 @@ mongoose.connect(MONGO_URL, {
 });
 export {mongoose};
 
-import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee, ITags} from "./schema";
+import {User, IAttendee, IAttendeeMongoose, Attendee, ITags} from "./schema";
 
 // Promise version of crypto.pbkdf2()
 export function pbkdf2Async (...params: any[]) {
@@ -456,7 +455,10 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 apiRouter.route("/data/tag/:tag").put(authenticateWithReject, postParser, async (request, response) => {
 	let tag: string = request.params.tag;
 	let name: string = request.body.name;
-	let emails: string[] = request.body.email ? request.body.email.split(",").map(email => email.trim()) : [];
+	let emails: string[] = request.body.email ? request.body.email
+		.split(",")
+		.map((email: string) => email.trim()) : [];
+
 	if (!name || !name.trim() || emails.length === 0) {
 		response.status(400).json({
 			"error": "Missing name or emails"
@@ -712,6 +714,7 @@ app.route("/login").get(async (request, response) => {
 });
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
+
 
 // WebSocket server
 const server = http.createServer(app);

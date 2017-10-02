@@ -1,4 +1,4 @@
-declare let mdc: any;
+/// <reference types="qwest" />
 mdc.autoInit();
 
 document.addEventListener("keydown", e => {

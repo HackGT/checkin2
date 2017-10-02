@@ -1,0 +1,25 @@
+{
+	"compilerOptions": {
+		"typeRoots": [
+			"../node_modules/*"
+		],
+		"target": "es5",
+		"lib": [
+			"es5",
+			"es2015.promise",
+			"dom",
+			"es6"
+		],
+		"sourceMap": true,
+		"alwaysStrict": true,
+		"strictNullChecks": true,
+		"noImplicitAny": true,
+		"noImplicitReturns": true,
+		"noUnusedLocals": true,
+		"module": "es6",
+		"moduleResolution": "node"
+	},
+	"include": [
+		"js/*.ts"
+	]
+}
