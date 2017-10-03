@@ -40,25 +40,25 @@ function resolver(registration: Registration): IResolver {
 			 * Query. Leave id empty if you'd like to view the currently logged in
 			 * user.
 			 */
-			user: registration.forward<types.UserAndTags<Ctx>>({
+			user: registration.forward({
 				path: "user.user",
 				include: ["id"]
 			}),
 			/**
 			 * Search through a user's name and email through regex
 			 */
-			search_user: registration.forward<types.UserAndTags<Ctx>[]>({
+			search_user: registration.forward({
 				path: "search_user.user",
 				include: ["id"]
 			}),
 			/**
 			 * All possible question branches
 			 */
-			question_branches: registration.forward<string[]>({}),
+			question_branches: registration.forward({}),
 			/**
 			 * All possible question names, or names of question in a branch
 			 */
-			question_names: registration.forward<string[] | undefined>({})
+			question_names: registration.forward({})
 		},
 		UserAndTags: {
 			user: (prev, args, ctx) => {
@@ -95,28 +95,25 @@ function resolver(registration: Registration): IResolver {
 			 */
 			check_in: async (prev, args, ctx, schema) => {
 				// Return none if tag doesn't exist
-				if (!(await Tag.findOne({ name: args.tag }))) {
-					return null as any;
+				if (!(await Tag.findOne({ name: args.tag })) || !schema) {
+					return null;
 				}
 
                 let attendee = await Attendee.findOne({
                     id: args.user
                 });
 
-                if (!schema) {
-                	return null as any;
-                }
-
-                let userInfo = await (registration.forward<types.UserAndTags<Ctx>>({
+				const forwarder = registration.forward({
                     path: "check_in.user",
                     include: ["id"],
                     head: `user(id: "${args.user}")`
-                }))(prev, args, ctx, schema);
+                });
+                const userInfo = await forwarder(prev, args, ctx, schema);
 
                 // Create attendee if it doesn't already exist
                 if (!attendee) {
                     attendee = new Attendee({
-                        id: args.user, 
+                        id: args.user,
                         name: userInfo.user.name,
                         emails: userInfo.user.email,
                         tags: {}
