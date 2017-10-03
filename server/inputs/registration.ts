@@ -75,7 +75,7 @@ export class Registration {
 		path?: string;
 		include?: string[];
 		head?: string;
-	}): Q {
+	}) {
 		const findBody = (query: string, nodes: graphql.SelectionNode[]) => {
 			let field;
 
@@ -149,8 +149,8 @@ export class Registration {
 		};
 
 		const inner_forward = async (
-			prev: {}, args: {}, req: express.Request, schema: graphql.GraphQLResolveInfo
-		) => {
+			prev: any, args: any, req: express.Request, schema: graphql.GraphQLResolveInfo
+		): Promise<Q> => {
 			if (schema.fieldNodes.length > 1) {
 				console.warn("More than one field node");
 				console.warn(JSON.stringify(schema));
@@ -158,7 +158,7 @@ export class Registration {
 			const query = req.body.query;
 			if (!query) {
 				console.warn("No query detected for schema " + JSON.stringify(schema));
-				return null;
+				return null as any as Q;
 			}
 
 			let body = findBody(query, schema.fieldNodes);
@@ -179,7 +179,7 @@ export class Registration {
 				if (data instanceof Array) {
 					return data.map((item: any) => {
 						return pathToObject(components, item);
-					});
+					}) as any as Q;
 				}
 				else {
 					return pathToObject(components, data);
@@ -189,6 +189,6 @@ export class Registration {
 				return data;
 			}
 		};
-		return inner_forward as any as Q;
+		return inner_forward;
 	}
 }
