@@ -131,8 +131,40 @@ function resolver(registration: Registration): IResolver {
 			/**
 			 * Check-out a user by specifying the tag name
 			 */
-			check_out: async (prev, args, ctx) => {
-				return null as any; // TODO: Implement
+			check_out: async (prev, args, ctx, schema) => {
+				// Return none if tag doesn't exist
+				if (!(await Tag.findOne({ name: args.tag })) || !schema) {
+					return null;
+				}
+
+                let attendee = await Attendee.findOne({
+                    id: args.user
+                });
+
+				const forwarder = registration.forward({
+                    path: "check_out.user",
+                    include: ["id"],
+                    head: `user(id: "${args.user}")`
+                });
+                const userInfo = await forwarder(prev, args, ctx, schema);
+
+                // Create attendee if it doesn't already exist
+                if (!attendee) {
+                    attendee = new Attendee({
+                        id: args.user,
+                        name: userInfo.user.name,
+                        emails: userInfo.user.email,
+                        tags: {}
+                    });
+                }
+                attendee.tags[args.tag] = {
+                    checked_in: false,
+                    checked_in_date: new Date()
+                }
+                attendee.markModified('tags');
+                await attendee.save();
+
+                return userInfo;
 			}
 		}
 	};
