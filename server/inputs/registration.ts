@@ -149,7 +149,7 @@ export class Registration {
 		};
 
 		const inner_forward = async (
-			prev: any, args: any, req: express.Request, schema: graphql.GraphQLResolveInfo
+			prev: any, args: any, req: express.Request, schema: graphql.GraphQLResolveInfo | undefined
 		): Promise<Q> => {
 			if (schema.fieldNodes.length > 1) {
 				console.warn("More than one field node");
@@ -189,6 +189,6 @@ export class Registration {
 				return data;
 			}
 		};
-		return inner_forward;
+		return inner_forward as any as Q;
 	}
 }

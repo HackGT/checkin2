@@ -69,8 +69,12 @@ function resolver(registration: Registration): IResolver {
 			 */
 			tags: async (prev, args, ctx) => {
 				// TODO: index users by registration's ID or create a UUID field
+				if (prev.tags) {
+					return prev.tags;
+				}
+
 				const attendee = await Attendee.findOne({
-					id: prev.id
+					id: prev.user.id
 				});
 				if (!attendee) {
 					return [];
@@ -89,8 +93,43 @@ function resolver(registration: Registration): IResolver {
 			/**
 			 * Check-in a user by specifying the tag name
 			 */
-			check_in: async (prev, args, ctx) => {
-				return null as any; // TODO: Implement
+			check_in: async (prev, args, ctx, schema) => {
+				// Return none if tag doesn't exist
+				if (!(await Tag.findOne({ name: args.tag }))) {
+					return null as any;
+				}
+
+                let attendee = await Attendee.findOne({
+                    id: args.user
+                });
+
+                if (!schema) {
+                	return null as any;
+                }
+
+                let userInfo = await (registration.forward<types.UserAndTags<Ctx>>({
+                    path: "check_in.user",
+                    include: ["id"],
+                    head: `user(id: "${args.user}")`
+                }))(prev, args, ctx, schema);
+
+                // Create attendee if it doesn't already exist
+                if (!attendee) {
+                    attendee = new Attendee({
+                        id: args.user, 
+                        name: userInfo.user.name,
+                        emails: userInfo.user.email,
+                        tags: {}
+                    });
+                }
+                attendee.tags[args.tag] = {
+                    checked_in: true,
+                    checked_in_date: new Date()
+                }
+                attendee.markModified('tags');
+                await attendee.save();
+
+                return userInfo;
 			},
 			/**
 			 * Check-out a user by specifying the tag name
