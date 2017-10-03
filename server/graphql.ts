@@ -6,7 +6,7 @@ import * as express from "express";
 import { graphqlExpress, graphiqlExpress } from "graphql-server-express";
 import { makeExecutableSchema } from "graphql-tools";
 import { Attendee, Tag } from "./schema";
-import { authenticateWithRedirect, authenticateWithReject } from "./middleware";
+import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
 
@@ -119,10 +119,13 @@ function resolver(registration: Registration): IResolver {
                         tags: {}
                     });
                 }
+                const loggedInUser = await getLoggedInUser(ctx);
                 attendee.tags[args.tag] = {
                     checked_in: true,
-                    checked_in_date: new Date()
+                    checked_in_date: new Date(),
+                    checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
                 }
+
                 attendee.markModified('tags');
                 await attendee.save();
 
@@ -157,9 +160,11 @@ function resolver(registration: Registration): IResolver {
                         tags: {}
                     });
                 }
+                const loggedInUser = await getLoggedInUser(ctx);
                 attendee.tags[args.tag] = {
                     checked_in: false,
-                    checked_in_date: new Date()
+                    checked_in_date: new Date(),
+                    checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
                 }
                 attendee.markModified('tags');
                 await attendee.save();

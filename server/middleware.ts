@@ -40,7 +40,7 @@ export async function authenticateWithRedirect(
 	}
 };
 
-async function getLoggedInUser(request: express.Request): Promise<{
+export async function getLoggedInUser(request: express.Request): Promise<{
 	admin: boolean;
 	user?: IUser;
 }> {
