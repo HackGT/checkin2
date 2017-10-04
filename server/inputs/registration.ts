@@ -150,6 +150,30 @@ export class Registration {
 			}
 		};
 
+		const findSignature = (
+			query: string,
+			defs: graphql.VariableDefinitionNode[] | undefined,
+			vals: {[name: string]: any}
+		) => {
+			const declaration = (defs || [])
+				.filter(def => {
+					return !!vals[def.variable.name.value];
+				})
+				.map(def => {
+					if (def.loc) {
+						return query.slice(def.loc.start, def.loc.end);
+					}
+					return false;
+				})
+				.filter(d => !!d)
+				.join(", ");
+
+			if (declaration.length === 0) {
+				return "";
+			}
+			return `ForwardQuery(${declaration})`;
+		};
+
 		const inner_forward = async (
 			prev: any, args: any, req: express.Request, schema: graphql.GraphQLResolveInfo
 		) => {
@@ -173,9 +197,10 @@ export class Registration {
 			}
 			body = augmentBody(body);
 			const head = findHead(query, schema.fieldNodes[0]);
-			const todo = `${head} ${body}`;
+			const signature = findSignature(query, schema.operation.variableDefinitions, schema.variableValues);
+			const todo = `query ${signature} { ${head} ${body} }`;
 
-			const result: {[key: string]: any} = await this.query(`{ ${todo} }`);
+			const result: {[key: string]: any} = await this.query(todo, schema.variableValues);
 			const data = result[Object.keys(result)[0]];
 
 			if (opts.path) {
