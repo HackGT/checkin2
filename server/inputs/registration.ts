@@ -91,7 +91,9 @@ export class Registration {
 						   ) {
 							if (node.selectionSet) {
 								found = true;
-								field = node;
+								if (components.length === 1) {
+									field = node;
+								}
 								components.shift();
 								nodes = node.selectionSet.selections;
 							}
@@ -162,6 +164,10 @@ export class Registration {
 			}
 
 			let body = findBody(query, schema.fieldNodes);
+			if (!body && opts.path) {
+				// NOTE: __typename is always a valid query
+				body = "{ __typename }";
+			}
 			if (!body) {
 				body = "";
 			}

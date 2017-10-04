@@ -62,7 +62,7 @@ function resolver(registration: Registration): IResolver {
 		},
 		UserAndTags: {
 			user: (prev, args, ctx) => {
-				return prev.user;
+				return prev && prev.user;
 			},
 			/**
 			 * Tags associated with a user
@@ -72,10 +72,15 @@ function resolver(registration: Registration): IResolver {
 				if (prev.tags) {
 					return prev.tags;
 				}
+				// Registration API did not find a user.
+				if (!prev || !prev.user || !prev.user.id) {
+					return [];
+				}
 
 				const attendee = await Attendee.findOne({
 					id: prev.user.id
 				});
+				// Checkin API did not find a user.
 				if (!attendee) {
 					return [];
 				}
