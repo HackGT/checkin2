@@ -174,6 +174,22 @@ export class Registration {
 			return `ForwardQuery(${declaration})`;
 		};
 
+		const findFragments = (
+			query: string,
+			fragments: {[name: string]: graphql.FragmentDefinitionNode}
+		) => {
+			return Object.keys(fragments)
+				.map(name => {
+					const fragment = fragments[name];
+					if (fragment.loc) {
+						return query.slice(fragment.loc.start, fragment.loc.end);
+					}
+					return false;
+				})
+				.filter(d => !!d)
+				.join("\n");
+		};
+
 		const inner_forward = async (
 			prev: any, args: any, req: express.Request, schema: graphql.GraphQLResolveInfo
 		) => {
@@ -198,7 +214,8 @@ export class Registration {
 			body = augmentBody(body);
 			const head = findHead(query, schema.fieldNodes[0]);
 			const signature = findSignature(query, schema.operation.variableDefinitions, schema.variableValues);
-			const todo = `query ${signature} { ${head} ${body} }`;
+			const fragments = findFragments(query, schema.fragments);
+			const todo = `query ${signature} { ${head} ${body} }\n${fragments}`;
 
 			const result: {[key: string]: any} = await this.query(todo, schema.variableValues);
 			const data = result[Object.keys(result)[0]];

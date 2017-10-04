@@ -37,7 +37,7 @@ type UserAndTags {
   # Tags associated with a user
   tags: [TagState!]!
   # Registration info about the user
-  user: UserInfo!
+  user: User!
 }
 
 # Information about checkin tags
@@ -51,8 +51,11 @@ type TagState {
   checked_in: Boolean!
 }
 
+# NOTE: Type names that forward to registration must match the type names
+# in the registration API itself for fragments to work currently.
+
 # Registration info about the user
-type UserInfo {
+type User {
   # User ID, valid across the entire system
   id: ID!
 

@@ -18,7 +18,7 @@ interface IResolver {
 	Query: types.Query<Ctx>;
 	UserAndTags: {
 		tags: types.GraphqlField<{}, types.TagState<Ctx>[], Ctx>;
-		user: types.GraphqlField<{}, types.UserInfo<Ctx>, Ctx>;
+		user: types.GraphqlField<{}, types.User<Ctx>, Ctx>;
 	};
 	Mutation: types.Mutation<Ctx>;
 }
