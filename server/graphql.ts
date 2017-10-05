@@ -45,12 +45,29 @@ function resolver(registration: Registration): IResolver {
 				include: ["id"]
 			}),
 			/**
+			 * All the users in the database, useful for polling for new user information.
+			 * This is paginated, n is the number of results, and last_id is the last ID
+			 * seen from the latest page retrieved, if you want the first page leave this out.
+			 */
+			users: registration.forward({
+				path: "users.user",
+				include: ["id"]
+			}),
+			/**
 			 * Search through a user's name and email through regex
 			 */
 			search_user: registration.forward({
 				path: "search_user.user",
 				include: ["id"]
 			}),
+			/**
+			 * All possible application question branches
+			 */
+			application_branches: registration.forward({}),
+			/**
+			 * All possible confirmation question branches
+			 */
+			confirmation_branches: registration.forward({}),
 			/**
 			 * All possible question branches
 			 */

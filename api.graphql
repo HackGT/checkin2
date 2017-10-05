@@ -20,9 +20,17 @@ type Query {
   # Query. Leave id empty if you'd like to view the currently logged in
   # user.
   user(id: ID!): UserAndTags
+  # All the users in the database, useful for polling for new user information.
+  # This is paginated, n is the number of results, and last_id is the last ID
+  # seen from the latest page retrieved, if you want the first page leave this out.
+  users(last_id: ID, n: Int!, filter: UserFilter): [UserAndTags!]!
   # Search through a user's name and email through regex
-  search_user(search: String!, offset: Int!, n: Int!): [UserAndTags!]!
-  # All possible question branches
+  search_user(search: String!, use_regex: Boolean = false, offset: Int!, n: Int!, filter: UserFilter): [UserAndTags!]!
+  # All possible application question branches
+  application_branches: [String!]!
+  # All possible confirmation question branches
+  confirmation_branches: [String!]!
+  # All possible question branches from all types!
   question_branches: [String!]!
   # All possible question names, or names of question in a branch
   question_names(branch: String): [String!]
@@ -87,8 +95,28 @@ type User {
   # If branch is not given, find this question name in any branch.
   question(name: String!): FormItem
 
+  # Get the answer to multiple questions asked of this user, userful
+  # when the set of questions you want to receive is set by the user.
+  questions(names: [String!]!): [FormItem!]!
+
   # What team, if any, is the user a part of?
   team: Team
+}
+
+# Filter users by this criterea.
+# A value means to filter by that value, no value
+# means that filter will be ignored.
+input UserFilter {
+  # If the user has applied to the event
+  applied: Boolean
+  # If the user has been accepted to the event
+  accepted: Boolean
+  # If the user has indicated that he or she is attending
+  attending: Boolean
+  # The type of application a user filled out (e.g. Mentor, Participant)
+  application_branch: String
+  # The type of confirmation a user filled out (e.g. Needs Reimbursement)
+  confirmation_branch: String
 }
 
 # A filled out form (application / confirmation form)
