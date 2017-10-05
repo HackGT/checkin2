@@ -76,7 +76,14 @@ export class Registration {
 		include?: string[];
 		head?: string;
 	}) {
-		const findBody = (query: string, nodes: graphql.SelectionNode[]) => {
+		const findBody = (
+			query: string,
+			nodes: graphql.SelectionNode[],
+			schema: graphql.GraphQLResolveInfo
+		): {
+			query?: string;
+			field?: graphql.FieldNode;
+		} => {
 			let field;
 
 			if (opts.path) {
@@ -98,6 +105,12 @@ export class Registration {
 								nodes = node.selectionSet.selections;
 							}
 						}
+						else if (node.kind === "FragmentSpread") {
+							const fragment = schema.fragments[node.name.value].selectionSet;
+							if (fragment) {
+								nodes.push(...fragment.selections);
+							}
+						}
 					}
 				}
 			}
@@ -106,10 +119,13 @@ export class Registration {
 			}
 
 			if (!field || !field.selectionSet || !field.selectionSet.loc) {
-				return null;
+				return {};
 			}
 
-			return query.slice(field.selectionSet.loc.start, field.selectionSet.loc.end);
+			return {
+				query: query.slice(field.selectionSet.loc.start, field.selectionSet.loc.end),
+				field
+			};
 		};
 
 		const augmentBody = (body: string) => {
@@ -150,6 +166,34 @@ export class Registration {
 			}
 		};
 
+		const findUsedFragments = (
+			field: graphql.FieldNode | undefined,
+			fragments: {[name: string]: graphql.FragmentDefinitionNode}
+		) => {
+			const usedFragments: Set<string> = new Set();
+
+			if (!field || !field.selectionSet) {
+				return usedFragments;
+			}
+			const nodes: graphql.SelectionNode[] = field.selectionSet.selections;
+
+			for (let node of nodes) {
+				if (node.kind === "FragmentSpread") {
+					usedFragments.add(node.name.value);
+					const fragment = fragments[node.name.value].selectionSet;
+					if (fragment) {
+						nodes.push(...fragment.selections);
+					}
+
+				}
+				else if (node.kind === "Field" && node.selectionSet) {
+					nodes.push(...node.selectionSet.selections);
+				}
+			}
+
+			return usedFragments;
+		};
+
 		const findSignature = (
 			query: string,
 			defs: graphql.VariableDefinitionNode[] | undefined,
@@ -176,9 +220,11 @@ export class Registration {
 
 		const findFragments = (
 			query: string,
-			fragments: {[name: string]: graphql.FragmentDefinitionNode}
+			fragments: {[name: string]: graphql.FragmentDefinitionNode},
+			usedFragments: Set<string>
 		) => {
 			return Object.keys(fragments)
+				.filter(name => usedFragments.has(name))
 				.map(name => {
 					const fragment = fragments[name];
 					if (fragment.loc) {
@@ -203,7 +249,8 @@ export class Registration {
 				return null;
 			}
 
-			let body = findBody(query, schema.fieldNodes);
+			const found = findBody(query, schema.fieldNodes, schema);
+			let body = found.query;
 			if (!body && opts.path) {
 				// NOTE: __typename is always a valid query
 				body = "{ __typename }";
@@ -214,7 +261,8 @@ export class Registration {
 			body = augmentBody(body);
 			const head = findHead(query, schema.fieldNodes[0]);
 			const signature = findSignature(query, schema.operation.variableDefinitions, schema.variableValues);
-			const fragments = findFragments(query, schema.fragments);
+			const usedFragments = findUsedFragments(found.field, schema.fragments);
+			const fragments = findFragments(query, schema.fragments, usedFragments);
 			const todo = `query ${signature} { ${head} ${body} }\n${fragments}`;
 
 			const result: {[key: string]: any} = await this.query(todo, schema.variableValues);
