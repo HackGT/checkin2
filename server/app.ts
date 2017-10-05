@@ -12,6 +12,10 @@ import * as cookieParser from "cookie-parser";
 import * as multer from "multer";
 import * as Handlebars from "handlebars";
 import reEscape = require("escape-string-regexp");
+import { Registration } from "./inputs/registration";
+import { config } from "./config";
+import { authenticateWithReject, authenticateWithRedirect } from "./middleware";
+import { setupRoutes as setupGraphQlRoutes } from "./graphql";
 
 let postParser = bodyParser.urlencoded({
 	extended: false
@@ -39,8 +43,8 @@ import * as csvParse from "csv-parse";
 import * as json2csv from "json2csv";
 import * as WebSocket from "ws";
 
-const PORT = parseInt(process.env.PORT) || 3000;
-const MONGO_URL = process.env.MONGO_URL || "mongodb://localhost/checkin";
+const PORT = config.server.port;
+const MONGO_URL = config.server.mongo;
 const STATIC_ROOT = "../client";
 
 const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")).version;
@@ -62,7 +66,7 @@ mongoose.connect(MONGO_URL, {
 });
 export {mongoose};
 
-import {User, IAttendee, IAttendeeMongoose, Attendee, ITags} from "./schema";
+import {User, IAttendee, IAttendeeMongoose, Attendee, ITags, Tag} from "./schema";
 
 // Promise version of crypto.pbkdf2()
 export function pbkdf2Async (...params: any[]) {
@@ -90,57 +94,39 @@ export function readFileAsync (filename: string): Promise<string> {
 }
 
 // Check for number of users and create default account if none
-const DEFAULT_USERNAME = "admin";
-const DEFAULT_PASSWORD = "admin";
 (async () => {
-	let users = await User.find();
-	if (users.length !== 0)
-		return;
+	// Create default user if there are none.
+	if (!(await User.findOne())) {
+		let salt = crypto.randomBytes(32);
+		let passwordHashed = await pbkdf2Async(config.app.default_admin.password,
+											   salt, 500000, 128, "sha256");
 
-	let salt = crypto.randomBytes(32);
-	let passwordHashed = await pbkdf2Async(DEFAULT_PASSWORD, salt, 500000, 128, "sha256");
-
-	let defaultUser = new User({
-		username: DEFAULT_USERNAME,
-		login: {
-			hash: passwordHashed.toString("hex"),
-			salt: salt.toString("hex")
-		},
-		auth_keys: []
-	});
-	await defaultUser.save();
-	console.info(`
-Created default user
-	Username: ${DEFAULT_USERNAME}
-	Password: ${DEFAULT_PASSWORD}
-**Delete this user after you have used it to set up your account**
-	`);
-})();
-
-let authenticateWithReject = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
-	let authKey = request.cookies.auth;
-	let user = await User.findOne({"auth_keys": authKey});
-	if (!user) {
-		response.status(401).json({
-			"error": "You must log in to access this endpoint"
+		let defaultUser = new User({
+			username: config.app.default_admin.username,
+			login: {
+				hash: passwordHashed.toString("hex"),
+				salt: salt.toString("hex")
+			},
+			auth_keys: []
 		});
+		await defaultUser.save();
+		console.info(`
+			Created default user
+			Username: ${config.app.default_admin.username}
+			Password: ${config.app.default_admin.password}
+			**Delete this user after you have used it to set up your account**
+		`);
 	}
-	else {
-		response.locals.username = user.username;
-		next();
+
+	// Add default list of tags if there are none.
+	if (!(await Tag.findOne())) {
+		// Add default tag
+		let defaultTag = new Tag({
+			name: "hackgt"
+		});
+		await defaultTag.save();
 	}
-};
-let authenticateWithRedirect = async function (request: express.Request, response: express.Response, next: express.NextFunction) {
-	let authKey = request.cookies.auth;
-	let user = await User.findOne({"auth_keys": authKey});
-	if (!user) {
-		response.redirect("/login");
-	}
-	else {
-		response.locals.username = user.username;
-		next();
-	}
-};
+})();
 
 function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
 	return {
@@ -675,13 +661,8 @@ app.use("/api", apiRouter);
 
 const indexTemplate = Handlebars.compile(fs.readFileSync(path.join(__dirname, STATIC_ROOT, "index.html"), "utf8"));
 app.route("/").get(authenticateWithRedirect, async (request, response) => {
-	let attendees = await Attendee.find();
-	let tags: string[] = attendees.reduce((prev, current) => {
-		let tagsToAdd: string[] = Object.keys(current.tags).filter(t => prev.indexOf(t) === -1);
-		prev = prev.concat(tagsToAdd);
-		return prev;
-	}, <string[]> []);
-	tags.sort((a, b) => a.localeCompare(b));
+	let allTags = await Tag.find().sort({ name: "asc" });
+	let tags: string[] = allTags.map(t => t.name);
 	let users = await User.find().sort({ username: "asc" });
 	let userInfo = users.map(user => {
 		return {
@@ -715,6 +696,14 @@ app.route("/login").get(async (request, response) => {
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
 
+// Test Registration
+const registration = new Registration({
+	url: config.inputs.registration,
+	key: config.secrets.adminKey
+});
+
+// Connect GraphQL API
+setupGraphQlRoutes(app, registration);
 
 // WebSocket server
 const server = http.createServer(app);

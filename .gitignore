@@ -41,3 +41,8 @@ jspm_packages
 *.js.map
 *.js
 apis/*
+
+*.types.ts
+
+# just emacs things
+.#*
