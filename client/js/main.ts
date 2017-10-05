@@ -87,6 +87,28 @@ interface IAttendee {
 	tags: ITags
 }
 
+interface IGraphqlTag {
+	tag: {
+		name: string
+	};
+	checked_in: boolean;
+}
+
+interface IGraphqlAttendee {
+	user: {
+		id: string,
+		name: string,
+		email: string
+	};
+	tags: IGraphqlTag[]
+}
+
+interface ISearchUserResponse {
+	data: {
+		search_user: IGraphqlAttendee[]
+	}
+}
+
 function delay (milliseconds: number) {
 	return new Promise<void>(resolve => {
 		setTimeout(resolve, milliseconds);
@@ -105,11 +127,29 @@ function checkIn (e: Event) {
 	let isCheckedIn: boolean = button.classList.contains("checked-in");
 	button.disabled = true;
 	let tag: string = tagSelector.value;
+	let id: string = button.parentElement!.parentElement!.id.slice(5);
+	let action: string = isCheckedIn ? "check_out" : "check_in";
 
-	qwest.post("/api/checkin", {
-		id: button.parentElement!.parentElement!.id.slice(5),
-		revert: isCheckedIn ? "true" : "false",
-		tag: tag
+	let mutation: string = `mutation {
+	  ${action}(user: "${id}", tag: "${tag}") {
+	    tags {
+	      tag {
+	        name
+	      }
+	      checked_in
+	    }
+	  }
+	}`;
+
+	qwest.post("/graphql", JSON.stringify({
+		query: mutation
+	}), {
+		dataType: "text",
+		responseType: "json",
+		headers: {
+			"Content-Type": "application/json",
+			"Accept": "application/json"
+		}
 	}).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {
@@ -201,58 +241,66 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	status.textContent = "Loading...";
 
 	let tag: string = tagSelector.value;
-	qwest.get("/api/search", {
-		"q": filter,
-		"tag": tag,
-		"checkedin": checkedIn
-	}).then((xhr, response: IAttendee[]) => {
+
+	// TODO: some kind of pagination when displaying users
+	let query: string = `{search_user(search: "${filter || ""}", n: 25, offset: 0) {user {id name email } tags {tag {name } checked_in } } }`;
+	qwest.post("/graphql", JSON.stringify({
+		query: query
+	}), {
+		dataType: "text",
+		responseType: "json",
+		headers: {
+			"Content-Type": "application/json",
+			"Accept": "application/json"
+		}
+	}).then((xhr, response: ISearchUserResponse) => {
+		let attendees: IGraphqlAttendee[] = response.data.search_user;
+
 		let attendeeList = document.getElementById("attendees")!;
 		let attendeeTemplate = <HTMLTemplateElement> document.getElementById("attendee-item")!;
 		let numberOfExistingNodes = document.querySelectorAll("#attendees li").length;
-		if (!attendeeList.firstChild || numberOfExistingNodes < response.length) {
+		if (!attendeeList.firstChild || numberOfExistingNodes < attendees.length) {
 			// First load, preallocate children
 			status.textContent = "Preallocating nodes...";
-			for (let i = numberOfExistingNodes; i < response.length; i++) {
+			for (let i = numberOfExistingNodes; i < attendees.length; i++) {
 				let node = document.importNode(attendeeTemplate.content, true) as DocumentFragment;
 				node.querySelector("li")!.style.display = "none";
 				node.querySelector(".actions > button")!.addEventListener("click", checkIn);
 				attendeeList.appendChild(node);
 			}
 			(<any> window).mdc.autoInit();
-			console.warn(`Allocated ${response.length - numberOfExistingNodes} nodes due to insufficient number`);
+			console.warn(`Allocated ${attendees.length - numberOfExistingNodes} nodes due to insufficient number`);
 			status.textContent = "Loading...";
 		}
 
 		// Reuse nodes already loaded from template
 		let existingNodes = document.querySelectorAll("#attendees li") as NodeListOf<HTMLElement>;
 		for (let i = 0; i < existingNodes.length; i++) {
-			let attendee = response[i];
+			let attendee = attendees[i];
 			if (!!attendee) {
 				existingNodes[i].style.display = "";
 
-				existingNodes[i].id = "item-" + attendee.id;
-				existingNodes[i].querySelector("#name")!.textContent = attendee.name;
-
-				let emails = attendee.emails.reduce((prev, current) => {
-					if (prev.indexOf(current) === -1) {
-						prev.push(current);
-					}
-					return prev;
-				}, <string[]> []);
-				existingNodes[i].querySelector("#emails")!.textContent = emails.join(", ");
+				existingNodes[i].id = "item-" + attendee.user.id;
+				existingNodes[i].querySelector("#name")!.textContent = attendee.user.name;
+				existingNodes[i].querySelector("#emails")!.textContent = attendee.user.email;
 
 				let button = existingNodes[i].querySelector(".actions > button")!;
-				let status = existingNodes[i].querySelector(".actions > span.status")!;
-				let date = attendee.tags[tag].checked_in_date;
-				if (date) {
+				// let status = existingNodes[i].querySelector(".actions > span.status")!;
+
+				// Determine if user has the current tag
+				let tagInfo: IGraphqlTag[] = attendee.tags.filter((curr) => {
+					return curr.tag.name == tag;
+				});
+
+				if (tagInfo.length > 0 && tagInfo[0].checked_in) {
 					button.textContent = "Uncheck in";
 					button.classList.add("checked-in");
-					status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
+					// status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
 				}
 				else {
 					button.textContent = "Check in";
 					button.classList.remove("checked-in");
-					status.textContent = "";
+					// status.textContent = "";
 				}
 			}
 			else {
@@ -262,7 +310,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 		}
 		tag = tag || "no tags found";
 		tag = tag.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-		status.innerHTML = `Found ${response.length} attendee${response.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
+		status.innerHTML = `Found ${attendees.length} attendee${attendees.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
 	}).catch((e, xhr, response) => {
 		status.textContent = "An error occurred";
 		alert(response.error);
@@ -455,6 +503,7 @@ function startWebSocketListener() {
 
 		let tag: string = tagSelector.value;
 		let attendee: IAttendee = JSON.parse(event.data);
+		console.log(attendee);
 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
 		if (!button) {
 			// This attendee belongs to a tag that isn't currently being shown

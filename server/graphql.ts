@@ -110,7 +110,7 @@ function resolver(registration: Registration): IResolver {
 
 				const forwarder = registration.forward({
                     path: "check_in.user",
-                    include: ["id"],
+                    include: ["id", "name", "email"],
                     head: `user(id: "${args.user}")`
                 });
                 const userInfo = await forwarder(prev, args, ctx, schema);
@@ -151,7 +151,7 @@ function resolver(registration: Registration): IResolver {
 
 				const forwarder = registration.forward({
                     path: "check_out.user",
-                    include: ["id"],
+                    include: ["id", "name", "email"],
                     head: `user(id: "${args.user}")`
                 });
                 const userInfo = await forwarder(prev, args, ctx, schema);
