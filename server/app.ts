@@ -707,7 +707,7 @@ setupGraphQlRoutes(app, registration);
 
 // WebSocket server
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+export const wss = new WebSocket.Server({ server });
 wss.on("connection", function(rawSocket, _request) {
 	let request = _request as express.Request;
 	cookieParserInstance(request, null!, async (err) => {

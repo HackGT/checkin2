@@ -109,6 +109,12 @@ interface ISearchUserResponse {
 	}
 }
 
+interface IUpdatedAttendee {
+	id: string;
+	tag: string;
+	checked_in: boolean;
+}
+
 function delay (milliseconds: number) {
 	return new Promise<void>(resolve => {
 		setTimeout(resolve, milliseconds);
@@ -502,30 +508,29 @@ function startWebSocketListener() {
 			return;
 
 		let tag: string = tagSelector.value;
-		let attendee: IAttendee = JSON.parse(event.data);
-		console.log(attendee);
+		let attendee: IUpdatedAttendee = JSON.parse(event.data);
+
 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
 		if (!button) {
 			// This attendee belongs to a tag that isn't currently being shown
 			// This message can safely be ignored; the user list will be updated when switching tags
 			return;
 		}
-		if (tag !== attendee.updatedTag) {
+		if (tag !== attendee.tag) {
 			// Check if the currently displayed tag is the tag that was just updated
 			return;
 		}
-		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
+		// let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
-		let date = attendee.tags[tag].checked_in_date;
-		if (date) {
+		if (attendee.checked_in) {
 			button.textContent = "Uncheck in";
 			button.classList.add("checked-in");
-			status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
+			// status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
 		}
 		else {
 			button.textContent = "Check in";
 			button.classList.remove("checked-in");
-			status.textContent = "";
+			// status.textContent = "";
 		}
 	});
 	socket.addEventListener("error", (event) => {

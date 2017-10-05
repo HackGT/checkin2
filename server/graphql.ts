@@ -9,6 +9,8 @@ import { Attendee, Tag } from "./schema";
 import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
+import { wss } from "./app";
+import * as WebSocket from "ws";
 
 const typeDefs = fs.readFileSync(path.resolve(__dirname, "../api.graphql"), "utf8");
 
@@ -134,6 +136,16 @@ function resolver(registration: Registration): IResolver {
                 attendee.markModified('tags');
                 await attendee.save();
 
+                wss.clients.forEach(function each(client) {
+					if (client.readyState === WebSocket.OPEN) {
+						client.send(JSON.stringify({
+							id: args.user,
+							tag: args.tag,
+							checked_in: true
+						}));
+					}
+				});
+
                 return userInfo;
 			},
 			/**
@@ -173,6 +185,16 @@ function resolver(registration: Registration): IResolver {
                 }
                 attendee.markModified('tags');
                 await attendee.save();
+
+                wss.clients.forEach(function each(client) {
+					if (client.readyState === WebSocket.OPEN) {
+						client.send(JSON.stringify({
+							id: args.user,
+							tag: args.tag,
+							checked_in: false
+						}));
+					}
+				});
 
                 return userInfo;
 			}
