@@ -46,6 +46,7 @@ import * as WebSocket from "ws";
 const PORT = config.server.port;
 const MONGO_URL = config.server.mongo;
 const STATIC_ROOT = "../client";
+export const HASH_ROUNDS = 50000;
 
 const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")).version;
 const VERSION_HASH = require("git-rev-sync").short();
@@ -99,7 +100,7 @@ export function readFileAsync (filename: string): Promise<string> {
 	if (!(await User.findOne())) {
 		let salt = crypto.randomBytes(32);
 		let passwordHashed = await pbkdf2Async(config.app.default_admin.password,
-											   salt, 500000, 128, "sha256");
+											   salt, HASH_ROUNDS, 128, "sha256");
 
 		let defaultUser = new User({
 			username: config.app.default_admin.username,
@@ -153,7 +154,7 @@ apiRouter.route("/user/update").put(authenticateWithReject, postParser, async (r
 	let user = await User.findOne({username: username});
 	let userCreated: boolean = !user;
 	let salt = crypto.randomBytes(32);
-	let passwordHashed = await pbkdf2Async(password, salt, 50000, 128, "sha256");
+	let passwordHashed = await pbkdf2Async(password, salt, HASH_ROUNDS, 128, "sha256");
 	if (!user) {
 		// Create new user
 		user = new User({
@@ -237,7 +238,7 @@ apiRouter.route("/user/login").post(postParser, async (request, response) => {
 		salt = Buffer.from(user.login.salt, "hex");
 	}
 	// Hash the password in both cases so that requests for non-existant usernames take the same amount of time as existant ones
-	let passwordHashed = await pbkdf2Async(password, salt, 500000, 128, "sha256");
+	let passwordHashed = await pbkdf2Async(password, salt, HASH_ROUNDS, 128, "sha256");
 	if (!user || user.login.hash !== passwordHashed.toString("hex")) {
 		response.status(401).json({
 			"error": "Username or password incorrect"

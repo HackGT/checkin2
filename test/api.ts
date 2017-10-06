@@ -8,7 +8,7 @@ import * as request from "supertest";
 import * as cheerio from "cheerio";
 import * as WebSocket from "ws";
 
-import {app, pbkdf2Async, mongoose} from "../server/app";
+import {HASH_ROUNDS, app, pbkdf2Async, mongoose} from "../server/app";
 import {IUser, IUserMongoose, User, IAttendee, IAttendeeMongoose, Attendee} from "../server/schema";
 
 let testUser = {
@@ -31,7 +31,7 @@ async function insertTestUser() {
 	if (!cachedPassword.hashed || cachedPassword.raw !== testUser.password) {
 		cachedPassword.raw = testUser.password;
 		cachedPassword.salt = crypto.randomBytes(32).toString("hex");
-		cachedPassword.hashed = (await pbkdf2Async(testUser.password, Buffer.from(cachedPassword.salt, "hex"), 500000, 128, "sha256")).toString("hex");
+		cachedPassword.hashed = (await pbkdf2Async(testUser.password, Buffer.from(cachedPassword.salt, "hex"), HASH_ROUNDS, 128, "sha256")).toString("hex");
 	}
 	let user = new User({
 		username: testUser.username,
