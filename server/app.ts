@@ -153,7 +153,7 @@ apiRouter.route("/user/update").put(authenticateWithReject, postParser, async (r
 	let user = await User.findOne({username: username});
 	let userCreated: boolean = !user;
 	let salt = crypto.randomBytes(32);
-	let passwordHashed = await pbkdf2Async(password, salt, 500000, 128, "sha256");
+	let passwordHashed = await pbkdf2Async(password, salt, 50000, 128, "sha256");
 	if (!user) {
 		// Create new user
 		user = new User({
