@@ -84,7 +84,7 @@ interface IAttendee {
 	id: string;
 	name: string;
 	emails: string[];
-	tags: ITags
+	tags: ITags;
 }
 
 interface IGraphqlTag {
@@ -94,13 +94,19 @@ interface IGraphqlTag {
 	checked_in: boolean;
 }
 
+interface IGraphqlQuestion {
+	name: string;
+	value: string;
+}
+
 interface IGraphqlAttendee {
 	user: {
 		id: string,
 		name: string,
-		email: string
+		email: string,
+		questions?: IGraphqlQuestion[]
 	};
-	tags: IGraphqlTag[]
+	tags: IGraphqlTag[];
 }
 
 interface ISearchUserResponse {
@@ -113,6 +119,15 @@ interface IUpdatedAttendee {
 	id: string;
 	tag: string;
 	checked_in: boolean;
+}
+
+const graphqlOptions = {
+	dataType: "text",
+	responseType: "json",
+	headers: {
+		"Content-Type": "application/json",
+		"Accept": "application/json"
+	}
 }
 
 function delay (milliseconds: number) {
@@ -149,14 +164,7 @@ function checkIn (e: Event) {
 
 	qwest.post("/graphql", JSON.stringify({
 		query: mutation
-	}), {
-		dataType: "text",
-		responseType: "json",
-		headers: {
-			"Content-Type": "application/json",
-			"Accept": "application/json"
-		}
-	}).catch((e, xhr, response) => {
+	}), graphqlOptions).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {
 		button.disabled = false;
@@ -248,23 +256,44 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 
 	let tag: string = tagSelector.value;
 
+	// Get selected question options
+	let checked: string[] = [];
+	let checkedElems = document.querySelectorAll("#question-options input:checked") as NodeListOf<HTMLElement>;
+	for (let i = 0; i < checkedElems.length; i++) {
+		checked.push((<HTMLInputElement>checkedElems[i]).value);
+	}
+	checked = checked.map(s => `"${s}"`);
+
 	// TODO: some kind of pagination when displaying users
-	let query: string = `{search_user(search: "${filter || ""}", n: 25, offset: 0) {user {id name email } tags {tag {name } checked_in } } }`;
+	let query: string = `{
+		search_user(search: "${filter || ""}", n: 25, offset: 0) {
+			user {
+				id 
+				name 
+				email
+				questions(names: [${checked.join(",")}]) {
+					name
+					value
+				} 
+			} 
+			tags {
+				tag {
+					name 
+				} 
+				checked_in 
+			} 
+		} 
+	}`;
+
 	qwest.post("/graphql", JSON.stringify({
 		query: query
-	}), {
-		dataType: "text",
-		responseType: "json",
-		headers: {
-			"Content-Type": "application/json",
-			"Accept": "application/json"
-		}
-	}).then((xhr, response: ISearchUserResponse) => {
+	}), graphqlOptions).then((xhr, response: ISearchUserResponse) => {
 		let attendees: IGraphqlAttendee[] = response.data.search_user;
 
 		let attendeeList = document.getElementById("attendees")!;
 		let attendeeTemplate = <HTMLTemplateElement> document.getElementById("attendee-item")!;
 		let numberOfExistingNodes = document.querySelectorAll("#attendees li").length;
+
 		if (!attendeeList.firstChild || numberOfExistingNodes < attendees.length) {
 			// First load, preallocate children
 			status.textContent = "Preallocating nodes...";
@@ -307,6 +336,12 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 					button.textContent = "Check in";
 					button.classList.remove("checked-in");
 					// status.textContent = "";
+				}
+				if (attendee.user.questions) {
+					let registrationInformation = attendee.user.questions.map(info => {
+						return info.name + ": " + info.value;
+					});
+					existingNodes[i].querySelector("#additional-info")!.innerHTML = registrationInformation.join("<br>");
 				}
 			}
 			else {
@@ -497,6 +532,43 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	}).complete(() => {
 		button.disabled = false;
 	});	
+});
+
+// Add checkboxes for question names
+qwest.post("/graphql", JSON.stringify({
+	query: `{ question_names }`
+}), graphqlOptions).then((xhr, response) => {
+	let checkboxTemplate = <HTMLTemplateElement> document.getElementById("checkbox-item")!;
+	let checkboxContainer = document.getElementById("question-options")!;
+	let button = document.getElementById("update-question-options")!;
+	if (!response.data || !response.data.question_names) {
+		return;
+	}
+
+	let question_names: string[] = response.data.question_names.sort((a: string, b: string) => {
+		return a.localeCompare(b);
+	});
+
+	for (let curr of question_names) {
+		let node = document.importNode(checkboxTemplate.content, true) as DocumentFragment;
+		node.querySelector("input")!.id = curr;
+		node.querySelector("input")!.value = curr;
+		node.querySelector("label")!.htmlFor = curr;
+		node.querySelector("label")!.textContent = curr;
+		checkboxContainer.insertBefore(node, button);
+	}	
+}).catch((e, xhr, response) => {
+	console.log(response);
+	alert("Error fetching registration question names");
+});
+
+document.querySelector("#question-options-wrapper span")!.addEventListener("click", e => {
+	let elem = document.getElementById("question-options")!;
+	elem.style.display = elem.style.display == 'none' ? '' : 'none';
+});
+
+document.getElementById("update-question-options")!.addEventListener("click", e => {
+	loadAttendees();
 });
 
 // Listen for updates

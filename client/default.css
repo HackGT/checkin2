@@ -163,8 +163,41 @@ abbr {
 	li.mdc-list-item > .actions > span:empty {
 		display: none;
 	}
+	#question-options .mdc-form-field {
+		width: 100% !important;
+	}
 }
 button#add-new-tag {
 	width: initial;
 	margin-top: 10px;
+}
+#question-options-wrapper span i {
+	vertical-align: middle;
+}
+#question-options-wrapper span {
+	cursor: pointer;
+}
+button#update-question-options {
+	display: block;
+}
+div#additional-info {
+	font-style: italic;
+	font-size: .875em;
+	line-height: 1.2em;
+	flex: 0 1 100%;
+	margin-left: 4em;
+	margin-bottom: .5em;
+}
+#question-options {
+	display: flex;
+	flex-wrap: wrap;
+}
+#question-options .mdc-form-field {
+	width: 33%;
+	box-sizing: border-box;
+}
+#attendees > .mdc-list-item {
+	flex-wrap: wrap;
+	min-height: 72px;
+	height: auto;
 }
