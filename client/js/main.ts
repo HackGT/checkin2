@@ -92,6 +92,8 @@ interface IGraphqlTag {
 		name: string
 	};
 	checked_in: boolean;
+	checked_in_by?: string;
+	checked_in_date?: string;
 }
 
 interface IGraphqlQuestion {
@@ -119,6 +121,8 @@ interface IUpdatedAttendee {
 	id: string;
 	tag: string;
 	checked_in: boolean;
+	checked_in_by?: string;
+	checked_in_date?: string;
 }
 
 const graphqlOptions = {
@@ -136,11 +140,11 @@ function delay (milliseconds: number) {
 	});
 }
 
-function statusFormatter (time: Date, by: string = "unknown"): string {
+function statusFormatter (time: string, by: string = "unknown"): string {
 	// Escape possible HTML in username
 	by = by.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-	return `Checked in <abbr title="${moment(time).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
+	const date: Date = new Date(time);
+	return `Checked in <abbr title="${moment(date).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
 }
 
 function checkIn (e: Event) {
@@ -293,7 +297,9 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 				tag {
 					name 
 				} 
-				checked_in 
+				checked_in
+				checked_in_by
+				checked_in_date 
 			} 
 		} 
 	}`;
@@ -333,7 +339,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 				existingNodes[i].querySelector("#emails")!.textContent = attendee.user.email;
 
 				let button = existingNodes[i].querySelector(".actions > button")!;
-				// let status = existingNodes[i].querySelector(".actions > span.status")!;
+				let status = existingNodes[i].querySelector(".actions > span.status")!;
 
 				// Determine if user has the current tag
 				let tagInfo: IGraphqlTag[] = attendee.tags.filter((curr) => {
@@ -343,12 +349,16 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 				if (tagInfo.length > 0 && tagInfo[0].checked_in) {
 					button.textContent = "Uncheck in";
 					button.classList.add("checked-in");
-					// status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
+
+					let date = tagInfo[0].checked_in_date;
+					if (date && tagInfo[0].checked_in_by) {
+						status.innerHTML = statusFormatter(date, tagInfo[0].checked_in_by);
+					}
 				}
 				else {
 					button.textContent = "Check in";
 					button.classList.remove("checked-in");
-					// status.textContent = "";
+					status.textContent = "";
 				}
 				if (attendee.user.questions) {
 					let registrationInformation = attendee.user.questions.map(info => {
@@ -620,17 +630,19 @@ function startWebSocketListener() {
 			// Check if the currently displayed tag is the tag that was just updated
 			return;
 		}
-		// let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
+		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
 		if (attendee.checked_in) {
 			button.textContent = "Uncheck in";
 			button.classList.add("checked-in");
-			// status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
+			if (attendee.checked_in_date && attendee.checked_in_by) {
+				status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+			} 
 		}
 		else {
 			button.textContent = "Check in";
 			button.classList.remove("checked-in");
-			// status.textContent = "";
+			status.textContent = "";
 		}
 	});
 	socket.addEventListener("error", (event) => {

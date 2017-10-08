@@ -59,6 +59,10 @@ type Tag {
 type TagState {
   tag: Tag!
   checked_in: Boolean!
+  # Date when the attendee was checked in
+  checked_in_date: String
+  # The username of the admin that checked the attendee in
+  checked_in_by: String
 }
 
 # NOTE: Type names that forward to registration must match the type names

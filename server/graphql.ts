@@ -104,11 +104,15 @@ function resolver(registration: Registration): IResolver {
 					return [];
 				}
 				return Object.keys(attendee.tags).map(tag => {
+					const date = attendee.tags[tag].checked_in_date;
+
 					return {
 						tag: {
 							name: tag
 						},
-						checked_in: attendee.tags[tag].checked_in
+						checked_in: attendee.tags[tag].checked_in,
+						checked_in_date: date ? date.toISOString() : "",
+						checked_in_by: attendee.tags[tag].checked_in_by || ""
 					};
 				});
 			}
@@ -144,9 +148,10 @@ function resolver(registration: Registration): IResolver {
                     });
                 }
                 const loggedInUser = await getLoggedInUser(ctx);
+                const date = new Date();
                 attendee.tags[args.tag] = {
                     checked_in: true,
-                    checked_in_date: new Date(),
+                    checked_in_date: date,
                     checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
                 }
 
@@ -159,7 +164,9 @@ function resolver(registration: Registration): IResolver {
 						client.send(JSON.stringify({
 							id: args.user,
 							tag: args.tag,
-							checked_in: true
+							checked_in: true,
+							checked_in_date: date,
+							checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
 						}));
 					}
 				});
