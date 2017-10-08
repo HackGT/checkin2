@@ -384,12 +384,6 @@ function updateTagSelectors(newTags: string[]) {
 				tagOption.textContent = curr;
 				el.appendChild(tagOption);
 			});
-			// Add to the selector in the edit tag panel
-			let editTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
-			let tagOption = document.createElement("option");
-			tagOption.textContent = `Attendees with ${curr} tag`;
-			tagOption.value = curr;
-			editTagSelect.appendChild(tagOption);
 		}
 	}
 }
@@ -505,43 +499,31 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	button.disabled = true;
 
 	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
-	let currentTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
-
-	let currentTag: string = currentTagSelect.options[currentTagSelect.selectedIndex].value;
-	if (!currentTag) {
-		alert("Please select a valid tag");
-		button.disabled = false;
-		return; 
-	}
 	let tag: string = tagInput.value.trim().toLowerCase();
 	if (!tag) {
 		alert("Please enter a tag name");
 		button.disabled = false;
 		return;
 	}
-	qwest.put(`/api/data/addTag/${tag}`, {
-		currentTag: currentTag
-	}).then((xhr, response) => {
-		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => el.textContent );
+
+	console.log(tag);
+	qwest.post(`/graphql`, JSON.stringify({
+		query: `mutation {
+			add_tag(tag: "${tag}") {
+				name
+			}
+		}`
+	}), graphqlOptions).then((xhr, response) => {
 		// Add to tag selectors
-		if (tags.indexOf(tag) === -1) {
-			const tagsList = document.querySelectorAll("select.tags");
-			Array.prototype.slice.call(tagsList).forEach((el: HTMLSelectElement) => {
-				let option = document.createElement("option");
-				option.textContent = tag;
-				el.appendChild(option);
-			});
-		}
-
-		// Clear the form
-		tagInput.value = tagInput.defaultValue;
-		currentTagSelect.options[0].selected = true;
-
+		updateTagSelectors([tag]);
+		
+		tagInput.value = "";
 		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
-
+		
 		alert("Successfully added tag to attendee(s)!");
 	}).catch((e, xhr, response) => {
-		alert(response.error);
+		console.log(response);
+		alert("An error occurred while adding the tag");
 	}).complete(() => {
 		button.disabled = false;
 	});	
