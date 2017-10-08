@@ -153,6 +153,7 @@ function resolver(registration: Registration): IResolver {
                 attendee.markModified('tags');
                 await attendee.save();
 
+                // Send updated information via web sockets
                 wss.clients.forEach(function each(client) {
 					if (client.readyState === WebSocket.OPEN) {
 						client.send(JSON.stringify({
@@ -203,6 +204,7 @@ function resolver(registration: Registration): IResolver {
                 attendee.markModified('tags');
                 await attendee.save();
 
+                // Send updated information via web sockets
                 wss.clients.forEach(function each(client) {
 					if (client.readyState === WebSocket.OPEN) {
 						client.send(JSON.stringify({

@@ -506,7 +506,6 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		return;
 	}
 
-	console.log(tag);
 	qwest.post(`/graphql`, JSON.stringify({
 		query: `mutation {
 			add_tag(tag: "${tag}") {
@@ -517,6 +516,7 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		// Add to tag selectors
 		updateTagSelectors([tag]);
 		
+		// Clear form
 		tagInput.value = "";
 		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
 		
