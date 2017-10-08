@@ -171,14 +171,11 @@ button#add-new-tag {
 	width: initial;
 	margin-top: 10px;
 }
-#question-options-wrapper span i {
+.collapsible span i {
 	vertical-align: middle;
 }
-#question-options-wrapper span {
+.collapsible span  {
 	cursor: pointer;
-}
-button#update-question-options {
-	display: block;
 }
 div#additional-info {
 	font-style: italic;
@@ -191,6 +188,7 @@ div#additional-info {
 #question-options {
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: center;
 }
 #question-options .mdc-form-field {
 	width: 33%;
@@ -200,4 +198,11 @@ div#additional-info {
 	flex-wrap: wrap;
 	min-height: 72px;
 	height: auto;
+}
+div#filters {
+	text-align: center;
+}
+div#button-row {
+	flex: 0 1 100%;
+	text-align: center;
 }

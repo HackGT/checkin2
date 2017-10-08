@@ -88,12 +88,28 @@
 								<option value="false">Non checked in attendees</option>
 							</select>
 							<em id="loading-status">Loading...</em>
-							<div id="question-options-wrapper">
+							<div id="question-options-wrapper" class="collapsible">
 								<span><i class="material-icons">keyboard_arrow_down</i>Registration Questions</span>
 								<div id="question-options" style="display:none;">
-									<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="update-question-options">
-										Update
-									</button>
+									<div id="button-row">
+										<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="update-question-options">
+											Update
+										</button>
+									</div>
+								</div>
+							</div>
+							<div id="filters-wrapper" class="collapsible">
+								<span><i class="material-icons">keyboard_arrow_down</i>Registration Filters</span>
+								<div id="filters" style="display: none;">
+									<select class="mdc-select" style="width: 300px;" id="attending-filter">
+										<option value="">All users</option>
+										<option value="applied">Applied</option>
+										<option value="accepted">Accepted</option>
+										<option value="attending" default selected>Attending</option>
+									</select>
+									<select class="mdc-select" style="width: 300px;" id="branches-filter">
+										<option value="">All application branches</option>
+									</select>
 								</div>
 							</div>
 						</section>

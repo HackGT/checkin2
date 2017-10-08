@@ -256,7 +256,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 
 	let tag: string = tagSelector.value;
 
-	// Get selected question options
+	// Get checked question options
 	let checked: string[] = [];
 	let checkedElems = document.querySelectorAll("#question-options input:checked") as NodeListOf<HTMLElement>;
 	for (let i = 0; i < checkedElems.length; i++) {
@@ -264,9 +264,22 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	}
 	checked = checked.map(s => `"${s}"`);
 
+	// Create filter query based on selected values
+	let registrationFilters = [];
+	let subgroup = document.getElementById("attending-filter") as HTMLInputElement;
+	if (subgroup.value) {
+		registrationFilters.push(`${subgroup.value}: true`);
+	}
+	let branch = document.getElementById("branches-filter") as HTMLInputElement;
+	if (branch.value) {
+		registrationFilters.push(`application_branch: "${branch.value}"`);
+	}
+	let filterStr: string = `filter: { ${ registrationFilters.join(",") } }`
+
+ 
 	// TODO: some kind of pagination when displaying users
 	let query: string = `{
-		search_user(search: "${filter || ""}", n: 25, offset: 0) {
+		search_user(search: "${filter || ""}", n: 25, offset: 0, ${filterStr}) {
 			user {
 				id 
 				name 
@@ -534,13 +547,13 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	});	
 });
 
-// Add checkboxes for question names
+// Populate checkboxes for question names
 qwest.post("/graphql", JSON.stringify({
 	query: `{ question_names }`
 }), graphqlOptions).then((xhr, response) => {
 	let checkboxTemplate = <HTMLTemplateElement> document.getElementById("checkbox-item")!;
 	let checkboxContainer = document.getElementById("question-options")!;
-	let button = document.getElementById("update-question-options")!;
+	let button = document.getElementById("button-row")!;
 	if (!response.data || !response.data.question_names) {
 		return;
 	}
@@ -562,12 +575,45 @@ qwest.post("/graphql", JSON.stringify({
 	alert("Error fetching registration question names");
 });
 
+// Toggle display of question checkboxes
 document.querySelector("#question-options-wrapper span")!.addEventListener("click", e => {
 	let elem = document.getElementById("question-options")!;
 	elem.style.display = elem.style.display == 'none' ? '' : 'none';
 });
 
 document.getElementById("update-question-options")!.addEventListener("click", e => {
+	loadAttendees();
+});
+
+// Toggle display of filters
+document.querySelector("#filters-wrapper span")!.addEventListener("click", e => {
+	let elem = document.getElementById("filters")!;
+	elem.style.display = elem.style.display == "none" ? "" : "none";
+});
+
+document.getElementById("attending-filter")!.addEventListener("change", e => {
+	loadAttendees();
+});
+
+// Populate application branches select options
+qwest.post("/graphql", JSON.stringify({
+	query: `{ application_branches }`
+}), graphqlOptions).then((xhr, response) => {
+	let select = document.getElementById("branches-filter")!;
+	let branches = response.data.application_branches;
+
+	for (let curr of branches) {
+		let option = document.createElement("option");
+		option.textContent = curr;
+		option.value = curr;
+		select.appendChild(option);
+	}
+}).catch((e, xhr, response) => {
+	console.log(response);
+	alert("Error fetching registration application branches");
+});
+
+document.getElementById("branches-filter")!.addEventListener("change", e => {
 	loadAttendees();
 });
 
