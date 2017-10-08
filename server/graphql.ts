@@ -214,6 +214,20 @@ function resolver(registration: Registration): IResolver {
 				});
 
                 return userInfo;
+			}, 
+
+			/**
+			* Add tag to all users
+			*/
+			add_tag: async(prev, args, ctx, schema) => {
+				// Return none if the tag already exists (prevent duplicates)
+				if (await Tag.findOne({ name: args.tag })) {
+					return null;
+				}
+
+				const tag = new Tag({ name: args.tag });
+				await tag.save();
+				return { name: args.tag };
 			}
 		}
 	};

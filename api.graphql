@@ -10,6 +10,8 @@ type Mutation {
   check_in(user: ID!, tag: String!): UserAndTags
   # Check-out a user by specifying the tag name
   check_out(user: ID!, tag: String!): UserAndTags
+  # Add tag to all users
+  add_tag(tag: String!): Tag
 }
 
 # The root query type, use to query data
