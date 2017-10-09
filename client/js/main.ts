@@ -262,33 +262,30 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 
 	// Get checked question options
 	let checked: string[] = [];
-	let checkedElems = document.querySelectorAll("#question-options input:checked") as NodeListOf<HTMLElement>;
+	let checkedElems = document.querySelectorAll("#question-options input:checked") as NodeListOf<HTMLInputElement>;
 	for (let i = 0; i < checkedElems.length; i++) {
-		checked.push((<HTMLInputElement>checkedElems[i]).value);
+		checked.push(checkedElems[i].value);
 	}
-	checked = checked.map(s => `"${s}"`);
 
 	// Create filter query based on selected values
-	let registrationFilters = [];
+	let registrationFilter: any = {};
 	let subgroup = document.getElementById("attending-filter") as HTMLInputElement;
 	if (subgroup.value) {
-		registrationFilters.push(`${subgroup.value}: true`);
+		registrationFilter[subgroup.value] = true;
 	}
 	let branch = document.getElementById("branches-filter") as HTMLInputElement;
 	if (branch.value) {
-		registrationFilters.push(`application_branch: "${branch.value}"`);
+		registrationFilter.application_branch = branch.value; 
 	}
-	let filterStr: string = `filter: { ${ registrationFilters.join(",") } }`
-
  
 	// TODO: some kind of pagination when displaying users
-	let query: string = `{
-		search_user(search: "${filter || ""}", n: 25, offset: 0, ${filterStr}) {
+	let query: string = `query UserAndTags($search: String!, $questions: [String!]!, $filter: UserFilter) {
+		search_user(search: $search, n: 25, offset: 0, filter: $filter) {
 			user {
 				id 
 				name 
 				email
-				questions(names: [${checked.join(",")}]) {
+				questions(names: $questions) {
 					name
 					value
 				} 
@@ -305,7 +302,12 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	}`;
 
 	qwest.post("/graphql", JSON.stringify({
-		query: query
+		query: query,
+		variables: {
+			search: filter || " ",
+			questions: checked,
+			filter: registrationFilter
+		}
 	}), graphqlOptions).then((xhr, response: ISearchUserResponse) => {
 		let attendees: IGraphqlAttendee[] = response.data.search_user;
 
@@ -342,9 +344,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 				let status = existingNodes[i].querySelector(".actions > span.status")!;
 
 				// Determine if user has the current tag
-				let tagInfo: IGraphqlTag[] = attendee.tags.filter((curr) => {
-					return curr.tag.name == tag;
-				});
+				let tagInfo: IGraphqlTag[] = attendee.tags.filter(curr => curr.tag.name === tag );
 
 				if (tagInfo.length > 0 && tagInfo[0].checked_in) {
 					button.textContent = "Uncheck in";
@@ -361,9 +361,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 					status.textContent = "";
 				}
 				if (attendee.user.questions) {
-					let registrationInformation = attendee.user.questions.map(info => {
-						return info.name + ": " + info.value;
-					});
+					let registrationInformation = attendee.user.questions.map(info => `${info.name}: ${info.value}`);
 					existingNodes[i].querySelector("#additional-info")!.innerHTML = registrationInformation.join("<br>");
 				}
 			}
@@ -517,11 +515,14 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	}
 
 	qwest.post(`/graphql`, JSON.stringify({
-		query: `mutation {
-			add_tag(tag: "${tag}") {
+		query: `mutation Tag($tag: String!) {
+			add_tag(tag: $tag) {
 				name
 			}
-		}`
+		}`,
+		variables: {
+			tag: tag
+		}
 	}), graphqlOptions).then((xhr, response) => {
 		// Add to tag selectors
 		updateTagSelectors([tag]);
@@ -529,10 +530,9 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		// Clear form
 		tagInput.value = "";
 		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
-		
 		alert("Successfully added tag to attendee(s)!");
 	}).catch((e, xhr, response) => {
-		console.log(response);
+		console.error(response);
 		alert("An error occurred while adding the tag");
 	}).complete(() => {
 		button.disabled = false;
@@ -556,14 +556,16 @@ qwest.post("/graphql", JSON.stringify({
 
 	for (let curr of question_names) {
 		let node = document.importNode(checkboxTemplate.content, true) as DocumentFragment;
-		node.querySelector("input")!.id = curr;
-		node.querySelector("input")!.value = curr;
-		node.querySelector("label")!.htmlFor = curr;
-		node.querySelector("label")!.textContent = curr;
+		let input = node.querySelector("input") as HTMLInputElement;
+		let label = node.querySelector("label") as HTMLLabelElement;
+		input.id = curr;
+		input.value = curr;
+		label.htmlFor = curr;
+		label.textContent = curr;
 		checkboxContainer.insertBefore(node, button);
 	}	
 }).catch((e, xhr, response) => {
-	console.log(response);
+	console.error(response);
 	alert("Error fetching registration question names");
 });
 
@@ -601,7 +603,7 @@ qwest.post("/graphql", JSON.stringify({
 		select.appendChild(option);
 	}
 }).catch((e, xhr, response) => {
-	console.log(response);
+	console.error(response);
 	alert("Error fetching registration application branches");
 });
 
