@@ -155,8 +155,8 @@ function checkIn (e: Event) {
 	let id: string = button.parentElement!.parentElement!.id.slice(5);
 	let action: string = isCheckedIn ? "check_out" : "check_in";
 
-	let mutation: string = `mutation {
-	  ${action}(user: "${id}", tag: "${tag}") {
+	let mutation: string = `mutation UserAndTags($user: ID!, $tag: String!) {
+	  ${action}(user: $user, tag: $tag) {
 	    tags {
 	      tag {
 	        name
@@ -167,7 +167,11 @@ function checkIn (e: Event) {
 	}`;
 
 	qwest.post("/graphql", JSON.stringify({
-		query: mutation
+		query: mutation,
+        variables: {
+            user: id,
+            tag: tag
+        }
 	}), graphqlOptions).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {

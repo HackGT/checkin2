@@ -48,7 +48,7 @@ function resolver(registration: Registration): IResolver {
 			}),
 			/**
 			 * All the users in the database, useful for polling for new user information.
-			 * This is paginated, n is the number of results, and last_id is the last ID
+			 * This is paginated, n is the number of results, and pagination_token is the last ID
 			 * seen from the latest page retrieved, if you want the first page leave this out.
 			 */
 			users: registration.forward({
@@ -133,10 +133,17 @@ function resolver(registration: Registration): IResolver {
 
 				const forwarder = registration.forward({
                     path: "check_in.user",
-                    include: ["id", "name", "email"],
+                    include: [
+						"id",
+						"name",
+						"email"
+					],
                     head: `user(id: "${args.user}")`
                 });
                 const userInfo = await forwarder(prev, args, ctx, schema);
+				if (!userInfo.user) {
+					return null;
+				}
 
                 // Create attendee if it doesn't already exist
                 if (!attendee) {
@@ -188,10 +195,17 @@ function resolver(registration: Registration): IResolver {
 
 				const forwarder = registration.forward({
                     path: "check_out.user",
-                    include: ["id", "name", "email"],
+                    include: [
+						"id",
+						"name",
+						"email"
+					],
                     head: `user(id: "${args.user}")`
                 });
                 const userInfo = await forwarder(prev, args, ctx, schema);
+				if (!userInfo.user) {
+					return null;
+				}
 
                 // Create attendee if it doesn't already exist
                 if (!attendee) {

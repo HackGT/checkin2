@@ -1,6 +1,13 @@
 git:
     branch: master
+
 secrets:
   - ADMIN_KEY_SECRET
+  - DEFAULT_ADMIN_USER
+  - DEFAULT_ADMIN_PASS
+
+env:
+  REGISTRATION_GRAPHQL: "https://registration.dev.hack.gt/graphql"
+
 wants:
     mongo: true
