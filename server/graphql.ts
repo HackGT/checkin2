@@ -228,7 +228,7 @@ function resolver(registration: Registration): IResolver {
             /**
             * Add tag to all users
             */
-            add_tag: async(prev, args, ctx, schema) => {
+            add_tag: async (prev, args, ctx, schema) => {
                 // Return none if the tag already exists (prevent duplicates)
                 if (await Tag.findOne({ name: args.tag })) {
                     return null;
