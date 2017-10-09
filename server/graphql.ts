@@ -46,7 +46,7 @@ function resolver(registration: Registration): IResolver {
 			}),
 			/**
 			 * All the users in the database, useful for polling for new user information.
-			 * This is paginated, n is the number of results, and last_id is the last ID
+			 * This is paginated, n is the number of results, and pagination_token is the last ID
 			 * seen from the latest page retrieved, if you want the first page leave this out.
 			 */
 			users: registration.forward({
