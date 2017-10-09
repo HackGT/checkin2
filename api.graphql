@@ -21,9 +21,9 @@ type Query {
   # user.
   user(id: ID!): UserAndTags
   # All the users in the database, useful for polling for new user information.
-  # This is paginated, n is the number of results, and last_id is the last ID
+  # This is paginated, n is the number of results, and pagination_token is the last ID
   # seen from the latest page retrieved, if you want the first page leave this out.
-  users(last_id: ID, n: Int!, filter: UserFilter): [UserAndTags!]!
+  users(pagination_token: ID, n: Int!, filter: UserFilter): [UserAndTags!]!
   # Search through a user's name and email through regex
   search_user(search: String!, use_regex: Boolean = false, offset: Int!, n: Int!, filter: UserFilter): [UserAndTags!]!
   # All possible application question branches
@@ -101,6 +101,9 @@ type User {
 
   # What team, if any, is the user a part of?
   team: Team
+  
+  # ID used for pagination
+  pagination_token: ID!
 }
 
 # Filter users by this criterea.
