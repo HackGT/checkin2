@@ -101,6 +101,9 @@ type User {
 
   # What team, if any, is the user a part of?
   team: Team
+  
+  # ID used for pagination
+  pagination_token: ID!
 }
 
 # Filter users by this criterea.
