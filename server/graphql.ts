@@ -160,15 +160,15 @@ function resolver(registration: Registration): IResolver {
 
                 // Send updated information via web sockets
                 wss.clients.forEach(function each(client) {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({
-                        id: args.user,
-                        tag: args.tag,
-                        checked_in: true,
-                        checked_in_date: date,
-                        checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-                    }));
-                }
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            id: args.user,
+                            tag: args.tag,
+                            checked_in: true,
+                            checked_in_date: date,
+                            checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+                        }));
+                    }
                 });
 
                 return userInfo;
@@ -213,13 +213,13 @@ function resolver(registration: Registration): IResolver {
 
                 // Send updated information via web sockets
                 wss.clients.forEach(function each(client) {
-                if (client.readyState === WebSocket.OPEN) {
-                    client.send(JSON.stringify({
-                        id: args.user,
-                        tag: args.tag,
-                        checked_in: false
-                    }));
-                }
+                    if (client.readyState === WebSocket.OPEN) {
+                        client.send(JSON.stringify({
+                            id: args.user,
+                            tag: args.tag,
+                            checked_in: false
+                        }));
+                    }
                 });
 
                 return userInfo;
