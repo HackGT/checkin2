@@ -88,6 +88,30 @@
 								<option value="false">Non checked in attendees</option>
 							</select>
 							<em id="loading-status">Loading...</em>
+							<div id="question-options-wrapper" class="collapsible">
+								<span><i class="material-icons">keyboard_arrow_down</i>Registration Questions</span>
+								<div id="question-options" style="display:none;">
+									<div id="button-row">
+										<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="update-question-options">
+											Update
+										</button>
+									</div>
+								</div>
+							</div>
+							<div id="filters-wrapper" class="collapsible">
+								<span><i class="material-icons">keyboard_arrow_down</i>Registration Filters</span>
+								<div id="filters" style="display: none;">
+									<select class="mdc-select" style="width: 300px;" id="attending-filter">
+										<option value="">All users</option>
+										<option value="applied">Applied</option>
+										<option value="accepted">Accepted</option>
+										<option value="attending" default selected>Attending</option>
+									</select>
+									<select class="mdc-select" style="width: 300px;" id="branches-filter">
+										<option value="">All application branches</option>
+									</select>
+								</div>
+							</div>
 						</section>
 
 						<ul class="mdc-list mdc-list--two-line" id="attendees"></ul>
@@ -201,22 +225,10 @@
 					<div class="card-content">
 						<section class="center">
 							<h1 class="mdc-typography--headline">Add Tags</h1>
-							<p>Add tags to groups of attendees</p>
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="new-tag-name" list="autocomplete-tags">
-								<datalist id="autocomplete-tags">
-									{{#each tags}}
-										<option value="{{this}}"></option>
-									{{/each}}
-								</datalist>
-								<label class="mdc-textfield__label" for="new-tag-name">Tag</label>
+								<input class="mdc-textfield__input" type="text" id="new-tag-name">
+								<label class="mdc-textfield__label" for="new-tag-name">Tag Name</label>
 							</div>
-							<select class="mdc-select" id="current-tag" role="listbox">
-								<option selected disabled hidden>Select attendees</option>
-							    {{#each tags}}
-							    	<option value="{{this}}">Attendees with {{this}} tag</option>
-							    {{/each}}
-							</select>
 							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-new-tag">Add</button>
 						</section>
 					</div>
@@ -236,9 +248,30 @@
 						Check in
 					</button>
 				</div>
+				<div id="additional-info"></div>
 			</li>
 		</template>
+		<template id="checkbox-item">
+			<div class="mdc-form-field">
+			  <div class="mdc-checkbox">
+			    <input type="checkbox"
+			           id="my-checkbox"
+			           class="mdc-checkbox__native-control"/>
+			    <div class="mdc-checkbox__background">
+			      <svg class="mdc-checkbox__checkmark"
+			           viewBox="0 0 24 24">
+			        <path class="mdc-checkbox__checkmark__path"
+			              fill="none"
+			              stroke="white"
+			              d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
+			      </svg>
+			      <div class="mdc-checkbox__mixedmark"></div>
+			    </div>
+			  </div>
 
+			  <label for="my-checkbox">Label</label>
+			</div>
+		</template>
 		<script src="/node_modules/material-components-web/dist/material-components-web.js"></script>
 		<script src="/js/main.js"></script>
 	</body>

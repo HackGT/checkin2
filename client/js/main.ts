@@ -84,7 +84,54 @@ interface IAttendee {
 	id: string;
 	name: string;
 	emails: string[];
-	tags: ITags
+	tags: ITags;
+}
+
+interface IGraphqlTag {
+	tag: {
+		name: string
+	};
+	checked_in: boolean;
+	checked_in_by?: string;
+	checked_in_date?: string;
+}
+
+interface IGraphqlQuestion {
+	name: string;
+	value: string;
+}
+
+interface IGraphqlAttendee {
+	user: {
+		id: string,
+		name: string,
+		email: string,
+		questions?: IGraphqlQuestion[]
+	};
+	tags: IGraphqlTag[];
+}
+
+interface ISearchUserResponse {
+	data: {
+		search_user_simple: IGraphqlAttendee[]
+	}
+}
+
+interface IUpdatedAttendee {
+	id: string;
+	tag: string;
+	checked_in: boolean;
+	checked_in_by?: string;
+	checked_in_date?: string;
+}
+
+const graphqlOptions = {
+	dataType: "text",
+	responseType: "json",
+	headers: {
+		"Content-Type": "application/json",
+		"Accept": "application/json"
+	}
 }
 
 function delay (milliseconds: number) {
@@ -93,28 +140,43 @@ function delay (milliseconds: number) {
 	});
 }
 
-function statusFormatter (time: Date, by: string = "unknown"): string {
+function statusFormatter (time: string, by: string = "unknown"): string {
 	// Escape possible HTML in username
 	by = by.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-	return `Checked in <abbr title="${moment(time).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
+	const date: Date = new Date(time);
+	return `Checked in <abbr title="${moment(date).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
 }
 
 function checkIn (e: Event) {
-	let button = (<HTMLButtonElement> e.target)!;
-	let isCheckedIn: boolean = button.classList.contains("checked-in");
-	button.disabled = true;
-	let tag: string = tagSelector.value;
+    let button = (<HTMLButtonElement> e.target)!;
+    let isCheckedIn: boolean = button.classList.contains("checked-in");
+    button.disabled = true;
+    let tag: string = tagSelector.value;
+    let id: string = button.parentElement!.parentElement!.id.slice(5);
+    let action: string = isCheckedIn ? "check_out" : "check_in";
 
-	qwest.post("/api/checkin", {
-		id: button.parentElement!.parentElement!.id.slice(5),
-		revert: isCheckedIn ? "true" : "false",
-		tag: tag
-	}).catch((e, xhr, response) => {
-		alert(response.error);
-	}).complete(() => {
-		button.disabled = false;
-	});
+    let mutation: string = `mutation UserAndTags($user: ID!, $tag: String!) {
+      ${action}(user: $user, tag: $tag) {
+        tags {
+          tag {
+            name
+          }
+          checked_in
+        }
+      }
+    }`;
+
+    qwest.post("/graphql", JSON.stringify({
+        query: mutation,
+        variables: {
+            user: id,
+            tag: tag
+        }
+    }), graphqlOptions).catch((e, xhr, response) => {
+        alert(response.error);
+    }).complete(() => {
+        button.disabled = false;
+    });
 }
 
 function attachUserDeleteHandlers () {
@@ -201,58 +263,110 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	status.textContent = "Loading...";
 
 	let tag: string = tagSelector.value;
-	qwest.get("/api/search", {
-		"q": filter,
-		"tag": tag,
-		"checkedin": checkedIn
-	}).then((xhr, response: IAttendee[]) => {
+
+	// Get checked question options
+	let checked: string[] = [];
+	let checkedElems = document.querySelectorAll("#question-options input:checked") as NodeListOf<HTMLInputElement>;
+	for (let i = 0; i < checkedElems.length; i++) {
+		checked.push(checkedElems[i].value);
+	}
+
+	// Create filter query based on selected values
+	let registrationFilter: any = {};
+	let subgroup = document.getElementById("attending-filter") as HTMLInputElement;
+	if (subgroup.value) {
+		registrationFilter[subgroup.value] = true;
+	}
+	let branch = document.getElementById("branches-filter") as HTMLInputElement;
+	if (branch.value) {
+		registrationFilter.application_branch = branch.value; 
+	}
+ 
+	// TODO: some kind of pagination when displaying users
+	let query: string = `query UserAndTags($search: String!, $questions: [String!]!, $filter: UserFilter) {
+		search_user_simple(search: $search, n: 25, offset: 0, filter: $filter) {
+			user {
+				id 
+				name 
+				email
+				questions(names: $questions) {
+					name
+					value
+				} 
+			} 
+			tags {
+				tag {
+					name 
+				} 
+				checked_in
+				checked_in_by
+				checked_in_date 
+			} 
+		} 
+	}`;
+
+	qwest.post("/graphql", JSON.stringify({
+		query: query,
+		variables: {
+			search: filter || " ",
+			questions: checked,
+			filter: registrationFilter
+		}
+	}), graphqlOptions).then((xhr, response: ISearchUserResponse) => {
+		let attendees: IGraphqlAttendee[] = response.data.search_user_simple;
+
 		let attendeeList = document.getElementById("attendees")!;
 		let attendeeTemplate = <HTMLTemplateElement> document.getElementById("attendee-item")!;
 		let numberOfExistingNodes = document.querySelectorAll("#attendees li").length;
-		if (!attendeeList.firstChild || numberOfExistingNodes < response.length) {
+
+		if (!attendeeList.firstChild || numberOfExistingNodes < attendees.length) {
 			// First load, preallocate children
 			status.textContent = "Preallocating nodes...";
-			for (let i = numberOfExistingNodes; i < response.length; i++) {
+			for (let i = numberOfExistingNodes; i < attendees.length; i++) {
 				let node = document.importNode(attendeeTemplate.content, true) as DocumentFragment;
 				node.querySelector("li")!.style.display = "none";
 				node.querySelector(".actions > button")!.addEventListener("click", checkIn);
 				attendeeList.appendChild(node);
 			}
 			(<any> window).mdc.autoInit();
-			console.warn(`Allocated ${response.length - numberOfExistingNodes} nodes due to insufficient number`);
+			console.warn(`Allocated ${attendees.length - numberOfExistingNodes} nodes due to insufficient number`);
 			status.textContent = "Loading...";
 		}
 
 		// Reuse nodes already loaded from template
 		let existingNodes = document.querySelectorAll("#attendees li") as NodeListOf<HTMLElement>;
 		for (let i = 0; i < existingNodes.length; i++) {
-			let attendee = response[i];
+			let attendee = attendees[i];
 			if (!!attendee) {
 				existingNodes[i].style.display = "";
 
-				existingNodes[i].id = "item-" + attendee.id;
-				existingNodes[i].querySelector("#name")!.textContent = attendee.name;
-
-				let emails = attendee.emails.reduce((prev, current) => {
-					if (prev.indexOf(current) === -1) {
-						prev.push(current);
-					}
-					return prev;
-				}, <string[]> []);
-				existingNodes[i].querySelector("#emails")!.textContent = emails.join(", ");
+				existingNodes[i].id = "item-" + attendee.user.id;
+				existingNodes[i].querySelector("#name")!.textContent = attendee.user.name;
+				existingNodes[i].querySelector("#emails")!.textContent = attendee.user.email;
 
 				let button = existingNodes[i].querySelector(".actions > button")!;
 				let status = existingNodes[i].querySelector(".actions > span.status")!;
-				let date = attendee.tags[tag].checked_in_date;
-				if (date) {
+
+				// Determine if user has the current tag
+				let tagInfo: IGraphqlTag[] = attendee.tags.filter(curr => curr.tag.name === tag );
+
+				if (tagInfo.length > 0 && tagInfo[0].checked_in) {
 					button.textContent = "Uncheck in";
 					button.classList.add("checked-in");
-					status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
+
+					let date = tagInfo[0].checked_in_date;
+					if (date && tagInfo[0].checked_in_by) {
+						status.innerHTML = statusFormatter(date, tagInfo[0].checked_in_by);
+					}
 				}
 				else {
 					button.textContent = "Check in";
 					button.classList.remove("checked-in");
 					status.textContent = "";
+				}
+				if (attendee.user.questions) {
+					let registrationInformation = attendee.user.questions.map(info => `${info.name}: ${info.value}`);
+					existingNodes[i].querySelector("#additional-info")!.innerHTML = registrationInformation.join("<br>");
 				}
 			}
 			else {
@@ -262,7 +376,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 		}
 		tag = tag || "no tags found";
 		tag = tag.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-		status.innerHTML = `Found ${response.length} attendee${response.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
+		status.innerHTML = `Found ${attendees.length} attendee${attendees.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
 	}).catch((e, xhr, response) => {
 		status.textContent = "An error occurred";
 		alert(response.error);
@@ -282,12 +396,6 @@ function updateTagSelectors(newTags: string[]) {
 				tagOption.textContent = curr;
 				el.appendChild(tagOption);
 			});
-			// Add to the selector in the edit tag panel
-			let editTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
-			let tagOption = document.createElement("option");
-			tagOption.textContent = `Attendees with ${curr} tag`;
-			tagOption.value = curr;
-			editTagSelect.appendChild(tagOption);
 		}
 	}
 }
@@ -403,46 +511,108 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	button.disabled = true;
 
 	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
-	let currentTagSelect = <HTMLSelectElement> document.getElementById("current-tag");
-
-	let currentTag: string = currentTagSelect.options[currentTagSelect.selectedIndex].value;
-	if (!currentTag) {
-		alert("Please select a valid tag");
-		button.disabled = false;
-		return; 
-	}
 	let tag: string = tagInput.value.trim().toLowerCase();
 	if (!tag) {
 		alert("Please enter a tag name");
 		button.disabled = false;
 		return;
 	}
-	qwest.put(`/api/data/addTag/${tag}`, {
-		currentTag: currentTag
-	}).then((xhr, response) => {
-		let tags: string[] = Array.prototype.slice.call(document.querySelectorAll("#tag-choose > option")).map((el: HTMLOptionElement) => el.textContent );
-		// Add to tag selectors
-		if (tags.indexOf(tag) === -1) {
-			const tagsList = document.querySelectorAll("select.tags");
-			Array.prototype.slice.call(tagsList).forEach((el: HTMLSelectElement) => {
-				let option = document.createElement("option");
-				option.textContent = tag;
-				el.appendChild(option);
-			});
+
+	qwest.post("/graphql", JSON.stringify({
+		query: `mutation Tag($tag: String!) {
+			add_tag(tag: $tag) {
+				name
+			}
+		}`,
+		variables: {
+			tag: tag
 		}
-
-		// Clear the form
-		tagInput.value = tagInput.defaultValue;
-		currentTagSelect.options[0].selected = true;
-
+	}), graphqlOptions).then((xhr, response) => {
+		// Add to tag selectors
+		updateTagSelectors([tag]);
+		
+		// Clear form
+		tagInput.value = "";
 		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
-
 		alert("Successfully added tag to attendee(s)!");
 	}).catch((e, xhr, response) => {
-		alert(response.error);
+		console.error(response);
+		alert("An error occurred while adding the tag");
 	}).complete(() => {
 		button.disabled = false;
 	});	
+});
+
+// Populate checkboxes for question names
+qwest.post("/graphql", JSON.stringify({
+	query: "{ question_names }"
+}), graphqlOptions).then((xhr, response) => {
+	let checkboxTemplate = <HTMLTemplateElement> document.getElementById("checkbox-item")!;
+	let checkboxContainer = document.getElementById("question-options")!;
+	let button = document.getElementById("button-row")!;
+	if (!response.data || !response.data.question_names) {
+		return;
+	}
+
+	let question_names: string[] = response.data.question_names.sort((a: string, b: string) => {
+		return a.localeCompare(b);
+	});
+
+	for (let curr of question_names) {
+		let node = document.importNode(checkboxTemplate.content, true) as DocumentFragment;
+		let input = node.querySelector("input") as HTMLInputElement;
+		let label = node.querySelector("label") as HTMLLabelElement;
+		input.id = curr;
+		input.value = curr;
+		label.htmlFor = curr;
+		label.textContent = curr;
+		checkboxContainer.insertBefore(node, button);
+	}	
+}).catch((e, xhr, response) => {
+	console.error(response);
+	alert("Error fetching registration question names");
+});
+
+// Toggle display of question checkboxes
+document.querySelector("#question-options-wrapper span")!.addEventListener("click", e => {
+	let elem = document.getElementById("question-options")!;
+	elem.style.display = elem.style.display == "none" ? "" : "none";
+});
+
+document.getElementById("update-question-options")!.addEventListener("click", e => {
+	loadAttendees();
+});
+
+// Toggle display of filters
+document.querySelector("#filters-wrapper span")!.addEventListener("click", e => {
+	let elem = document.getElementById("filters")!;
+	elem.style.display = elem.style.display == "none" ? "" : "none";
+});
+
+document.getElementById("attending-filter")!.addEventListener("change", e => {
+	loadAttendees();
+});
+
+// Populate application branches select options
+qwest.post("/graphql", JSON.stringify({
+	query: "{ application_branches }"
+}), graphqlOptions).then((xhr, response) => {
+	let select = document.getElementById("branches-filter")!;
+	let branches = response.data.application_branches;
+
+	for (let curr of branches) {
+		let option = document.createElement("option");
+		option.textContent = curr;
+		option.value = curr;
+		select.appendChild(option);
+	}
+}).catch((e, xhr, response) => {
+	console.error(response);
+	alert("Error fetching registration application branches");
+});
+
+document.getElementById("branches-filter")!.addEventListener("change", e => {
+	loadAttendees();
 });
 
 // Listen for updates
@@ -454,24 +624,26 @@ function startWebSocketListener() {
 			return;
 
 		let tag: string = tagSelector.value;
-		let attendee: IAttendee = JSON.parse(event.data);
+		let attendee: IUpdatedAttendee = JSON.parse(event.data);
+
 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
 		if (!button) {
 			// This attendee belongs to a tag that isn't currently being shown
 			// This message can safely be ignored; the user list will be updated when switching tags
 			return;
 		}
-		if (tag !== attendee.updatedTag) {
+		if (tag !== attendee.tag) {
 			// Check if the currently displayed tag is the tag that was just updated
 			return;
 		}
 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
-		let date = attendee.tags[tag].checked_in_date;
-		if (date) {
+		if (attendee.checked_in) {
 			button.textContent = "Uncheck in";
 			button.classList.add("checked-in");
-			status.innerHTML = statusFormatter(date, attendee.tags[tag].checked_in_by);
+			if (attendee.checked_in_date && attendee.checked_in_by) {
+				status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+			} 
 		}
 		else {
 			button.textContent = "Check in";

@@ -9,6 +9,8 @@ import { Attendee, Tag } from "./schema";
 import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
+import { wss } from "./app";
+import * as WebSocket from "ws";
 import { printHackGTMetricsEvent } from "./app";
 
 const typeDefs = fs.readFileSync(path.resolve(__dirname, "../api.graphql"), "utf8");
@@ -103,11 +105,15 @@ function resolver(registration: Registration): IResolver {
 					return [];
 				}
 				return Object.keys(attendee.tags).map(tag => {
+					const date = attendee.tags[tag].checked_in_date;
+
 					return {
 						tag: {
 							name: tag
 						},
-						checked_in: attendee.tags[tag].checked_in
+						checked_in: attendee.tags[tag].checked_in,
+						checked_in_date: date ? date.toISOString() : "",
+						checked_in_by: attendee.tags[tag].checked_in_by || ""
 					};
 				});
 			}
@@ -150,18 +156,33 @@ function resolver(registration: Registration): IResolver {
 					});
 				}
 				const loggedInUser = await getLoggedInUser(ctx);
+				const date = new Date();
 				attendee.tags[args.tag] = {
 					checked_in: true,
-					checked_in_date: new Date(),
+					checked_in_date: date,
 					checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
 				}
 
 				attendee.markModified('tags');
 				await attendee.save();
-				
-				printHackGTMetricsEvent(args, userInfo, loggedInUser, true);				
+
+				// Send updated information via web sockets
+				wss.clients.forEach(function each(client) {
+					if (client.readyState === WebSocket.OPEN) {
+						client.send(JSON.stringify({
+							id: args.user,
+							tag: args.tag,
+							checked_in: true,
+							checked_in_date: date,
+							checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+						}));
+					}
+				});
+
+				printHackGTMetricsEvent(args, userInfo, loggedInUser, true);
 				return userInfo;
 			},
+
 			/**
 			 * Check-out a user by specifying the tag name
 			 */
@@ -188,7 +209,7 @@ function resolver(registration: Registration): IResolver {
 				if (!userInfo.user) {
 					return null;
 				}
-
+				
 				// Create attendee if it doesn't already exist
 				if (!attendee) {
 					attendee = new Attendee({
@@ -206,9 +227,34 @@ function resolver(registration: Registration): IResolver {
 				}
 				attendee.markModified('tags');
 				await attendee.save();
-				
+
+				// Send updated information via web sockets
+				wss.clients.forEach(function each(client) {
+					if (client.readyState === WebSocket.OPEN) {
+						client.send(JSON.stringify({
+							id: args.user,
+							tag: args.tag,
+							checked_in: false
+						}));
+					}
+				});
+
 				printHackGTMetricsEvent(args, userInfo, loggedInUser, false);
 				return userInfo;
+			}, 
+
+			/**
+			* Add tag to all users
+			*/
+			add_tag: async (prev, args, ctx, schema) => {
+				// Return none if the tag already exists (prevent duplicates)
+				if (await Tag.findOne({ name: args.tag })) {
+					return null;
+				}
+
+				const tag = new Tag({ name: args.tag });
+				await tag.save();
+				return { name: args.tag };
 			}
 		}
 	};

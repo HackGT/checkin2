@@ -10,6 +10,8 @@ type Mutation {
   check_in(user: ID!, tag: String!): UserAndTags
   # Check-out a user by specifying the tag name
   check_out(user: ID!, tag: String!): UserAndTags
+  # Add tag to all users
+  add_tag(tag: String!): Tag
 }
 
 # The root query type, use to query data
@@ -57,6 +59,10 @@ type Tag {
 type TagState {
   tag: Tag!
   checked_in: Boolean!
+  # Date when the attendee was checked in
+  checked_in_date: String
+  # The username of the admin that checked the attendee in
+  checked_in_by: String
 }
 
 # NOTE: Type names that forward to registration must match the type names

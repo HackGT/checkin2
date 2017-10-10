@@ -647,43 +647,6 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 	}
 });
 
-// Endpoint for adding tags to existing groups of attendees
-apiRouter.route("/data/addTag/:tag").put(authenticateWithReject, postParser, async (request, response) => {
-	let tag: string = request.params.tag;
-	let currentTag: string = request.body.currentTag;
-	if (!currentTag) {
-		response.status(400).json({
-			"error": "Must provide existing tag"
-		});
-		return;
-	}
-	try {
-		await Attendee.update({
-			["tags." + currentTag]: {
-				$exists: true
-			},
-			["tags." + tag]: {
-				$exists: false
-			},
-		}, {
-			["tags." + tag]: {
-				checked_in: false
-			}
-		}, {
-			multi: true
-		});
-		response.status(200).json({
-			"success": true
-		});
-	}
-	catch (e) {
-		console.log(e);
-		response.status(500).json({
-			"error": "An error occurred while adding tag to attendees"
-		});
-	}
-});
-
 app.use("/api", apiRouter);
 
 const indexTemplate = Handlebars.compile(fs.readFileSync(path.join(__dirname, STATIC_ROOT, "index.html"), "utf8"));
@@ -734,7 +697,7 @@ setupGraphQlRoutes(app, registration);
 
 // WebSocket server
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+export const wss = new WebSocket.Server({ server });
 wss.on("connection", function(rawSocket, _request) {
 	let request = _request as express.Request;
 	cookieParserInstance(request, null!, async (err) => {
