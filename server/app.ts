@@ -441,7 +441,7 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 				let checkedInDate = attendee.tags[tag].checked_in_date;
 				attendeesSimplified.push({
 					id: id,
-					name: name,
+					name: name || "",
 					emails: emails,
 					tag: tag,
 					checked_in: attendee.tags[tag].checked_in ? "Checked in" : "",
@@ -558,6 +558,7 @@ apiRouter.route("/search").get(authenticateWithReject, async (request, response)
 	}
 	// Sort by last name
 	filteredAttendees = filteredAttendees.sort((a, b) => {
+		if (!a.name || !b.name) return 0;
 		var aName = a.name.split(" ");
 		var bName = b.name.split(" ");
 		var aLastName = aName[aName.length - 1];
