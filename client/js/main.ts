@@ -148,35 +148,35 @@ function statusFormatter (time: string, by: string = "unknown"): string {
 }
 
 function checkIn (e: Event) {
-	let button = (<HTMLButtonElement> e.target)!;
-	let isCheckedIn: boolean = button.classList.contains("checked-in");
-	button.disabled = true;
-	let tag: string = tagSelector.value;
-	let id: string = button.parentElement!.parentElement!.id.slice(5);
-	let action: string = isCheckedIn ? "check_out" : "check_in";
+    let button = (<HTMLButtonElement> e.target)!;
+    let isCheckedIn: boolean = button.classList.contains("checked-in");
+    button.disabled = true;
+    let tag: string = tagSelector.value;
+    let id: string = button.parentElement!.parentElement!.id.slice(5);
+    let action: string = isCheckedIn ? "check_out" : "check_in";
 
-	let mutation: string = `mutation UserAndTags($user: ID!, $tag: String!) {
-	  ${action}(user: $user, tag: $tag) {
-	    tags {
-	      tag {
-	        name
-	      }
-	      checked_in
-	    }
-	  }
-	}`;
+    let mutation: string = `mutation UserAndTags($user: ID!, $tag: String!) {
+      ${action}(user: $user, tag: $tag) {
+        tags {
+          tag {
+            name
+          }
+          checked_in
+        }
+      }
+    }`;
 
-	qwest.post("/graphql", JSON.stringify({
-		query: mutation,
+    qwest.post("/graphql", JSON.stringify({
+        query: mutation,
         variables: {
             user: id,
             tag: tag
         }
-	}), graphqlOptions).catch((e, xhr, response) => {
-		alert(response.error);
-	}).complete(() => {
-		button.disabled = false;
-	});
+    }), graphqlOptions).catch((e, xhr, response) => {
+        alert(response.error);
+    }).complete(() => {
+        button.disabled = false;
+    });
 }
 
 function attachUserDeleteHandlers () {
@@ -518,7 +518,7 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		return;
 	}
 
-	qwest.post(`/graphql`, JSON.stringify({
+	qwest.post("/graphql", JSON.stringify({
 		query: `mutation Tag($tag: String!) {
 			add_tag(tag: $tag) {
 				name
@@ -545,7 +545,7 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 
 // Populate checkboxes for question names
 qwest.post("/graphql", JSON.stringify({
-	query: `{ question_names }`
+	query: "{ question_names }"
 }), graphqlOptions).then((xhr, response) => {
 	let checkboxTemplate = <HTMLTemplateElement> document.getElementById("checkbox-item")!;
 	let checkboxContainer = document.getElementById("question-options")!;
@@ -576,7 +576,7 @@ qwest.post("/graphql", JSON.stringify({
 // Toggle display of question checkboxes
 document.querySelector("#question-options-wrapper span")!.addEventListener("click", e => {
 	let elem = document.getElementById("question-options")!;
-	elem.style.display = elem.style.display == 'none' ? '' : 'none';
+	elem.style.display = elem.style.display == "none" ? "" : "none";
 });
 
 document.getElementById("update-question-options")!.addEventListener("click", e => {
@@ -595,7 +595,7 @@ document.getElementById("attending-filter")!.addEventListener("change", e => {
 
 // Populate application branches select options
 qwest.post("/graphql", JSON.stringify({
-	query: `{ application_branches }`
+	query: "{ application_branches }"
 }), graphqlOptions).then((xhr, response) => {
 	let select = document.getElementById("branches-filter")!;
 	let branches = response.data.application_branches;
