@@ -2,7 +2,6 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
-import * as http from "http";
 
 import * as express from "express";
 import * as serveStatic from "serve-static";
@@ -15,8 +14,12 @@ import reEscape = require("escape-string-regexp");
 import { Registration } from "./inputs/registration";
 import { config } from "./config";
 import { authenticateWithReject, authenticateWithRedirect } from "./middleware";
-import { setupRoutes as setupGraphQlRoutes } from "./graphql";
+import { setupRoutes as setupGraphQlRoutes, getSchema as getGraphQlSchema } from "./graphql";
 import { IUser } from "./schema";
+
+import { createServer } from "http";
+import { SubscriptionServer } from "subscriptions-transport-ws";
+import { execute, subscribe } from "graphql";
 
 let postParser = bodyParser.urlencoded({
 	extended: false
@@ -42,7 +45,7 @@ let uploadHandler = multer({
 import * as mongoose from "mongoose";
 import * as csvParse from "csv-parse";
 import * as json2csv from "json2csv";
-import * as WebSocket from "ws";
+// import * as WebSocket from "ws";
 
 const PORT = config.server.port;
 const MONGO_URL = config.server.mongo;
@@ -626,16 +629,16 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 	attendee.markModified("tags");
 	try {
 		await attendee.save();
-		let updateData = JSON.stringify({
-			...simplifyAttendee(attendee),
-			updatedTag: tag,
-			reverted: shouldRevert
-		});
-		wss.clients.forEach(function each(client) {
-			if (client.readyState === WebSocket.OPEN) {
-				client.send(updateData);
-			}
-		});
+		// let updateData = JSON.stringify({
+		// 	...simplifyAttendee(attendee),
+		// 	updatedTag: tag,
+		// 	reverted: shouldRevert
+		// });
+		// wss.clients.forEach(function each(client) {
+		// 	if (client.readyState === WebSocket.OPEN) {
+		// 		client.send(updateData);
+		// 	}
+		// });
 		response.status(200).json({
 			"success": true
 		});
@@ -697,18 +700,35 @@ const registration = new Registration({
 setupGraphQlRoutes(app, registration);
 
 // WebSocket server
-const server = http.createServer(app);
-export const wss = new WebSocket.Server({ server });
-wss.on("connection", function(rawSocket, _request) {
-	let request = _request as express.Request;
-	cookieParserInstance(request, null!, async (err) => {
-		let authKey = request.cookies.auth;
-		let user = await User.findOne({"auth_keys": authKey});
-		if (!user) {
-			rawSocket.close();
-		}
-	});
-});
+// export const wss = new WebSocket.Server({ server });
+// wss.on("connection", function(rawSocket, _request) {
+// 	let request = _request as express.Request;
+// 	cookieParserInstance(request, null!, async (err) => {
+// 		let authKey = request.cookies.auth;
+// 		let user = await User.findOne({"auth_keys": authKey});
+// 		if (!user) {
+// 			rawSocket.close();
+// 		}
+// 	});
+// });
+
+const server = createServer(app);
+const schema = getGraphQlSchema(registration);
+
 server.listen(PORT, () => {
 	console.log(`Check in system v${VERSION_NUMBER} @ ${VERSION_HASH} started on port ${PORT}`);
+
+	new SubscriptionServer({
+		execute,
+		subscribe,
+		schema
+	}, {
+		server,
+		path: '/subscriptions'
+	});
 });
+
+// const server = http.createServer(app);
+// server.listen(PORT, () => {
+// 	console.log(`Check in system v${VERSION_NUMBER} @ ${VERSION_HASH} started on port ${PORT}`);
+// });

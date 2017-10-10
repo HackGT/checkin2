@@ -615,52 +615,52 @@ document.getElementById("branches-filter")!.addEventListener("change", e => {
 	loadAttendees();
 });
 
-// Listen for updates
-const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
-function startWebSocketListener() {
-	const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
-	socket.addEventListener("message", (event) => {
-		if (!States["checkin"].isDisplayed)
-			return;
+// // Listen for updates
+// const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
+// function startWebSocketListener() {
+// 	const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
+// 	socket.addEventListener("message", (event) => {
+// 		if (!States["checkin"].isDisplayed)
+// 			return;
 
-		let tag: string = tagSelector.value;
-		let attendee: IUpdatedAttendee = JSON.parse(event.data);
+// 		let tag: string = tagSelector.value;
+// 		let attendee: IUpdatedAttendee = JSON.parse(event.data);
 
-		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
-		if (!button) {
-			// This attendee belongs to a tag that isn't currently being shown
-			// This message can safely be ignored; the user list will be updated when switching tags
-			return;
-		}
-		if (tag !== attendee.tag) {
-			// Check if the currently displayed tag is the tag that was just updated
-			return;
-		}
-		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
+// 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
+// 		if (!button) {
+// 			// This attendee belongs to a tag that isn't currently being shown
+// 			// This message can safely be ignored; the user list will be updated when switching tags
+// 			return;
+// 		}
+// 		if (tag !== attendee.tag) {
+// 			// Check if the currently displayed tag is the tag that was just updated
+// 			return;
+// 		}
+// 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
-		if (attendee.checked_in) {
-			button.textContent = "Uncheck in";
-			button.classList.add("checked-in");
-			if (attendee.checked_in_date && attendee.checked_in_by) {
-				status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
-			} 
-		}
-		else {
-			button.textContent = "Check in";
-			button.classList.remove("checked-in");
-			status.textContent = "";
-		}
-	});
-	socket.addEventListener("error", (event) => {
-		console.warn("Socket encountered an error, restarting...:", event);
-		startWebSocketListener();
-	});
-	socket.addEventListener("close", (event) => {
-		console.warn("Socket closed unexpectedly");
-		startWebSocketListener();
-	});
-}
-startWebSocketListener();
+// 		if (attendee.checked_in) {
+// 			button.textContent = "Uncheck in";
+// 			button.classList.add("checked-in");
+// 			if (attendee.checked_in_date && attendee.checked_in_by) {
+// 				status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
+// 			} 
+// 		}
+// 		else {
+// 			button.textContent = "Check in";
+// 			button.classList.remove("checked-in");
+// 			status.textContent = "";
+// 		}
+// 	});
+// 	socket.addEventListener("error", (event) => {
+// 		console.warn("Socket encountered an error, restarting...:", event);
+// 		startWebSocketListener();
+// 	});
+// 	socket.addEventListener("close", (event) => {
+// 		console.warn("Socket closed unexpectedly");
+// 		startWebSocketListener();
+// 	});
+// }
+// startWebSocketListener();
 
 attachUserDeleteHandlers();
 // Update check in relative times every minute the lazy way
