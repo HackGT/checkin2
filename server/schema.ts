@@ -41,7 +41,7 @@ export interface ITags {
 
 export interface IAttendee {
 	id: string;
-	name: string;
+	name?: string;
 	emails: string[];
 	tags: ITags;
 }
@@ -54,9 +54,7 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 		unique: true
 	},
 	name: {
-		type: String,
-		required: true,
-		//unique: true
+		type: String
 	},
 	emails: {
 		type: [String],

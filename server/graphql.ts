@@ -136,7 +136,6 @@ function resolver(registration: Registration): IResolver {
 					path: "check_in.user",
 					include: [
 						"id",
-						"name",
 						"email"
 					],
 					head: `user(id: "${args.user}")`
@@ -200,7 +199,6 @@ function resolver(registration: Registration): IResolver {
 					path: "check_out.user",
 					include: [
 						"id",
-						"name",
 						"email"
 					],
 					head: `user(id: "${args.user}")`
