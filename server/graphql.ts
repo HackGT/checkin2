@@ -164,6 +164,7 @@ function resolver(registration: Registration): IResolver {
 						value: 1
 					},
 					tags: {
+						checkinTag: args.tag,
 						id: args.user,
 						name: userInfo.user.name,
 						email: userInfo.user.email,
@@ -224,6 +225,7 @@ function resolver(registration: Registration): IResolver {
 						value: 1
 					},
 					tags: {
+						checkinTag: args.tag,						
 						id: args.user,
 						name: userInfo.user.name,
 						email: userInfo.user.email,
