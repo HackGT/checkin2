@@ -9,6 +9,7 @@ import { Attendee, Tag } from "./schema";
 import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
+import { printHackGTMetricsEvent } from "./app";
 
 const typeDefs = fs.readFileSync(path.resolve(__dirname, "../api.graphql"), "utf8");
 
@@ -157,21 +158,8 @@ function resolver(registration: Registration): IResolver {
 
                 attendee.markModified('tags');
                 await attendee.save();
-				console.log(JSON.stringify({
-					hackgtmetricsversion: 1,
-					serviceName: process.env.ROOT_URL,
-					values: {
-						value: 1
-					},
-					tags: {
-						checkinTag: args.tag,
-						id: args.user,
-						name: userInfo.user.name,
-						email: userInfo.user.email,
-						check_in: true,
-						checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-					}
-				}))
+				
+                printHackGTMetricsEvent(args, userInfo, loggedInUser, true);				
                 return userInfo;
 			},
 			/**
@@ -218,21 +206,8 @@ function resolver(registration: Registration): IResolver {
                 }
                 attendee.markModified('tags');
                 await attendee.save();
-				console.log(JSON.stringify({
-					hackgtmetricsversion: 1,
-					serviceName: process.env.ROOT_URL,
-					values: {
-						value: 1
-					},
-					tags: {
-						checkinTag: args.tag,						
-						id: args.user,
-						name: userInfo.user.name,
-						email: userInfo.user.email,
-						check_in: false,
-						checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-					}
-				}))
+                
+                printHackGTMetricsEvent(args, userInfo, loggedInUser, false);
                 return userInfo;
 			}
 		}
