@@ -25,7 +25,7 @@ type Query {
   # seen from the latest page retrieved, if you want the first page leave this out.
   users(pagination_token: ID, n: Int!, filter: UserFilter): [UserAndTags!]!
   # Search through a user's name and email through regex
-  search_user(search: String!, use_regex: Boolean = false, offset: Int!, n: Int!, filter: UserFilter): [UserAndTags!]!
+  search_user_simple(search: String!, use_regex: Boolean = false, offset: Int!, n: Int!, filter: UserFilter): [UserAndTags!]!
   # All possible application question branches
   application_branches: [String!]!
   # All possible confirmation question branches

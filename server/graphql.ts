@@ -57,8 +57,8 @@ function resolver(registration: Registration): IResolver {
 			/**
 			 * Search through a user's name and email through regex
 			 */
-			search_user: registration.forward({
-				path: "search_user.user",
+			search_user_simple: registration.forward({
+				path: "search_user_simple.user",
 				include: ["id"]
 			}),
 			/**
