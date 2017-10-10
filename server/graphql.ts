@@ -157,7 +157,20 @@ function resolver(registration: Registration): IResolver {
 
                 attendee.markModified('tags');
                 await attendee.save();
-
+				console.log(JSON.stringify({
+					hackgtmetricsversion: 1,
+					serviceName: process.env.ROOT_URL,
+					values: {
+						value: 1
+					},
+					tags: {
+						id: args.user,
+						name: userInfo.user.name,
+						email: userInfo.user.email,
+						check_in: true,
+						checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+					}
+				}))
                 return userInfo;
 			},
 			/**
@@ -204,7 +217,20 @@ function resolver(registration: Registration): IResolver {
                 }
                 attendee.markModified('tags');
                 await attendee.save();
-
+				console.log(JSON.stringify({
+					hackgtmetricsversion: 1,
+					serviceName: process.env.ROOT_URL,
+					values: {
+						value: 1
+					},
+					tags: {
+						id: args.user,
+						name: userInfo.user.name,
+						email: userInfo.user.email,
+						check_in: false,
+						checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+					}
+				}))
                 return userInfo;
 			}
 		}
