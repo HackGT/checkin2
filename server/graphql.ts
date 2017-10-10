@@ -9,6 +9,7 @@ import { Attendee, Tag } from "./schema";
 import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
+import { printHackGTMetricsEvent } from "./app";
 
 const typeDefs = fs.readFileSync(path.resolve(__dirname, "../api.graphql"), "utf8");
 
@@ -121,44 +122,45 @@ function resolver(registration: Registration): IResolver {
 					return null;
 				}
 
-                let attendee = await Attendee.findOne({
-                    id: args.user
-                });
+				let attendee = await Attendee.findOne({
+					id: args.user
+				});
 
 				const forwarder = registration.forward({
-                    path: "check_in.user",
-                    include: [
+					path: "check_in.user",
+					include: [
 						"id",
 						"name",
 						"email"
 					],
-                    head: `user(id: "${args.user}")`
-                });
-                const userInfo = await forwarder(prev, args, ctx, schema);
+					head: `user(id: "${args.user}")`
+				});
+				const userInfo = await forwarder(prev, args, ctx, schema);
 				if (!userInfo.user) {
 					return null;
 				}
 
-                // Create attendee if it doesn't already exist
-                if (!attendee) {
-                    attendee = new Attendee({
-                        id: args.user,
-                        name: userInfo.user.name,
-                        emails: userInfo.user.email,
-                        tags: {}
-                    });
-                }
-                const loggedInUser = await getLoggedInUser(ctx);
-                attendee.tags[args.tag] = {
-                    checked_in: true,
-                    checked_in_date: new Date(),
-                    checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-                }
+				// Create attendee if it doesn't already exist
+				if (!attendee) {
+					attendee = new Attendee({
+						id: args.user,
+						name: userInfo.user.name,
+						emails: userInfo.user.email,
+						tags: {}
+					});
+				}
+				const loggedInUser = await getLoggedInUser(ctx);
+				attendee.tags[args.tag] = {
+					checked_in: true,
+					checked_in_date: new Date(),
+					checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+				}
 
-                attendee.markModified('tags');
-                await attendee.save();
-
-                return userInfo;
+				attendee.markModified('tags');
+				await attendee.save();
+				
+				printHackGTMetricsEvent(args, userInfo, loggedInUser, true);				
+				return userInfo;
 			},
 			/**
 			 * Check-out a user by specifying the tag name
@@ -169,43 +171,44 @@ function resolver(registration: Registration): IResolver {
 					return null;
 				}
 
-                let attendee = await Attendee.findOne({
-                    id: args.user
-                });
+				let attendee = await Attendee.findOne({
+					id: args.user
+				});
 
 				const forwarder = registration.forward({
-                    path: "check_out.user",
-                    include: [
+					path: "check_out.user",
+					include: [
 						"id",
 						"name",
 						"email"
 					],
-                    head: `user(id: "${args.user}")`
-                });
-                const userInfo = await forwarder(prev, args, ctx, schema);
+					head: `user(id: "${args.user}")`
+				});
+				const userInfo = await forwarder(prev, args, ctx, schema);
 				if (!userInfo.user) {
 					return null;
 				}
 
-                // Create attendee if it doesn't already exist
-                if (!attendee) {
-                    attendee = new Attendee({
-                        id: args.user,
-                        name: userInfo.user.name,
-                        emails: userInfo.user.email,
-                        tags: {}
-                    });
-                }
-                const loggedInUser = await getLoggedInUser(ctx);
-                attendee.tags[args.tag] = {
-                    checked_in: false,
-                    checked_in_date: new Date(),
-                    checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-                }
-                attendee.markModified('tags');
-                await attendee.save();
-
-                return userInfo;
+				// Create attendee if it doesn't already exist
+				if (!attendee) {
+					attendee = new Attendee({
+						id: args.user,
+						name: userInfo.user.name,
+						emails: userInfo.user.email,
+						tags: {}
+					});
+				}
+				const loggedInUser = await getLoggedInUser(ctx);
+				attendee.tags[args.tag] = {
+					checked_in: false,
+					checked_in_date: new Date(),
+					checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+				}
+				attendee.markModified('tags');
+				await attendee.save();
+				
+				printHackGTMetricsEvent(args, userInfo, loggedInUser, false);
+				return userInfo;
 			}
 		}
 	};
