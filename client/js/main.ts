@@ -113,7 +113,7 @@ interface IGraphqlAttendee {
 
 interface ISearchUserResponse {
 	data: {
-		search_user: IGraphqlAttendee[]
+		search_user_simple: IGraphqlAttendee[]
 	}
 }
 
@@ -284,7 +284,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
  
 	// TODO: some kind of pagination when displaying users
 	let query: string = `query UserAndTags($search: String!, $questions: [String!]!, $filter: UserFilter) {
-		search_user(search: $search, n: 25, offset: 0, filter: $filter) {
+		search_user_simple(search: $search, n: 25, offset: 0, filter: $filter) {
 			user {
 				id 
 				name 
@@ -313,7 +313,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 			filter: registrationFilter
 		}
 	}), graphqlOptions).then((xhr, response: ISearchUserResponse) => {
-		let attendees: IGraphqlAttendee[] = response.data.search_user;
+		let attendees: IGraphqlAttendee[] = response.data.search_user_simple;
 
 		let attendeeList = document.getElementById("attendees")!;
 		let attendeeTemplate = <HTMLTemplateElement> document.getElementById("attendee-item")!;
