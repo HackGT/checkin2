@@ -16,6 +16,7 @@ import { Registration } from "./inputs/registration";
 import { config } from "./config";
 import { authenticateWithReject, authenticateWithRedirect } from "./middleware";
 import { setupRoutes as setupGraphQlRoutes } from "./graphql";
+import { IUser } from "./schema";
 
 let postParser = bodyParser.urlencoded({
 	extended: false
@@ -92,6 +93,32 @@ export function readFileAsync (filename: string): Promise<string> {
 		})
 	});
 }
+
+/**
+ * Helper to print HackGT Metrics formatted event
+ * @param args GraphQL args to checkin/checkout mutation
+ * @param userInfo User object
+ * @param loggedInUser Logged in CheckIn admin
+ * @param checkinStatus Truthy to indicate if user was checked in or out of the given tag
+ */
+export function printHackGTMetricsEvent(args: {user: string, tag: string}, userInfo: any, loggedInUser :{admin: boolean; user?: IUser;} , checkinStatus: boolean) {
+	console.log(JSON.stringify({
+		hackgtmetricsversion: 1,
+		serviceName: process.env.ROOT_URL,
+		values: {
+			value: 1
+		},
+		tags: {
+			checkinTag: args.tag,
+			id: args.user,
+			name: userInfo.user.name,
+			email: userInfo.user.email,
+			check_in: true,
+			checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+		}
+	}));
+}
+
 
 // Check for number of users and create default account if none
 (async () => {

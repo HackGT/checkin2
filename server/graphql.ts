@@ -11,6 +11,7 @@ import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
 import { wss } from "./app";
 import * as WebSocket from "ws";
+import { printHackGTMetricsEvent } from "./app";
 
 const typeDefs = fs.readFileSync(path.resolve(__dirname, "../api.graphql"), "utf8");
 
@@ -58,8 +59,8 @@ function resolver(registration: Registration): IResolver {
 			/**
 			 * Search through a user's name and email through regex
 			 */
-			search_user: registration.forward({
-				path: "search_user.user",
+			search_user_simple: registration.forward({
+				path: "search_user_simple.user",
 				include: ["id"]
 			}),
 			/**
@@ -127,59 +128,61 @@ function resolver(registration: Registration): IResolver {
 					return null;
 				}
 
-                let attendee = await Attendee.findOne({
-                    id: args.user
-                });
+				let attendee = await Attendee.findOne({
+					id: args.user
+				});
 
 				const forwarder = registration.forward({
-                    path: "check_in.user",
-                    include: [
+					path: "check_in.user",
+					include: [
 						"id",
 						"name",
 						"email"
 					],
-                    head: `user(id: "${args.user}")`
-                });
-                const userInfo = await forwarder(prev, args, ctx, schema);
+					head: `user(id: "${args.user}")`
+				});
+				const userInfo = await forwarder(prev, args, ctx, schema);
 				if (!userInfo.user) {
 					return null;
 				}
 
-                // Create attendee if it doesn't already exist
-                if (!attendee) {
-                    attendee = new Attendee({
-                        id: args.user,
-                        name: userInfo.user.name,
-                        emails: userInfo.user.email,
-                        tags: {}
-                    });
-                }
-                const loggedInUser = await getLoggedInUser(ctx);
-                const date = new Date();
-                attendee.tags[args.tag] = {
-                    checked_in: true,
-                    checked_in_date: date,
-                    checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-                }
+				// Create attendee if it doesn't already exist
+				if (!attendee) {
+					attendee = new Attendee({
+						id: args.user,
+						name: userInfo.user.name,
+						emails: userInfo.user.email,
+						tags: {}
+					});
+				}
+				const loggedInUser = await getLoggedInUser(ctx);
+				const date = new Date();
+				attendee.tags[args.tag] = {
+					checked_in: true,
+					checked_in_date: date,
+					checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+				}
 
-                attendee.markModified('tags');
-                await attendee.save();
+				attendee.markModified('tags');
+				await attendee.save();
 
-                // Send updated information via web sockets
-                wss.clients.forEach(function each(client) {
-                    if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({
-                            id: args.user,
-                            tag: args.tag,
-                            checked_in: true,
-                            checked_in_date: date,
-                            checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-                        }));
-                    }
-                });
+				// Send updated information via web sockets
+				wss.clients.forEach(function each(client) {
+					if (client.readyState === WebSocket.OPEN) {
+						client.send(JSON.stringify({
+							id: args.user,
+							tag: args.tag,
+							checked_in: true,
+							checked_in_date: date,
+							checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+						}));
+					}
+				});
 
-                return userInfo;
-            },
+				printHackGTMetricsEvent(args, userInfo, loggedInUser, true);
+				return userInfo;
+			},
+
 			/**
 			 * Check-out a user by specifying the tag name
 			 */
@@ -189,71 +192,72 @@ function resolver(registration: Registration): IResolver {
 					return null;
 				}
 
-                let attendee = await Attendee.findOne({
-                    id: args.user
-                });
+				let attendee = await Attendee.findOne({
+					id: args.user
+				});
 
 				const forwarder = registration.forward({
-                    path: "check_out.user",
-                    include: [
+					path: "check_out.user",
+					include: [
 						"id",
 						"name",
 						"email"
 					],
-                    head: `user(id: "${args.user}")`
-                });
-                const userInfo = await forwarder(prev, args, ctx, schema);
+					head: `user(id: "${args.user}")`
+				});
+				const userInfo = await forwarder(prev, args, ctx, schema);
 				if (!userInfo.user) {
 					return null;
 				}
+				
+				// Create attendee if it doesn't already exist
+				if (!attendee) {
+					attendee = new Attendee({
+						id: args.user,
+						name: userInfo.user.name,
+						emails: userInfo.user.email,
+						tags: {}
+					});
+				}
+				const loggedInUser = await getLoggedInUser(ctx);
+				attendee.tags[args.tag] = {
+					checked_in: false,
+					checked_in_date: new Date(),
+					checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+				}
+				attendee.markModified('tags');
+				await attendee.save();
 
-                // Create attendee if it doesn't already exist
-                if (!attendee) {
-                    attendee = new Attendee({
-                        id: args.user,
-                        name: userInfo.user.name,
-                        emails: userInfo.user.email,
-                        tags: {}
-                    });
-                }
-                const loggedInUser = await getLoggedInUser(ctx);
-                attendee.tags[args.tag] = {
-                    checked_in: false,
-                    checked_in_date: new Date(),
-                    checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-                }
-                attendee.markModified('tags');
-                await attendee.save();
+				// Send updated information via web sockets
+				wss.clients.forEach(function each(client) {
+					if (client.readyState === WebSocket.OPEN) {
+						client.send(JSON.stringify({
+							id: args.user,
+							tag: args.tag,
+							checked_in: false
+						}));
+					}
+				});
 
-                // Send updated information via web sockets
-                wss.clients.forEach(function each(client) {
-                    if (client.readyState === WebSocket.OPEN) {
-                        client.send(JSON.stringify({
-                            id: args.user,
-                            tag: args.tag,
-                            checked_in: false
-                        }));
-                    }
-                });
+				printHackGTMetricsEvent(args, userInfo, loggedInUser, false);
+				return userInfo;
+			}, 
 
-                return userInfo;
-            }, 
+			/**
+			* Add tag to all users
+			*/
+			add_tag: async (prev, args, ctx, schema) => {
+				// Return none if the tag already exists (prevent duplicates)
+				if (await Tag.findOne({ name: args.tag })) {
+					return null;
+				}
 
-            /**
-            * Add tag to all users
-            */
-            add_tag: async (prev, args, ctx, schema) => {
-                // Return none if the tag already exists (prevent duplicates)
-                if (await Tag.findOne({ name: args.tag })) {
-                    return null;
-                }
-
-                const tag = new Tag({ name: args.tag });
-                await tag.save();
-                return { name: args.tag };
-            }
-        }
-    };
+				const tag = new Tag({ name: args.tag });
+				await tag.save();
+				return { name: args.tag };
+			}
+		}
+	};
 }
 
 /**
