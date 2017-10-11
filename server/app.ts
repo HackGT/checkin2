@@ -724,7 +724,7 @@ server.listen(PORT, () => {
 		schema
 	}, {
 		server,
-		path: '/subscriptions'
+		path: '/graphql'
 	});
 });
 

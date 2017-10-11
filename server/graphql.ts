@@ -35,6 +35,8 @@ interface IResolver {
 	}
 }
 
+const TAG_CHANGE = "tag_change";
+
 
 /**
  * GraphQL API
@@ -176,7 +178,7 @@ function resolver(registration: Registration): IResolver {
 				attendee.markModified('tags');
 				await attendee.save();
 
-				pubsub.publish('tag_change', {tag_change : userInfo});
+				pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
 				printHackGTMetricsEvent(args, userInfo, loggedInUser, true);
 				return userInfo;
@@ -227,7 +229,7 @@ function resolver(registration: Registration): IResolver {
 				attendee.markModified('tags');
 				await attendee.save();
 
-				pubsub.publish('tag_change', {tag_change : userInfo});
+				pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
 				printHackGTMetricsEvent(args, userInfo, loggedInUser, false);
 				return userInfo;
@@ -249,7 +251,7 @@ function resolver(registration: Registration): IResolver {
 		},
 		Subscription: {
 			tag_change: {
-				subscribe: () => pubsub.asyncIterator('tag_change')
+				subscribe: () => pubsub.asyncIterator(TAG_CHANGE)
 			}
 		}
 	};
@@ -280,10 +282,12 @@ export function setupRoutes(app: express.Express, registration: Registration) {
 	app.use(
 		"/graphiql",
 		authenticateWithRedirect,
-		graphiqlExpress({
-			endpointURL: "/graphql",
-			subscriptionsEndpoint: "ws://localhost:3000/subscriptions"
-		})
+		(request, response, next) => {
+			graphiqlExpress({
+				endpointURL: "/graphql",
+				subscriptionsEndpoint: `ws://${request.get('host')}/graphql`
+			})(request, response, next);
+		}
 	);
 }
 
