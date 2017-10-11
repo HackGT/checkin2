@@ -94,8 +94,12 @@ interface IGraphqlAttendee {
 
 interface ISearchUserResponse {
 	data: {
-		search_user_simple: IGraphqlAttendee[]
+		search_user_simple: IGraphqlAttendee[];
 	}
+}
+
+interface ITagChangeResponse {
+	tag_change: IGraphqlAttendee;
 }
 
 const graphqlOptions = {
@@ -603,6 +607,7 @@ loadAttendees();
 declare let require: any
 declare let SubscriptionsTransportWs: any;
 
+// ???
 let apollo = require("apollo-client");
 let gql = require("graphql-tag");
 
@@ -610,7 +615,8 @@ const networkInterface = apollo.createNetworkInterface({
  uri: '/graphql'
 });
 
-const wsClient = new SubscriptionsTransportWs.SubscriptionClient(`ws://${window.location.host}/graphql`, {
+const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
+const wsClient = new SubscriptionsTransportWs.SubscriptionClient(`${wsProtocol}://${window.location.host}/graphql`, {
 	reconnect: true,
 });
 
@@ -645,14 +651,15 @@ apolloClient.subscribe({
 	query: subscriptionQuery,
 	variables: {}
 }).subscribe({ 
-	next (data: any) {
+	next (data: ITagChangeResponse) {
 		let attendee: IGraphqlAttendee = data.tag_change;
 
 		if (!States["checkin"].isDisplayed)
 			return;
 
 		let tag: string = tagSelector.value;
-		let attendeeTags = attendee.tags.filter((t: IGraphqlTag) => { return t.tag.name === tag});
+		// Filter by the currently shown tag
+		let attendeeTags = attendee.tags.filter((t: IGraphqlTag) => t.tag.name === tag);
 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.user.id} > .actions > button`);
 
 		if (!button) {

@@ -45,7 +45,6 @@ let uploadHandler = multer({
 import * as mongoose from "mongoose";
 import * as csvParse from "csv-parse";
 import * as json2csv from "json2csv";
-// import * as WebSocket from "ws";
 
 const PORT = config.server.port;
 const MONGO_URL = config.server.mongo;
@@ -629,16 +628,6 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 	attendee.markModified("tags");
 	try {
 		await attendee.save();
-		// let updateData = JSON.stringify({
-		// 	...simplifyAttendee(attendee),
-		// 	updatedTag: tag,
-		// 	reverted: shouldRevert
-		// });
-		// wss.clients.forEach(function each(client) {
-		// 	if (client.readyState === WebSocket.OPEN) {
-		// 		client.send(updateData);
-		// 	}
-		// });
 		response.status(200).json({
 			"success": true
 		});
@@ -700,18 +689,6 @@ const registration = new Registration({
 setupGraphQlRoutes(app, registration);
 
 // WebSocket server
-// export const wss = new WebSocket.Server({ server });
-// wss.on("connection", function(rawSocket, _request) {
-// 	let request = _request as express.Request;
-// 	cookieParserInstance(request, null!, async (err) => {
-// 		let authKey = request.cookies.auth;
-// 		let user = await User.findOne({"auth_keys": authKey});
-// 		if (!user) {
-// 			rawSocket.close();
-// 		}
-// 	});
-// });
-
 const server = createServer(app);
 const schema = getGraphQlSchema(registration);
 
@@ -727,8 +704,3 @@ server.listen(PORT, () => {
 		path: '/graphql'
 	});
 });
-
-// const server = http.createServer(app);
-// server.listen(PORT, () => {
-// 	console.log(`Check in system v${VERSION_NUMBER} @ ${VERSION_HASH} started on port ${PORT}`);
-// });
