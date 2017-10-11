@@ -68,25 +68,6 @@ function readURLHash() {
 readURLHash();
 window.addEventListener("hashchange", readURLHash);
 
-interface ITagItem {
-	checked_in: boolean,
-	checked_in_date?: Date,
-	checked_in_by?: string
-}
-
-interface ITags {
-	[key: string]: ITagItem
-}
-
-interface IAttendee {
-	reverted?: boolean;
-	updatedTag?: string,
-	id: string;
-	name: string;
-	emails: string[];
-	tags: ITags;
-}
-
 interface IGraphqlTag {
 	tag: {
 		name: string
@@ -117,14 +98,6 @@ interface ISearchUserResponse {
 	}
 }
 
-interface IUpdatedAttendee {
-	id: string;
-	tag: string;
-	checked_in: boolean;
-	checked_in_by?: string;
-	checked_in_date?: string;
-}
-
 const graphqlOptions = {
 	dataType: "text",
 	responseType: "json",
@@ -148,35 +121,35 @@ function statusFormatter (time: string, by: string = "unknown"): string {
 }
 
 function checkIn (e: Event) {
-    let button = (<HTMLButtonElement> e.target)!;
-    let isCheckedIn: boolean = button.classList.contains("checked-in");
-    button.disabled = true;
-    let tag: string = tagSelector.value;
-    let id: string = button.parentElement!.parentElement!.id.slice(5);
-    let action: string = isCheckedIn ? "check_out" : "check_in";
+	let button = (<HTMLButtonElement> e.target)!;
+	let isCheckedIn: boolean = button.classList.contains("checked-in");
+	button.disabled = true;
+	let tag: string = tagSelector.value;
+	let id: string = button.parentElement!.parentElement!.id.slice(5);
+	let action: string = isCheckedIn ? "check_out" : "check_in";
 
-    let mutation: string = `mutation UserAndTags($user: ID!, $tag: String!) {
-      ${action}(user: $user, tag: $tag) {
-        tags {
-          tag {
-            name
-          }
-          checked_in
-        }
-      }
-    }`;
+	let mutation: string = `mutation UserAndTags($user: ID!, $tag: String!) {
+	  ${action}(user: $user, tag: $tag) {
+		tags {
+		  tag {
+			name
+		  }
+		  checked_in
+		}
+	  }
+	}`;
 
-    qwest.post("/graphql", JSON.stringify({
-        query: mutation,
-        variables: {
-            user: id,
-            tag: tag
-        }
-    }), graphqlOptions).catch((e, xhr, response) => {
-        alert(response.error);
-    }).complete(() => {
-        button.disabled = false;
-    });
+	qwest.post("/graphql", JSON.stringify({
+		query: mutation,
+		variables: {
+			user: id,
+			tag: tag
+		}
+	}), graphqlOptions).catch((e, xhr, response) => {
+		alert(response.error);
+	}).complete(() => {
+		button.disabled = false;
+	});
 }
 
 function attachUserDeleteHandlers () {
@@ -615,53 +588,6 @@ document.getElementById("branches-filter")!.addEventListener("change", e => {
 	loadAttendees();
 });
 
-// // Listen for updates
-// const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
-// function startWebSocketListener() {
-// 	const socket = new WebSocket(`${wsProtocol}://${window.location.host}`);
-// 	socket.addEventListener("message", (event) => {
-// 		if (!States["checkin"].isDisplayed)
-// 			return;
-
-// 		let tag: string = tagSelector.value;
-// 		let attendee: IUpdatedAttendee = JSON.parse(event.data);
-
-// 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.id} > .actions > button`);
-// 		if (!button) {
-// 			// This attendee belongs to a tag that isn't currently being shown
-// 			// This message can safely be ignored; the user list will be updated when switching tags
-// 			return;
-// 		}
-// 		if (tag !== attendee.tag) {
-// 			// Check if the currently displayed tag is the tag that was just updated
-// 			return;
-// 		}
-// 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
-
-// 		if (attendee.checked_in) {
-// 			button.textContent = "Uncheck in";
-// 			button.classList.add("checked-in");
-// 			if (attendee.checked_in_date && attendee.checked_in_by) {
-// 				status.innerHTML = statusFormatter(attendee.checked_in_date, attendee.checked_in_by);
-// 			} 
-// 		}
-// 		else {
-// 			button.textContent = "Check in";
-// 			button.classList.remove("checked-in");
-// 			status.textContent = "";
-// 		}
-// 	});
-// 	socket.addEventListener("error", (event) => {
-// 		console.warn("Socket encountered an error, restarting...:", event);
-// 		startWebSocketListener();
-// 	});
-// 	socket.addEventListener("close", (event) => {
-// 		console.warn("Socket closed unexpectedly");
-// 		startWebSocketListener();
-// 	});
-// }
-// startWebSocketListener();
-
 attachUserDeleteHandlers();
 // Update check in relative times every minute the lazy way
 setInterval(() => {
@@ -670,3 +596,88 @@ setInterval(() => {
 	}
 }, 1000 * 60);
 loadAttendees();
+
+
+// Set up graphql subscriptions listener
+
+declare let require: any
+declare let SubscriptionsTransportWs: any;
+
+let apollo = require("apollo-client");
+let gql = require("graphql-tag");
+
+const networkInterface = apollo.createNetworkInterface({
+ uri: '/graphql'
+});
+
+const wsClient = new SubscriptionsTransportWs.SubscriptionClient(`ws://${window.location.host}/graphql`, {
+	reconnect: true,
+});
+
+const networkInterfaceWithSubscriptions = SubscriptionsTransportWs.addGraphQLSubscriptions(
+	networkInterface,
+	wsClient
+);
+
+const apolloClient = new apollo.ApolloClient({
+	networkInterface: networkInterfaceWithSubscriptions
+});
+
+const subscriptionQuery = gql(`subscription {
+  tag_change {
+	user {
+	  id
+	  name
+	  email
+	}
+	tags {
+	  tag {
+		name
+	  }
+	  checked_in
+	  checked_in_by
+	  checked_in_date
+	}
+  }
+}`);
+
+apolloClient.subscribe({
+	query: subscriptionQuery,
+	variables: {}
+}).subscribe({ 
+	next (data: any) {
+		let attendee: IGraphqlAttendee = data.tag_change;
+
+		if (!States["checkin"].isDisplayed)
+			return;
+
+		let tag: string = tagSelector.value;
+		let attendeeTags = attendee.tags.filter((t: IGraphqlTag) => { return t.tag.name === tag});
+		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.user.id} > .actions > button`);
+
+		if (!button) {
+			// This attendee belongs to a tag that isn't currently being shown
+			// This message can safely be ignored; the user list will be updated when switching tags
+			return;
+		}
+		if (attendeeTags.length === 0) {
+			// Check if the currently displayed tag is the tag that was just updated
+			return;
+		}
+		let attendeeTag = attendeeTags[0];
+		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
+
+		if (attendeeTag.checked_in) {
+			button.textContent = "Uncheck in";
+			button.classList.add("checked-in");
+			if (attendeeTag.checked_in_date && attendeeTag.checked_in_by) {
+				status.innerHTML = statusFormatter(attendeeTag.checked_in_date, attendeeTag.checked_in_by);
+			} 
+		}
+		else {
+			button.textContent = "Check in";
+			button.classList.remove("checked-in");
+			status.textContent = "";
+		}
+	}
+});

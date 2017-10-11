@@ -1,5 +1,5 @@
 /// <reference types="qwest" />
-mdc.autoInit();
+// mdc.autoInit();
 
 document.addEventListener("keydown", e => {
 	// Enter key

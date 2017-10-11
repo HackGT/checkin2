@@ -24,3 +24,4 @@ mv ./api.graphql.types.ts ./server/graphql.types.ts
 ./node_modules/typescript/bin/tsc -p server/
 ./node_modules/typescript/bin/tsc -p client/
 
+./node_modules/.bin/browserify ./client/js/main.js -o ./client/js/bundle.js
