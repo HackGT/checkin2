@@ -113,7 +113,7 @@ export function printHackGTMetricsEvent(args: {user: string, tag: string}, userI
 			id: args.user,
 			name: userInfo.user.name,
 			email: userInfo.user.email,
-			check_in: true,
+			check_in: checkinStatus,
 			checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
 		}
 	}));
