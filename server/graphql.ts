@@ -286,7 +286,7 @@ export function setupRoutes(app: express.Express, registration: Registration) {
 		(request, response, next) => {
 			graphiqlExpress({
 				endpointURL: "/graphql",
-				subscriptionsEndpoint: createLink(request, "graphql", "ws")
+				subscriptionsEndpoint: createLink(request, "graphql", "wss")
 			})(request, response, next);
 		}
 	);
