@@ -346,7 +346,29 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 					status.textContent = "";
 				}
 				if (attendee.user.questions) {
-					let registrationInformation = attendee.user.questions.map(info => `${info.name}: ${info.value}`);
+					const infoToText = (info: {
+						name: string;
+						value?: string;
+						values?: string[];
+						file?: {
+							path: string;
+							original_name: string;
+						}
+					}) => {
+						if (info.value) {
+							return `${info.name}: ${info.value}`;
+						}
+						else if (info.values) {
+							return `${info.name}: ${info.values.join(",")}`;
+						}
+						else if (info.file) {
+							const path = encodeURIComponent(info.file.path);
+							const url = `${location.protocol}//${location.host}/uploads?file=${path}`;
+							return `${info.name}: <a href="${url}">${info.file.original_name}</a>`;
+						}
+						return `${info.name}: Not given.`;
+					};
+					let registrationInformation = attendee.user.questions.map(infoToText);
 					existingNodes[i].querySelector("#additional-info")!.innerHTML = registrationInformation.join("<br>");
 				}
 			}

@@ -4,6 +4,7 @@ import * as os from "os";
 import * as crypto from "crypto";
 import * as morgan from "morgan";
 import * as chalk from "chalk";
+import * as urlib from "url";
 
 import * as express from "express";
 import * as serveStatic from "serve-static";
@@ -672,6 +673,12 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 });
 
 app.use("/api", apiRouter);
+
+// TODO: fix, you must be logged into registration to view this.
+app.route("/uploads").get(authenticateWithReject, async (request, response) => {
+	const url = urlib.parse(config.inputs.registration);
+	response.redirect(`${url.protocol}//${url.host}/${request.query.file}`);
+});
 
 const indexTemplate = Handlebars.compile(fs.readFileSync(path.join(__dirname, STATIC_ROOT, "index.html"), "utf8"));
 app.route("/").get(authenticateWithRedirect, async (request, response) => {
