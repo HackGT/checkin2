@@ -282,7 +282,6 @@ export function setupRoutes(app: express.Express, registration: Registration) {
 	);
 	app.use(
 		"/graphiql",
-		validateAndCacheHostName,
 		authenticateWithRedirect,
 		(request, response, next) => {
 			graphiqlExpress({
