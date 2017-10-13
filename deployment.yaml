@@ -7,6 +7,7 @@ secrets:
   - DEFAULT_ADMIN_PASS
 
 env:
+  PRODUCTION: true
   REGISTRATION_GRAPHQL: "https://registration.dev.hack.gt/graphql"
 
 wants:

@@ -2,6 +2,7 @@ export interface IConfig {
 	server: {
 		port: number;
 		mongo: string;
+		production: boolean;
 	},
 	inputs: {
 		registration: string;
@@ -20,7 +21,8 @@ export interface IConfig {
 export const config: IConfig = {
 	server: {
 		port: envOrDefaultMap("PORT", 3000, parseInt),
-		mongo: envOrDefault("MONGO_URL", "mongodb://localhost/checkin")
+		mongo: envOrDefault("MONGO_URL", "mongodb://localhost/checkin"),
+		production: envOrDefault("PRODUCTION", "false").toLowerCase() === "true",
 	},
 	inputs: {
 		registration: envOrDefault("REGISTRATION_GRAPHQL", "https://registration.dev.hack.gt/graphql")

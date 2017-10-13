@@ -58,6 +58,10 @@ const VERSION_HASH = require("git-rev-sync").short();
 
 export let app = express();
 
+if (config.server.production) {
+	app.enable("trust proxy");
+}
+
 app.use(compression());
 let cookieParserInstance = cookieParser(undefined, {
 	"path": "/",
