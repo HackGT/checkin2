@@ -13,7 +13,7 @@ import * as Handlebars from "handlebars";
 import reEscape = require("escape-string-regexp");
 import { Registration } from "./inputs/registration";
 import { config } from "./config";
-import { authenticateWithReject, authenticateWithRedirect } from "./middleware";
+import { authenticateWithReject, authenticateWithRedirect, validateHostCallback } from "./middleware";
 import { setupRoutes as setupGraphQlRoutes } from "./graphql";
 import { IUser } from "./schema";
 
@@ -54,6 +54,7 @@ const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../pa
 const VERSION_HASH = require("git-rev-sync").short();
 
 export let app = express();
+
 app.use(compression());
 let cookieParserInstance = cookieParser(undefined, {
 	"path": "/",
@@ -678,6 +679,7 @@ app.route("/login").get(async (request, response) => {
 });
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
+app.get("/auth/validatehost/:nonce", validateHostCallback);
 
 // Test Registration
 const registration = new Registration({

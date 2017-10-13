@@ -6,10 +6,11 @@ import * as express from "express";
 import { graphqlExpress, graphiqlExpress } from "graphql-server-express";
 import { makeExecutableSchema } from "graphql-tools";
 import { Attendee, Tag } from "./schema";
-import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser } from "./middleware";
+import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser, validateAndCacheHostName } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
 import { printHackGTMetricsEvent } from "./app";
+import { createLink } from "./util";
 import { PubSub } from 'graphql-subscriptions';
 
 
@@ -281,11 +282,12 @@ export function setupRoutes(app: express.Express, registration: Registration) {
 	);
 	app.use(
 		"/graphiql",
+		validateAndCacheHostName,
 		authenticateWithRedirect,
 		(request, response, next) => {
 			graphiqlExpress({
 				endpointURL: "/graphql",
-				subscriptionsEndpoint: `ws://${request.get('host')}/graphql`
+				subscriptionsEndpoint: createLink(request, "graphql", "ws")
 			})(request, response, next);
 		}
 	);
