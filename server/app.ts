@@ -2,6 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
+import * as morgan from "morgan";
+import * as chalk from "chalk";
 
 import * as express from "express";
 import * as serveStatic from "serve-static";
@@ -63,6 +65,34 @@ let cookieParserInstance = cookieParser(undefined, {
 	"httpOnly": true
 } as cookieParser.CookieParseOptions);
 app.use(cookieParserInstance);
+
+morgan.format("hackgt", (tokens, request, response) => {
+        let statusColorizer: (input: string) => string = input => input; // Default passthrough function
+        if (response.statusCode >= 500) {
+                statusColorizer = chalk.red;
+        }
+        if (response.statusCode >= 400) {
+                statusColorizer = chalk.yellow;
+        }
+        if (response.statusCode >= 300) {
+                statusColorizer = chalk.cyan;
+        }
+        if (response.statusCode >= 200) {
+                statusColorizer = chalk.green;
+        }
+
+        return [
+                tokens.date(request, response, "iso"),
+                tokens["remote-addr"](request, response),
+                tokens.method(request, response),
+                tokens.url(request, response),
+                statusColorizer(tokens.status(request, response)),
+                tokens["response-time"](request, response), "ms", "-",
+                tokens.res(request, response, "content-length")
+        ].join(" ");
+});
+app.use(morgan("hackgt"));
+
 
 (mongoose as any).Promise = global.Promise;
 mongoose.connect(MONGO_URL, {
