@@ -5,6 +5,7 @@ secrets:
   - ADMIN_KEY_SECRET
   - DEFAULT_ADMIN_USER
   - DEFAULT_ADMIN_PASS
+  - RANDOM_CHALLENGE
 
 env:
   REGISTRATION_GRAPHQL: "https://registration.dev.hack.gt/graphql"

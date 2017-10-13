@@ -14,6 +14,7 @@ export interface IConfig {
 	}
 	secrets: {
 		adminKey: string;
+		challenge: string;
 	}
 }
 
@@ -32,7 +33,8 @@ export const config: IConfig = {
 		}
 	},
 	secrets: {
-		adminKey: env("ADMIN_KEY_SECRET")
+		adminKey: env("ADMIN_KEY_SECRET"),
+		challenge: env("RANDOM_CHALLENGE"),
 	}
 };
 

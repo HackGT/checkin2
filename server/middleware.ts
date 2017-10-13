@@ -74,7 +74,7 @@ export async function getLoggedInUser(request: express.Request): Promise<{
 }
 
 const validatedHostNames: string[] = [];
-const validateHostNameChallenge = crypto.randomBytes(64).toString("hex");
+const validateHostNameChallenge = config.secrets.challenge;
 
 export function validateAndCacheHostName(
 	request: express.Request,
