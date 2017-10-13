@@ -603,13 +603,13 @@ loadAttendees();
 
 
 // Set up graphql subscriptions listener
-
-declare let require: any
 declare let SubscriptionsTransportWs: any;
 
-// ???
-let apollo = require("apollo-client");
-let gql = require("graphql-tag");
+import * as apollo from "apollo-client";
+import * as gqlRaw from "graphql-tag";
+// Types not working for some reason so we'll apply them manually here instead
+// TODO: Super hacky please fix
+const gql = <any>gqlRaw as (literals: any, ...placeholders: any[]) => any;
 
 const networkInterface = apollo.createNetworkInterface({
  uri: '/graphql'
