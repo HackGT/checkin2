@@ -67,7 +67,7 @@ let cookieParserInstance = cookieParser(undefined, {
 } as cookieParser.CookieParseOptions);
 app.use(cookieParserInstance);
 
-morgan.format("hackgt", (tokens, request, response) => {
+morgan.format("hackgt", (tokens : any, request : any, response : any) => {
         let statusColorizer: (input: string) => string = input => input; // Default passthrough function
         if (response.statusCode >= 500) {
                 statusColorizer = chalk.red;

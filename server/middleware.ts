@@ -1,10 +1,7 @@
 import * as express from "express";
-import * as http from "http";
-import * as https from "https";
 import * as crypto from "crypto";
 import { config } from "./config";
 import { User, IUser } from "./schema";
-import { createLink } from "./util";
 
 export async function authenticateWithReject(
 	request: express.Request,

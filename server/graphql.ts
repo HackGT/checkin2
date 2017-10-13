@@ -6,7 +6,7 @@ import * as express from "express";
 import { graphqlExpress, graphiqlExpress } from "graphql-server-express";
 import { makeExecutableSchema } from "graphql-tools";
 import { Attendee, Tag } from "./schema";
-import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser, validateAndCacheHostName } from "./middleware";
+import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
 import { printHackGTMetricsEvent } from "./app";
