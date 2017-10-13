@@ -258,7 +258,11 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	if (branch.value) {
 		registrationFilter.application_branch = branch.value; 
 	}
- 
+	const confirmationBranch = document.getElementById("confirmation-branches-filter") as HTMLInputElement;
+	if (confirmationBranch.value) {
+		registrationFilter.confirmation_branch = confirmationBranch.value;
+	}
+
 	// TODO: some kind of pagination when displaying users
 	let query: string = `query UserAndTags($search: String!, $questions: [String!]!, $filter: UserFilter) {
 		search_user_simple(search: $search, n: 25, offset: 0, filter: $filter) {
@@ -342,7 +346,29 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 					status.textContent = "";
 				}
 				if (attendee.user.questions) {
-					let registrationInformation = attendee.user.questions.map(info => `${info.name}: ${info.value}`);
+					const infoToText = (info: {
+						name: string;
+						value?: string;
+						values?: string[];
+						file?: {
+							path: string;
+							original_name: string;
+						}
+					}) => {
+						if (info.value) {
+							return `${info.name}: ${info.value}`;
+						}
+						else if (info.values) {
+							return `${info.name}: ${info.values.join(",")}`;
+						}
+						else if (info.file) {
+							const path = encodeURIComponent(info.file.path);
+							const url = `${location.protocol}//${location.host}/uploads?file=${path}`;
+							return `${info.name}: <a href="${url}">${info.file.original_name}</a>`;
+						}
+						return `${info.name}: Not given.`;
+					};
+					let registrationInformation = attendee.user.questions.map(infoToText);
 					existingNodes[i].querySelector("#additional-info")!.innerHTML = registrationInformation.join("<br>");
 				}
 			}
@@ -584,11 +610,33 @@ qwest.post("/graphql", JSON.stringify({
 		select.appendChild(option);
 	}
 }).catch((e, xhr, response) => {
-	console.error(response);
+	console.error(response, e);
 	alert("Error fetching registration application branches");
 });
 
+// Populate application branches select options
+qwest.post("/graphql", JSON.stringify({
+	query: "{ confirmation_branches }"
+}), graphqlOptions).then((xhr, response) => {
+	let select = document.getElementById("confirmation-branches-filter")!;
+	let branches = response.data.confirmation_branches;
+
+	for (let curr of branches) {
+		let option = document.createElement("option");
+		option.textContent = curr;
+		option.value = curr;
+		select.appendChild(option);
+	}
+}).catch((e, xhr, response) => {
+	console.error(response, e);
+	alert("Error fetching registration confirmation branches");
+});
+
 document.getElementById("branches-filter")!.addEventListener("change", e => {
+	loadAttendees();
+});
+
+document.getElementById("confirmation-branches-filter")!.addEventListener("change", e => {
 	loadAttendees();
 });
 
