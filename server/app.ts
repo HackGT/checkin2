@@ -72,13 +72,13 @@ morgan.format("hackgt", (tokens, request, response) => {
         if (response.statusCode >= 500) {
                 statusColorizer = chalk.red;
         }
-        if (response.statusCode >= 400) {
+        else if (response.statusCode >= 400) {
                 statusColorizer = chalk.yellow;
         }
-        if (response.statusCode >= 300) {
+        else if (response.statusCode >= 300) {
                 statusColorizer = chalk.cyan;
         }
-        if (response.statusCode >= 200) {
+        else if (response.statusCode >= 200) {
                 statusColorizer = chalk.green;
         }
 
