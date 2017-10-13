@@ -6,16 +6,23 @@ import * as express from "express";
 import { graphqlExpress, graphiqlExpress } from "graphql-server-express";
 import { makeExecutableSchema } from "graphql-tools";
 import { Attendee, Tag } from "./schema";
-import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser } from "./middleware";
+import { authenticateWithRedirect, authenticateWithReject, getLoggedInUser, validateAndCacheHostName } from "./middleware";
 import { schema as types } from "./graphql.types";
 import { Registration } from "./inputs/registration";
-import { wss } from "./app";
-import * as WebSocket from "ws";
 import { printHackGTMetricsEvent } from "./app";
+import { createLink } from "./util";
+import { PubSub } from 'graphql-subscriptions';
+
 
 const typeDefs = fs.readFileSync(path.resolve(__dirname, "../api.graphql"), "utf8");
 
+export const pubsub = new PubSub();
+
 type Ctx = express.Request;
+
+interface ISubscription<Args> {
+	subscribe: types.GraphqlField<Args, AsyncIterator<any>, Ctx>;
+}
 
 interface IResolver {
 	Query: types.Query<Ctx>;
@@ -24,7 +31,13 @@ interface IResolver {
 		user: types.GraphqlField<{}, types.User<Ctx>, Ctx>;
 	};
 	Mutation: types.Mutation<Ctx>;
+	Subscription: {
+		tag_change: ISubscription<undefined>;
+	}
 }
+
+const TAG_CHANGE = "tag_change";
+
 
 /**
  * GraphQL API
@@ -166,18 +179,7 @@ function resolver(registration: Registration): IResolver {
 				attendee.markModified('tags');
 				await attendee.save();
 
-				// Send updated information via web sockets
-				wss.clients.forEach(function each(client) {
-					if (client.readyState === WebSocket.OPEN) {
-						client.send(JSON.stringify({
-							id: args.user,
-							tag: args.tag,
-							checked_in: true,
-							checked_in_date: date,
-							checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
-						}));
-					}
-				});
+				pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
 				printHackGTMetricsEvent(args, userInfo, loggedInUser, true);
 				return userInfo;
@@ -228,16 +230,7 @@ function resolver(registration: Registration): IResolver {
 				attendee.markModified('tags');
 				await attendee.save();
 
-				// Send updated information via web sockets
-				wss.clients.forEach(function each(client) {
-					if (client.readyState === WebSocket.OPEN) {
-						client.send(JSON.stringify({
-							id: args.user,
-							tag: args.tag,
-							checked_in: false
-						}));
-					}
-				});
+				pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
 				printHackGTMetricsEvent(args, userInfo, loggedInUser, false);
 				return userInfo;
@@ -255,6 +248,11 @@ function resolver(registration: Registration): IResolver {
 				const tag = new Tag({ name: args.tag });
 				await tag.save();
 				return { name: args.tag };
+			}
+		},
+		Subscription: {
+			tag_change: {
+				subscribe: () => pubsub.asyncIterator(TAG_CHANGE)
 			}
 		}
 	};
@@ -284,9 +282,15 @@ export function setupRoutes(app: express.Express, registration: Registration) {
 	);
 	app.use(
 		"/graphiql",
+		validateAndCacheHostName,
 		authenticateWithRedirect,
-		graphiqlExpress({
-			endpointURL: "/graphql"
-		})
+		(request, response, next) => {
+			graphiqlExpress({
+				endpointURL: "/graphql",
+				subscriptionsEndpoint: createLink(request, "graphql", "ws")
+			})(request, response, next);
+		}
 	);
+
+	return schema;
 }

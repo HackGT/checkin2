@@ -5,6 +5,7 @@
 		],
 		"target": "es5",
 		"lib": [
+            "esnext.asynciterable",
 			"es5",
 			"es2015.promise",
 			"dom",
@@ -16,7 +17,7 @@
 		"noImplicitAny": true,
 		"noImplicitReturns": true,
 		"noUnusedLocals": true,
-		"module": "es6",
+		"module": "commonjs",
 		"moduleResolution": "node"
 	},
 	"include": [

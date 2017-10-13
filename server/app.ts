@@ -2,7 +2,8 @@ import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
-import * as http from "http";
+import * as morgan from "morgan";
+import * as chalk from "chalk";
 
 import * as express from "express";
 import * as serveStatic from "serve-static";
@@ -14,9 +15,13 @@ import * as Handlebars from "handlebars";
 import reEscape = require("escape-string-regexp");
 import { Registration } from "./inputs/registration";
 import { config } from "./config";
-import { authenticateWithReject, authenticateWithRedirect } from "./middleware";
+import { authenticateWithReject, authenticateWithRedirect, validateHostCallback } from "./middleware";
 import { setupRoutes as setupGraphQlRoutes } from "./graphql";
 import { IUser } from "./schema";
+
+import { createServer } from "http";
+import { SubscriptionServer } from "subscriptions-transport-ws";
+import { execute, subscribe } from "graphql";
 
 let postParser = bodyParser.urlencoded({
 	extended: false
@@ -42,7 +47,6 @@ let uploadHandler = multer({
 import * as mongoose from "mongoose";
 import * as csvParse from "csv-parse";
 import * as json2csv from "json2csv";
-import * as WebSocket from "ws";
 
 const PORT = config.server.port;
 const MONGO_URL = config.server.mongo;
@@ -52,6 +56,7 @@ const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../pa
 const VERSION_HASH = require("git-rev-sync").short();
 
 export let app = express();
+
 app.use(compression());
 let cookieParserInstance = cookieParser(undefined, {
 	"path": "/",
@@ -60,6 +65,34 @@ let cookieParserInstance = cookieParser(undefined, {
 	"httpOnly": true
 } as cookieParser.CookieParseOptions);
 app.use(cookieParserInstance);
+
+morgan.format("hackgt", (tokens, request, response) => {
+        let statusColorizer: (input: string) => string = input => input; // Default passthrough function
+        if (response.statusCode >= 500) {
+                statusColorizer = chalk.red;
+        }
+        if (response.statusCode >= 400) {
+                statusColorizer = chalk.yellow;
+        }
+        if (response.statusCode >= 300) {
+                statusColorizer = chalk.cyan;
+        }
+        if (response.statusCode >= 200) {
+                statusColorizer = chalk.green;
+        }
+
+        return [
+                tokens.date(request, response, "iso"),
+                tokens["remote-addr"](request, response),
+                tokens.method(request, response),
+                tokens.url(request, response),
+                statusColorizer(tokens.status(request, response)),
+                tokens["response-time"](request, response), "ms", "-",
+                tokens.res(request, response, "content-length")
+        ].join(" ");
+});
+app.use(morgan("hackgt"));
+
 
 (mongoose as any).Promise = global.Promise;
 mongoose.connect(MONGO_URL, {
@@ -626,16 +659,6 @@ apiRouter.route("/checkin").post(authenticateWithReject, postParser, async (requ
 	attendee.markModified("tags");
 	try {
 		await attendee.save();
-		let updateData = JSON.stringify({
-			...simplifyAttendee(attendee),
-			updatedTag: tag,
-			reverted: shouldRevert
-		});
-		wss.clients.forEach(function each(client) {
-			if (client.readyState === WebSocket.OPEN) {
-				client.send(updateData);
-			}
-		});
 		response.status(200).json({
 			"success": true
 		});
@@ -686,6 +709,7 @@ app.route("/login").get(async (request, response) => {
 });
 app.use("/node_modules", serveStatic(path.resolve(__dirname, "../node_modules")));
 app.use("/", serveStatic(path.resolve(__dirname, STATIC_ROOT)));
+app.get("/auth/validatehost/:nonce", validateHostCallback);
 
 // Test Registration
 const registration = new Registration({
@@ -694,21 +718,20 @@ const registration = new Registration({
 });
 
 // Connect GraphQL API
-setupGraphQlRoutes(app, registration);
+const schema = setupGraphQlRoutes(app, registration);
 
 // WebSocket server
-const server = http.createServer(app);
-export const wss = new WebSocket.Server({ server });
-wss.on("connection", function(rawSocket, _request) {
-	let request = _request as express.Request;
-	cookieParserInstance(request, null!, async (err) => {
-		let authKey = request.cookies.auth;
-		let user = await User.findOne({"auth_keys": authKey});
-		if (!user) {
-			rawSocket.close();
-		}
-	});
-});
+const server = createServer(app);
+
 server.listen(PORT, () => {
 	console.log(`Check in system v${VERSION_NUMBER} @ ${VERSION_HASH} started on port ${PORT}`);
+
+	new SubscriptionServer({
+		execute,
+		subscribe,
+		schema
+	}, {
+		server,
+		path: '/graphql'
+	});
 });
