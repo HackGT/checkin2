@@ -289,14 +289,6 @@ export function setupRoutes(app: express.Express, registration: Registration) {
 			})(request, response, next);
 		}
 	);
-}
 
-export function getSchema(registration: Registration) {
-	const schema = makeExecutableSchema({
-		typeDefs,
-		// XXX: The types are javascript equivalent, but unreachable from the graphql-tools library
-		resolvers: resolver(registration) as any
-	});
-
-	return schema;	
+	return schema;
 }

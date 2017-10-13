@@ -14,7 +14,7 @@ import reEscape = require("escape-string-regexp");
 import { Registration } from "./inputs/registration";
 import { config } from "./config";
 import { authenticateWithReject, authenticateWithRedirect } from "./middleware";
-import { setupRoutes as setupGraphQlRoutes, getSchema as getGraphQlSchema } from "./graphql";
+import { setupRoutes as setupGraphQlRoutes } from "./graphql";
 import { IUser } from "./schema";
 
 import { createServer } from "http";
@@ -686,11 +686,10 @@ const registration = new Registration({
 });
 
 // Connect GraphQL API
-setupGraphQlRoutes(app, registration);
+const schema = setupGraphQlRoutes(app, registration);
 
 // WebSocket server
 const server = createServer(app);
-const schema = getGraphQlSchema(registration);
 
 server.listen(PORT, () => {
 	console.log(`Check in system v${VERSION_NUMBER} @ ${VERSION_HASH} started on port ${PORT}`);
