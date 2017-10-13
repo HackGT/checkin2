@@ -273,6 +273,11 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 				questions(names: $questions) {
 					name
 					value
+					values
+					file {
+						path
+						original_name
+					}
 				} 
 			} 
 			tags {
