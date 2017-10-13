@@ -73,57 +73,57 @@ export async function getLoggedInUser(request: express.Request): Promise<{
 	};
 }
 
-const validatedHostNames: string[] = [];
+// const validatedHostNames: string[] = [];
 const validateHostNameChallenge = crypto.randomBytes(64).toString("hex");
 
-export function validateAndCacheHostName(
-	request: express.Request,
-	response: express.Response,
-	next: express.NextFunction
-) {
-	// Basically checks to see if the server behind the hostname has the same
-	// session key by HMACing a random nonce
-	if (validatedHostNames.find(hostname => hostname === request.hostname)) {
-		next();
-		return;
-	}
+// export function validateAndCacheHostName(
+// 	request: express.Request,
+// 	response: express.Response,
+// 	next: express.NextFunction
+// ) {
+// 	// Basically checks to see if the server behind the hostname has the same
+// 	// session key by HMACing a random nonce
+// 	if (validatedHostNames.find(hostname => hostname === request.hostname)) {
+// 		next();
+// 		return;
+// 	}
 
-	let nonce = crypto.randomBytes(64).toString("hex");
-	const callback = (message: http.IncomingMessage) => {
-		if (message.statusCode !== 200) {
-			console.error(`Got non-OK status code when validating hostname: ${request.hostname}`);
-			message.resume();
-			return;
-		}
-		message.setEncoding("utf8");
-		let data = "";
-		message.on("data", (chunk) => data += chunk);
-		message.on("end", () => {
-			let localHMAC = crypto
-				.createHmac("sha256", validateHostNameChallenge)
-				.update(nonce)
-				.digest()
-				.toString("hex");
-			if (localHMAC === data) {
-				validatedHostNames.push(request.hostname);
-				next();
-			}
-			else {
-				console.error(`Got invalid HMAC when validating hostname: ${request.hostname}`);
-			}
-		});
-	};
-	const onError = (err: Error) => {
-		console.error(`Error when validating hostname: ${request.hostname}`, err);
-	};
-	const link = createLink(request, `/auth/validatehost/${nonce}`);
-	if (request.protocol === "http") {
-		http.get(link, callback).on("error", onError);
-	}
-	else {
-		https.get(link, callback).on("error", onError);
-	}
-}
+// 	let nonce = crypto.randomBytes(64).toString("hex");
+// 	const callback = (message: http.IncomingMessage) => {
+// 		if (message.statusCode !== 200) {
+// 			console.error(`Got non-OK status code when validating hostname: ${request.hostname}`);
+// 			message.resume();
+// 			return;
+// 		}
+// 		message.setEncoding("utf8");
+// 		let data = "";
+// 		message.on("data", (chunk) => data += chunk);
+// 		message.on("end", () => {
+// 			let localHMAC = crypto
+// 				.createHmac("sha256", validateHostNameChallenge)
+// 				.update(nonce)
+// 				.digest()
+// 				.toString("hex");
+// 			if (localHMAC === data) {
+// 				validatedHostNames.push(request.hostname);
+// 				next();
+// 			}
+// 			else {
+// 				console.error(`Got invalid HMAC when validating hostname: ${request.hostname}`);
+// 			}
+// 		});
+// 	};
+// 	const onError = (err: Error) => {
+// 		console.error(`Error when validating hostname: ${request.hostname}`, err);
+// 	};
+// 	const link = createLink(request, `/auth/validatehost/${nonce}`);
+// 	if (request.protocol === "http") {
+// 		http.get(link, callback).on("error", onError);
+// 	}
+// 	else {
+// 		https.get(link, callback).on("error", onError);
+// 	}
+// }
 
 export function validateHostCallback(
 	request: express.Request,
