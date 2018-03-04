@@ -1,6 +1,21 @@
 declare let mdc: any;
 declare let moment: any;
 
+import { ApolloClient } from "apollo-client";
+import { createHttpLink } from "apollo-link-http";
+import { InMemoryCache } from 'apollo-cache-inmemory';
+import gql from 'graphql-tag';
+
+const link = createHttpLink({
+	uri: "/graphql",
+	credentials: "same-origin"
+});
+
+const client = new ApolloClient({
+	link: link,
+	cache: new InMemoryCache()
+});
+
 class State {
 	public linkID: string;
 	public sectionID: string;
@@ -98,9 +113,9 @@ interface ISearchUserResponse {
 	}
 }
 
-interface ITagChangeResponse {
-	tag_change: IGraphqlAttendee;
-}
+// interface ITagChangeResponse {
+// 	tag_change: IGraphqlAttendee;
+// }
 
 const graphqlOptions = {
 	dataType: "text",
@@ -655,89 +670,99 @@ setInterval(() => {
 loadAttendees();
 
 
-// Set up graphql subscriptions listener
-declare let SubscriptionsTransportWs: any;
+client.query({
+		query: gql`{
+		  tags {
+		    name
+		  }
+		}`
+	})
+	.then(data => console.log(data))
+	.catch(error => console.log(error));
 
-import * as apollo from "apollo-client";
-import * as gqlRaw from "graphql-tag";
-// Types not working for some reason so we'll apply them manually here instead
-// TODO: Super hacky please fix
-const gql = <any>gqlRaw as (literals: any, ...placeholders: any[]) => any;
+// // Set up graphql subscriptions listener
+// declare let SubscriptionsTransportWs: any;
 
-const networkInterface = apollo.createNetworkInterface({
- uri: '/graphql'
-});
+// import * as apollo from "apollo-client";
+// import * as gqlRaw from "graphql-tag";
+// // Types not working for some reason so we'll apply them manually here instead
+// // TODO: Super hacky please fix
+// const gql = <any>gqlRaw as (literals: any, ...placeholders: any[]) => any;
 
-const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
-const wsClient = new SubscriptionsTransportWs.SubscriptionClient(`${wsProtocol}://${window.location.host}/graphql`, {
-	reconnect: true,
-});
+// const networkInterface = apollo.createNetworkInterface({
+//  uri: '/graphql'
+// });
 
-const networkInterfaceWithSubscriptions = SubscriptionsTransportWs.addGraphQLSubscriptions(
-	networkInterface,
-	wsClient
-);
+// const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
+// const wsClient = new SubscriptionsTransportWs.SubscriptionClient(`${wsProtocol}://${window.location.host}/graphql`, {
+// 	reconnect: true,
+// });
 
-const apolloClient = new apollo.ApolloClient({
-	networkInterface: networkInterfaceWithSubscriptions
-});
+// const networkInterfaceWithSubscriptions = SubscriptionsTransportWs.addGraphQLSubscriptions(
+// 	networkInterface,
+// 	wsClient
+// );
 
-const subscriptionQuery = gql(`subscription {
-  tag_change {
-	user {
-	  id
-	  name
-	  email
-	}
-	tags {
-	  tag {
-		name
-	  }
-	  checked_in
-	  checked_in_by
-	  checked_in_date
-	}
-  }
-}`);
+// const apolloClient = new apollo.ApolloClient({
+// 	networkInterface: networkInterfaceWithSubscriptions
+// });
 
-apolloClient.subscribe({
-	query: subscriptionQuery,
-	variables: {}
-}).subscribe({ 
-	next (data: ITagChangeResponse) {
-		let attendee: IGraphqlAttendee = data.tag_change;
+// const subscriptionQuery = gql(`subscription {
+//   tag_change {
+// 	user {
+// 	  id
+// 	  name
+// 	  email
+// 	}
+// 	tags {
+// 	  tag {
+// 		name
+// 	  }
+// 	  checked_in
+// 	  checked_in_by
+// 	  checked_in_date
+// 	}
+//   }
+// }`);
 
-		if (!States["checkin"].isDisplayed)
-			return;
+// apolloClient.subscribe({
+// 	query: subscriptionQuery,
+// 	variables: {}
+// }).subscribe({ 
+// 	next (data: ITagChangeResponse) {
+// 		let attendee: IGraphqlAttendee = data.tag_change;
 
-		let tag: string = tagSelector.value;
-		// Filter by the currently shown tag
-		let attendeeTags = attendee.tags.filter((t: IGraphqlTag) => t.tag.name === tag);
-		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.user.id} > .actions > button`);
+// 		if (!States["checkin"].isDisplayed)
+// 			return;
 
-		if (!button) {
-			// This attendee belongs to a tag that isn't currently being shown
-			// This message can safely be ignored; the user list will be updated when switching tags
-			return;
-		}
-		if (attendeeTags.length === 0) {
-			// Check if the currently displayed tag is the tag that was just updated
-			return;
-		}
-		let attendeeTag = attendeeTags[0];
-		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
+// 		let tag: string = tagSelector.value;
+// 		// Filter by the currently shown tag
+// 		let attendeeTags = attendee.tags.filter((t: IGraphqlTag) => t.tag.name === tag);
+// 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.user.id} > .actions > button`);
 
-		if (attendeeTag.checked_in) {
-			button.textContent = "Uncheck in";
-			button.classList.add("checked-in");
-			if (attendeeTag.checked_in_date && attendeeTag.checked_in_by) {
-				status.innerHTML = statusFormatter(attendeeTag.checked_in_date, attendeeTag.checked_in_by);
-			} 
-		}
-		else {
-			button.textContent = "Check in";
-			button.classList.remove("checked-in");
-			status.textContent = "";
-		}
-	}
-});
+// 		if (!button) {
+// 			// This attendee belongs to a tag that isn't currently being shown
+// 			// This message can safely be ignored; the user list will be updated when switching tags
+// 			return;
+// 		}
+// 		if (attendeeTags.length === 0) {
+// 			// Check if the currently displayed tag is the tag that was just updated
+// 			return;
+// 		}
+// 		let attendeeTag = attendeeTags[0];
+// 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
+
+// 		if (attendeeTag.checked_in) {
+// 			button.textContent = "Uncheck in";
+// 			button.classList.add("checked-in");
+// 			if (attendeeTag.checked_in_date && attendeeTag.checked_in_by) {
+// 				status.innerHTML = statusFormatter(attendeeTag.checked_in_date, attendeeTag.checked_in_by);
+// 			} 
+// 		}
+// 		else {
+// 			button.textContent = "Check in";
+// 			button.classList.remove("checked-in");
+// 			status.textContent = "";
+// 		}
+// 	}
+// });

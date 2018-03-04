@@ -3,7 +3,7 @@ import * as path from "path";
 import * as os from "os";
 import * as crypto from "crypto";
 import * as morgan from "morgan";
-import * as chalk from "chalk";
+import chalk from "chalk";
 import * as urlib from "url";
 
 import * as express from "express";
