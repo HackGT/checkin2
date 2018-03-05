@@ -25,7 +25,7 @@ export const config: IConfig = {
 		production: envOrDefault("PRODUCTION", "false").toLowerCase() === "true",
 	},
 	inputs: {
-		registration: envOrDefault("REGISTRATION_GRAPHQL", "https://registration.dev.hack.gt/graphql")
+		registration: env("REGISTRATION_GRAPHQL")
 	},
 	app: {
 		default_admin: {
