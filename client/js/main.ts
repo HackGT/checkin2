@@ -139,42 +139,6 @@ function checkIn (e: Event) {
 	});
 }
 
-function attachUserDeleteHandlers () {
-	let deleteButtons = document.querySelectorAll("#manage-users .actions > button");
-	for (let i = 0; i < deleteButtons.length; i++) {
-		deleteButtons[i].addEventListener("click", e => {
-			let source = (<HTMLButtonElement> e.target)!;
-			let username: string = source.parentElement!.parentElement!.dataset.username!;
-			let extraWarn: boolean = !!source.parentElement!.querySelector(".status");
-			const extraWarnMessage = `**YOU ARE TRYING TO DELETE THE ACCOUNT THAT YOU ARE CURRENTLY LOGGED IN WITH. THIS WILL DELETE YOUR USER AND LOG YOU OUT.**`;
-
-			let shouldContinue: boolean = confirm(`${extraWarn ? extraWarnMessage + "\n\n": ""}Are you sure that you want to delete the user '${username}'?`);
-			if (!shouldContinue)
-				return;
-
-			source.disabled = true;
-			qwest.delete("/api/user/update", {
-				username: username
-			}).then((xhr, response) => {
-				let toRemove = document.querySelector(`li[data-username="${username}"]`);
-				if (toRemove && toRemove.parentElement) {
-					toRemove.parentElement.removeChild(toRemove);
-				}
-				// Reattach button event handlers
-				attachUserDeleteHandlers();
-
-				if (response.reauth) {
-					window.location.reload();
-				}
-			}).catch((e, xhr, response) => {
-				alert(response.error);
-			}).complete(() => {
-				source.disabled = false;
-			});
-		});
-	}
-}
-
 let queryField = <HTMLInputElement> document.getElementById("query")!;
 queryField.addEventListener("keyup", e => {
 	loadAttendees();
@@ -190,32 +154,6 @@ tagSelector.addEventListener("change", e => {
 	}
 	drawer.open = false;
 	loadAttendees();
-});
-let tagDeleteSelector = <HTMLSelectElement> document.getElementById("tag-delete")!;
-tagDeleteSelector.addEventListener("change", e => {
-	let tag: string = tagDeleteSelector.value;
-	if (!tag)
-		return;
-	let shouldContinue = confirm(`Are you sure that you want to delete all attendees tagged with '${tag}'?`);
-	if (!shouldContinue) {
-		tagDeleteSelector.selectedIndex = 0;
-		return;
-	}
-	tagDeleteSelector.disabled = true;
-	qwest.delete(`/api/data/tag/${tag}`)
-	.then(() => {
-		drawer.open = false;
-
-		let deleteIndex: number = tagDeleteSelector.selectedIndex;
-		tagDeleteSelector.removeChild(tagDeleteSelector.options[deleteIndex]);
-		tagSelector.removeChild(tagSelector.options[deleteIndex - 1]); // - 1 compensates for default "please choose" <option>
-		loadAttendees();
-	})
-	.catch((e, xhr, response) => {
-		alert(response.error);
-	}).complete(() => {
-		tagDeleteSelector.disabled = false;
-	});
 });
 
 function loadAttendees (filter: string = queryField.value, checkedIn: string = checkedInFilterField.value) {
@@ -551,7 +489,6 @@ document.getElementById("confirmation-branches-filter")!.addEventListener("chang
 	loadAttendees();
 });
 
-attachUserDeleteHandlers();
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (States["checkin"].isDisplayed) {
