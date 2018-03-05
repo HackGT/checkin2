@@ -4,14 +4,34 @@ declare let mdc: any;
 declare let moment: any;
 
 import { ApolloClient } from "apollo-client";
+import { split } from "apollo-link";
 import { createHttpLink } from "apollo-link-http";
 import { InMemoryCache } from 'apollo-cache-inmemory';
+import { WebSocketLink } from "apollo-link-ws";
+import { SubscriptionClient } from "subscriptions-transport-ws";
+import { getOperationAST } from 'graphql';
 import gql from 'graphql-tag';
 
-const link = createHttpLink({
+const httpLink = createHttpLink({
 	uri: "/graphql",
 	credentials: "same-origin"
 });
+
+const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
+const wsClient = new SubscriptionClient(`${wsProtocol}://${window.location.host}/graphql`, {
+	reconnect: true
+});
+const wsLink = new WebSocketLink(wsClient);
+
+const link = split(
+  // split based on operation type
+  operation => {
+    const operationAST = getOperationAST(operation.query, operation.operationName);
+    return !!operationAST && operationAST.operation === 'subscription';
+  },
+  wsLink,
+  httpLink
+);
 
 const client = new ApolloClient({
 	link: link,
