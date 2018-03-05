@@ -1,3 +1,5 @@
+/// <reference path="../../apis/checkin.d.ts" />
+
 declare let mdc: any;
 declare let moment: any;
 
@@ -83,48 +85,10 @@ function readURLHash() {
 readURLHash();
 window.addEventListener("hashchange", readURLHash);
 
-interface IGraphqlTag {
-	tag: {
-		name: string
-	};
-	checked_in: boolean;
-	checked_in_by?: string;
-	checked_in_date?: string;
-}
-
-interface IGraphqlQuestion {
-	name: string;
-	value: string;
-}
-
-interface IGraphqlAttendee {
-	user: {
-		id: string,
-		name: string,
-		email: string,
-		questions?: IGraphqlQuestion[]
-	};
-	tags: IGraphqlTag[];
-}
-
-interface ISearchUserResponse {
-	data: {
-		search_user_simple: IGraphqlAttendee[];
-	}
-}
 
 // interface ITagChangeResponse {
 // 	tag_change: IGraphqlAttendee;
 // }
-
-const graphqlOptions = {
-	dataType: "text",
-	responseType: "json",
-	headers: {
-		"Content-Type": "application/json",
-		"Accept": "application/json"
-	}
-}
 
 function delay (milliseconds: number) {
 	return new Promise<void>(resolve => {
@@ -132,8 +96,11 @@ function delay (milliseconds: number) {
 	});
 }
 
-function statusFormatter (time: string, by: string = "unknown"): string {
+function statusFormatter (time: string, by: string | null): string {
 	// Escape possible HTML in username
+	if (by === null) {
+		by = "unknown";
+	}
 	by = by.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 	const date: Date = new Date(time);
 	return `Checked in <abbr title="${moment(date).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
@@ -147,7 +114,7 @@ function checkIn (e: Event) {
 	let id: string = button.parentElement!.parentElement!.id.slice(5);
 	let action: string = isCheckedIn ? "check_out" : "check_in";
 
-	let mutation: string = `mutation UserAndTags($user: ID!, $tag: String!) {
+	const mutation = gql`mutation UserAndTags($user: ID!, $tag: String!) {
 	  ${action}(user: $user, tag: $tag) {
 		tags {
 		  tag {
@@ -158,15 +125,17 @@ function checkIn (e: Event) {
 	  }
 	}`;
 
-	qwest.post("/graphql", JSON.stringify({
-		query: mutation,
+	client.mutate<GQL.IMutation>({
+		mutation: mutation,
 		variables: {
 			user: id,
 			tag: tag
 		}
-	}), graphqlOptions).catch((e, xhr, response) => {
-		alert(response.error);
-	}).complete(() => {
+	}).then(response => {
+		button.disabled = false;
+	}).catch(error => {
+		console.error(error);
+		alert("Error checking in participant");
 		button.disabled = false;
 	});
 }
@@ -278,8 +247,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 		registrationFilter.confirmation_branch = confirmationBranch.value;
 	}
 
-	// TODO: some kind of pagination when displaying users
-	let query: string = `query UserAndTags($search: String!, $questions: [String!]!, $filter: UserFilter) {
+	const query = gql`query UserAndTags($search: String!, $questions: [String!]!, $filter: UserFilter) {
 		search_user_simple(search: $search, n: 25, offset: 0, filter: $filter) {
 			user {
 				id 
@@ -306,104 +274,96 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 		} 
 	}`;
 
-	qwest.post("/graphql", JSON.stringify({
-		query: query,
-		variables: {
-			search: filter || " ",
-			questions: checked,
-			filter: registrationFilter
-		}
-	}), graphqlOptions).then((xhr, response: ISearchUserResponse) => {
-		let attendees: IGraphqlAttendee[] = response.data.search_user_simple;
-
-		let attendeeList = document.getElementById("attendees")!;
-		let attendeeTemplate = <HTMLTemplateElement> document.getElementById("attendee-item")!;
-		let numberOfExistingNodes = document.querySelectorAll("#attendees li").length;
-
-		if (!attendeeList.firstChild || numberOfExistingNodes < attendees.length) {
-			// First load, preallocate children
-			status.textContent = "Preallocating nodes...";
-			for (let i = numberOfExistingNodes; i < attendees.length; i++) {
-				let node = document.importNode(attendeeTemplate.content, true) as DocumentFragment;
-				node.querySelector("li")!.style.display = "none";
-				node.querySelector(".actions > button")!.addEventListener("click", checkIn);
-				attendeeList.appendChild(node);
+	client.query<GQL.IQuery>({
+			query: query,
+			variables: {
+				search: filter || " ",
+				questions: checked,
+				filter: registrationFilter				
 			}
-			(<any> window).mdc.autoInit();
-			console.warn(`Allocated ${attendees.length - numberOfExistingNodes} nodes due to insufficient number`);
-			status.textContent = "Loading...";
-		}
+		}).then(response => {
+			let attendees = response.data.search_user_simple;
 
-		// Reuse nodes already loaded from template
-		let existingNodes = document.querySelectorAll("#attendees li") as NodeListOf<HTMLElement>;
-		for (let i = 0; i < existingNodes.length; i++) {
-			let attendee = attendees[i];
-			if (!!attendee) {
-				existingNodes[i].style.display = "";
+			let attendeeList = document.getElementById("attendees")!;
+			let attendeeTemplate = <HTMLTemplateElement> document.getElementById("attendee-item")!;
+			let numberOfExistingNodes = document.querySelectorAll("#attendees li").length;
 
-				existingNodes[i].id = "item-" + attendee.user.id;
-				existingNodes[i].querySelector("#name")!.textContent = attendee.user.name;
-				existingNodes[i].querySelector("#emails")!.textContent = attendee.user.email;
+			if (!attendeeList.firstChild || numberOfExistingNodes < attendees.length) {
+				// First load, preallocate children
+				status.textContent = "Preallocating nodes...";
+				for (let i = numberOfExistingNodes; i < attendees.length; i++) {
+					let node = document.importNode(attendeeTemplate.content, true) as DocumentFragment;
+					node.querySelector("li")!.style.display = "none";
+					node.querySelector(".actions > button")!.addEventListener("click", checkIn);
+					attendeeList.appendChild(node);
+				}
+				(<any> window).mdc.autoInit();
+				console.warn(`Allocated ${attendees.length - numberOfExistingNodes} nodes due to insufficient number`);
+				status.textContent = "Loading...";
+			}
 
-				let button = existingNodes[i].querySelector(".actions > button")!;
-				let status = existingNodes[i].querySelector(".actions > span.status")!;
+			// Reuse nodes already loaded from template
+			let existingNodes = document.querySelectorAll("#attendees li") as NodeListOf<HTMLElement>;
+			for (let i = 0; i < existingNodes.length; i++) {
+				let attendee = attendees[i];
+				if (!!attendee) {
+					existingNodes[i].style.display = "";
 
-				// Determine if user has the current tag
-				let tagInfo: IGraphqlTag[] = attendee.tags.filter(curr => curr.tag.name === tag );
+					existingNodes[i].id = "item-" + attendee.user.id;
+					existingNodes[i].querySelector("#name")!.textContent = attendee.user.name;
+					existingNodes[i].querySelector("#emails")!.textContent = attendee.user.email;
 
-				if (tagInfo.length > 0 && tagInfo[0].checked_in) {
-					button.textContent = "Uncheck in";
-					button.classList.add("checked-in");
+					let button = existingNodes[i].querySelector(".actions > button")!;
+					let status = existingNodes[i].querySelector(".actions > span.status")!;
 
-					let date = tagInfo[0].checked_in_date;
-					if (date && tagInfo[0].checked_in_by) {
-						status.innerHTML = statusFormatter(date, tagInfo[0].checked_in_by);
+					// Determine if user has the current tag
+					let tagInfo = attendee.tags.filter(curr => curr.tag.name === tag );
+
+					if (tagInfo.length > 0 && tagInfo[0].checked_in) {
+						button.textContent = "Uncheck in";
+						button.classList.add("checked-in");
+
+						let date = tagInfo[0].checked_in_date;
+						if (date && tagInfo[0].checked_in_by) {
+							status.innerHTML = statusFormatter(date, tagInfo[0].checked_in_by);
+						}
+					}
+					else {
+						button.textContent = "Check in";
+						button.classList.remove("checked-in");
+						status.textContent = "";
+					}
+					if (attendee.user.questions) {
+						const infoToText = (info: GQL.IFormItem) => {
+							if (info.value) {
+								return `${info.name}: ${info.value}`;
+							}
+							else if (info.values) {
+								return `${info.name}: ${info.values.join(",")}`;
+							}
+							else if (info.file) {
+								const path = encodeURIComponent(info.file.path);
+								const url = `${location.protocol}//${location.host}/uploads?file=${path}`;
+								return `${info.name}: <a href="${url}">${info.file.original_name}</a>`;
+							}
+							return `${info.name}: Not given.`;
+						};
+						let registrationInformation = attendee.user.questions.map(infoToText);
+						existingNodes[i].querySelector("#additional-info")!.innerHTML = registrationInformation.join("<br>");
 					}
 				}
 				else {
-					button.textContent = "Check in";
-					button.classList.remove("checked-in");
-					status.textContent = "";
-				}
-				if (attendee.user.questions) {
-					const infoToText = (info: {
-						name: string;
-						value?: string;
-						values?: string[];
-						file?: {
-							path: string;
-							original_name: string;
-						}
-					}) => {
-						if (info.value) {
-							return `${info.name}: ${info.value}`;
-						}
-						else if (info.values) {
-							return `${info.name}: ${info.values.join(",")}`;
-						}
-						else if (info.file) {
-							const path = encodeURIComponent(info.file.path);
-							const url = `${location.protocol}//${location.host}/uploads?file=${path}`;
-							return `${info.name}: <a href="${url}">${info.file.original_name}</a>`;
-						}
-						return `${info.name}: Not given.`;
-					};
-					let registrationInformation = attendee.user.questions.map(infoToText);
-					existingNodes[i].querySelector("#additional-info")!.innerHTML = registrationInformation.join("<br>");
+					existingNodes[i].style.display = "none";
+					existingNodes[i].id = "";
 				}
 			}
-			else {
-				existingNodes[i].style.display = "none";
-				existingNodes[i].id = "";
-			}
-		}
-		tag = tag || "no tags found";
-		tag = tag.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-		status.innerHTML = `Found ${attendees.length} attendee${attendees.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
-	}).catch((e, xhr, response) => {
-		status.textContent = "An error occurred";
-		alert(response.error);
-	});
+			tag = tag || "no tags found";
+			tag = tag.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+			status.innerHTML = `Found ${attendees.length} attendee${attendees.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
+		}).catch(error => {
+			console.error(error);
+			alert("Error fetching participants");
+		});
 }
 
 function updateTagSelectors(newTags: string[]) {
@@ -541,16 +501,18 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		return;
 	}
 
-	qwest.post("/graphql", JSON.stringify({
-		query: `mutation Tag($tag: String!) {
-			add_tag(tag: $tag) {
-				name
-			}
-		}`,
+	const mutation = gql `mutation Tag($tag: String!) {
+		add_tag(tag: $tag) {
+			name
+		}
+	}`;
+
+	client.mutate({
+		mutation: mutation,
 		variables: {
 			tag: tag
 		}
-	}), graphqlOptions).then((xhr, response) => {
+	}).then(response => {
 		// Add to tag selectors
 		updateTagSelectors([tag]);
 		
@@ -558,26 +520,27 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 		tagInput.value = "";
 		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
 		alert("Successfully added tag to attendee(s)!");
-	}).catch((e, xhr, response) => {
-		console.error(response);
-		alert("An error occurred while adding the tag");
-	}).complete(() => {
 		button.disabled = false;
-	});	
+	}).catch(error => {
+		console.error(error);
+		alert("An error occurred while adding the tag");	
+		button.disabled = false;	
+	});
 });
 
 // Populate checkboxes for question names
-qwest.post("/graphql", JSON.stringify({
-	query: "{ question_names }"
-}), graphqlOptions).then((xhr, response) => {
-	let checkboxTemplate = <HTMLTemplateElement> document.getElementById("checkbox-item")!;
-	let checkboxContainer = document.getElementById("question-options")!;
-	let button = document.getElementById("button-row")!;
+client.query<GQL.IQuery>({
+	query: gql`{ question_names }`
+}).then(response => {
 	if (!response.data || !response.data.question_names) {
 		return;
 	}
+	let checkboxTemplate = <HTMLTemplateElement> document.getElementById("checkbox-item")!;
+	let checkboxContainer = document.getElementById("question-options")!;
+	let button = document.getElementById("button-row")!;
 
-	let question_names: string[] = response.data.question_names.sort((a: string, b: string) => {
+	let question_names = response.data.question_names.map(name => name);
+	question_names = question_names.sort((a, b) => {
 		return a.localeCompare(b);
 	});
 
@@ -591,8 +554,8 @@ qwest.post("/graphql", JSON.stringify({
 		label.textContent = curr;
 		checkboxContainer.insertBefore(node, button);
 	}	
-}).catch((e, xhr, response) => {
-	console.error(response);
+}).catch(error => {
+	console.error(error);
 	alert("Error fetching registration question names");
 });
 
@@ -617,9 +580,9 @@ document.getElementById("attending-filter")!.addEventListener("change", e => {
 });
 
 // Populate application branches select options
-qwest.post("/graphql", JSON.stringify({
-	query: "{ application_branches }"
-}), graphqlOptions).then((xhr, response) => {
+client.query<GQL.IQuery>({
+	query: gql`{ application_branches }`
+}).then(response => {
 	let select = document.getElementById("branches-filter")!;
 	let branches = response.data.application_branches;
 
@@ -628,16 +591,16 @@ qwest.post("/graphql", JSON.stringify({
 		option.textContent = curr;
 		option.value = curr;
 		select.appendChild(option);
-	}
-}).catch((e, xhr, response) => {
-	console.error(response, e);
+	}	
+}).catch(error => {
+	console.error(error);
 	alert("Error fetching registration application branches");
 });
 
-// Populate application branches select options
-qwest.post("/graphql", JSON.stringify({
-	query: "{ confirmation_branches }"
-}), graphqlOptions).then((xhr, response) => {
+// Populate confirmation branch options
+client.query<GQL.IQuery>({
+	query: gql `{ confirmation_branches }`
+}).then(response => {
 	let select = document.getElementById("confirmation-branches-filter")!;
 	let branches = response.data.confirmation_branches;
 
@@ -646,10 +609,10 @@ qwest.post("/graphql", JSON.stringify({
 		option.textContent = curr;
 		option.value = curr;
 		select.appendChild(option);
-	}
-}).catch((e, xhr, response) => {
-	console.error(response, e);
-	alert("Error fetching registration confirmation branches");
+	}	
+}).catch(error => {
+	console.error(error);
+	alert("Error fetching registration confirmation branches");	
 });
 
 document.getElementById("branches-filter")!.addEventListener("change", e => {
@@ -668,17 +631,6 @@ setInterval(() => {
 	}
 }, 1000 * 60);
 loadAttendees();
-
-
-client.query({
-		query: gql`{
-		  tags {
-		    name
-		  }
-		}`
-	})
-	.then(data => console.log(data))
-	.catch(error => console.log(error));
 
 // // Set up graphql subscriptions listener
 // declare let SubscriptionsTransportWs: any;
