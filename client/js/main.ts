@@ -67,7 +67,6 @@ class State {
 }
 const States: { [key: string]: State } = {
 	"checkin": new State("open-checkin", "checkin"),
-	"attendees": new State("open-attendees", "import"),
 	"users": new State("open-users", "manage-users"),
 	"tags": new State("open-tags", "edit-tags")
 };
@@ -389,43 +388,6 @@ document.querySelector("nav.toolbar > i:first-of-type")!.addEventListener("click
 	drawer.open = !drawer.open;
 });
 
-document.getElementById("import-attendees")!.addEventListener("click", e => {
-	let button = (<HTMLButtonElement> e.target)!;
-	button.disabled = true;
-
-	let form = new FormData();
-	let fileInput = <HTMLInputElement> document.querySelector(`#import input[type="file"]`)!;
-	let tagInput = <HTMLInputElement> document.getElementById("import-tag");
-	let tag: string = tagInput.value.trim().toLowerCase();
-	let nameInput = <HTMLInputElement> document.getElementById("name-header");
-	let emailInput = <HTMLInputElement> document.getElementById("email-headers");
-	if (!fileInput.files || fileInput.files.length < 1) {
-		alert("Please choose a CSV file to upload");
-		button.disabled = false;
-		return;
-	}
-	form.append("import", fileInput.files[0]);
-	form.append("tag", tagInput.value);
-	form.append("name", nameInput.value);
-	form.append("email", emailInput.value.replace(/, /g, ","));
-
-	qwest.post("/api/data/import", 
-		form
-	).then(() => {
-		// Clear the form
-		[fileInput, tagInput, nameInput, emailInput].forEach((el) => {
-			el.value = el.defaultValue;
-		});
-		// Add new tags to the options list
-		let newTags: string[] = tag.toLowerCase().split(/, */);
-		updateTagSelectors(newTags);
-		alert("Successfully imported attendees");
-	}).catch((e, xhr, response) => {
-		alert(response.error);
-	}).complete(() => {
-		button.disabled = false;
-	});
-});
 
 document.getElementById("add-update-user")!.addEventListener("click", e => {
 	let button = (<HTMLButtonElement> e.target)!;
@@ -447,40 +409,6 @@ document.getElementById("add-update-user")!.addEventListener("click", e => {
 		}
 		window.location.reload();
 
-	}).catch((e, xhr, response) => {
-		alert(response.error);
-	}).complete(() => {
-		button.disabled = false;
-	});
-});
-
-document.getElementById("add-attendee")!.addEventListener("click", e => {
-	let button = (<HTMLButtonElement> e.target)!;
-	button.disabled = true;
-
-	let ids = ["add-tag", "add-name", "add-email"];
-	let [tagInput, nameInput, emailInput] = ids.map(id => <HTMLInputElement> document.getElementById(id));
-	if (!tagInput.value.trim()) {
-		alert("Please enter a tag");
-		button.disabled = false;
-		return;
-	}
-
-	qwest.put(`/api/data/tag/${tagInput.value.trim()}`, {
-		"name": nameInput.value.trim(),
-		"email": emailInput.value.replace(/, /g, ",").trim()
-	}).then(() => {
-		// Add new tags to the options list
-		let newTags: string[] = tagInput.value.toLowerCase().split(/, */)
-		updateTagSelectors(newTags);
-		// Clear the form
-		[tagInput, nameInput, emailInput].forEach((el) => {
-			el.value = el.defaultValue;
-		});
-		ids.forEach(id => {
-			document.querySelector(`label[for="${id}"]`)!.classList.remove("mdc-textfield__label--float-above");
-		});
-		alert("Successfully added new attendee");
 	}).catch((e, xhr, response) => {
 		alert(response.error);
 	}).complete(() => {
