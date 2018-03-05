@@ -509,6 +509,71 @@ document.getElementById("confirmation-branches-filter")!.addEventListener("chang
 	loadAttendees();
 });
 
+// Subscriptions for updating checked in/out
+const subscriptionQuery = gql`subscription {
+  tag_change {
+	user {
+	  id
+	  name
+	  email
+	}
+	tags {
+	  tag {
+		name
+	  }
+	  checked_in
+	  checked_in_by
+	  checked_in_date
+	}
+  }
+}`;
+
+client.subscribe({
+	query: subscriptionQuery,
+}).subscribe({
+  	next (response: {data: GQL.ISubscription}) {
+  		if (!response.data || !response.data.tag_change) {
+  			return;
+  		}
+
+		let attendee = response.data.tag_change;
+
+		if (!States["checkin"].isDisplayed)
+			return;
+
+		let tag = tagSelector.value;
+
+		// Filter by the currently shown tag
+		let attendeeTags = attendee.tags.filter((t) => t.tag.name === tag);
+		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.user.id} > .actions > button`);
+
+		if (!button) {
+			// This attendee belongs to a tag that isn't currently being shown
+			// This message can safely be ignored; the user list will be updated when switching tags
+			return;
+		}
+		if (attendeeTags.length === 0) {
+			// Check if the currently displayed tag is the tag that was just updated
+			return;
+		}
+		let attendeeTag = attendeeTags[0];
+		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
+
+		if (attendeeTag.checked_in) {
+			button.textContent = "Uncheck in";
+			button.classList.add("checked-in");
+			if (attendeeTag.checked_in_date && attendeeTag.checked_in_by) {
+				status.innerHTML = statusFormatter(attendeeTag.checked_in_date, attendeeTag.checked_in_by);
+			} 
+		}
+		else {
+			button.textContent = "Check in";
+			button.classList.remove("checked-in");
+			status.textContent = "";
+		}
+  	}
+});
+
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (States["checkin"].isDisplayed) {
@@ -516,90 +581,3 @@ setInterval(() => {
 	}
 }, 1000 * 60);
 loadAttendees();
-
-// // Set up graphql subscriptions listener
-// declare let SubscriptionsTransportWs: any;
-
-// import * as apollo from "apollo-client";
-// import * as gqlRaw from "graphql-tag";
-// // Types not working for some reason so we'll apply them manually here instead
-// // TODO: Super hacky please fix
-// const gql = <any>gqlRaw as (literals: any, ...placeholders: any[]) => any;
-
-// const networkInterface = apollo.createNetworkInterface({
-//  uri: '/graphql'
-// });
-
-// const wsProtocol = location.protocol === "http:" ? "ws" : "wss";
-// const wsClient = new SubscriptionsTransportWs.SubscriptionClient(`${wsProtocol}://${window.location.host}/graphql`, {
-// 	reconnect: true,
-// });
-
-// const networkInterfaceWithSubscriptions = SubscriptionsTransportWs.addGraphQLSubscriptions(
-// 	networkInterface,
-// 	wsClient
-// );
-
-// const apolloClient = new apollo.ApolloClient({
-// 	networkInterface: networkInterfaceWithSubscriptions
-// });
-
-// const subscriptionQuery = gql(`subscription {
-//   tag_change {
-// 	user {
-// 	  id
-// 	  name
-// 	  email
-// 	}
-// 	tags {
-// 	  tag {
-// 		name
-// 	  }
-// 	  checked_in
-// 	  checked_in_by
-// 	  checked_in_date
-// 	}
-//   }
-// }`);
-
-// apolloClient.subscribe({
-// 	query: subscriptionQuery,
-// 	variables: {}
-// }).subscribe({ 
-// 	next (data: ITagChangeResponse) {
-// 		let attendee: IGraphqlAttendee = data.tag_change;
-
-// 		if (!States["checkin"].isDisplayed)
-// 			return;
-
-// 		let tag: string = tagSelector.value;
-// 		// Filter by the currently shown tag
-// 		let attendeeTags = attendee.tags.filter((t: IGraphqlTag) => t.tag.name === tag);
-// 		let button = <HTMLButtonElement> document.querySelector(`#item-${attendee.user.id} > .actions > button`);
-
-// 		if (!button) {
-// 			// This attendee belongs to a tag that isn't currently being shown
-// 			// This message can safely be ignored; the user list will be updated when switching tags
-// 			return;
-// 		}
-// 		if (attendeeTags.length === 0) {
-// 			// Check if the currently displayed tag is the tag that was just updated
-// 			return;
-// 		}
-// 		let attendeeTag = attendeeTags[0];
-// 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
-
-// 		if (attendeeTag.checked_in) {
-// 			button.textContent = "Uncheck in";
-// 			button.classList.add("checked-in");
-// 			if (attendeeTag.checked_in_date && attendeeTag.checked_in_by) {
-// 				status.innerHTML = statusFormatter(attendeeTag.checked_in_date, attendeeTag.checked_in_by);
-// 			} 
-// 		}
-// 		else {
-// 			button.textContent = "Check in";
-// 			button.classList.remove("checked-in");
-// 			status.textContent = "";
-// 		}
-// 	}
-// });
