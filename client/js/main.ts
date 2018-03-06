@@ -35,7 +35,12 @@ const link = split(
 
 const client = new ApolloClient({
 	link: link,
-	cache: new InMemoryCache()
+	cache: new InMemoryCache(),
+	defaultOptions: {
+		query: {
+			fetchPolicy: "network-only"
+		}
+	}
 });
 
 class State {
