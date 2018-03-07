@@ -26,8 +26,8 @@ const wsLink = new WebSocketLink(wsClient);
 const link = split(
   // split based on operation type
   operation => {
-    const operationAST = getOperationAST(operation.query, operation.operationName);
-    return !!operationAST && operationAST.operation === 'subscription';
+	const operationAST = getOperationAST(operation.query, operation.operationName);
+	return !!operationAST && operationAST.operation === 'subscription';
   },
   wsLink,
   httpLink
@@ -109,11 +109,6 @@ function readURLHash() {
 readURLHash();
 window.addEventListener("hashchange", readURLHash);
 
-
-// interface ITagChangeResponse {
-// 	tag_change: IGraphqlAttendee;
-// }
-
 function delay (milliseconds: number) {
 	return new Promise<void>(resolve => {
 		setTimeout(resolve, milliseconds);
@@ -185,20 +180,26 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	let status = document.getElementById("loading-status")!;
 	status.textContent = "Loading...";
 
-	let tag: string = tagSelector.value;
+	let tag = tagSelector.value;
 
 	// Get checked question options
-	let checked: string[] = [];
+	let checked = [];
 	let checkedElems = document.querySelectorAll("#question-options input:checked") as NodeListOf<HTMLInputElement>;
 	for (let i = 0; i < checkedElems.length; i++) {
 		checked.push(checkedElems[i].value);
 	}
 
 	// Create filter query based on selected values
-	let registrationFilter: any = {};
+	let registrationFilter: GQL.IUserFilter = {};
 	let subgroup = document.getElementById("attending-filter") as HTMLInputElement;
 	if (subgroup.value) {
-		registrationFilter[subgroup.value] = true;
+		if (subgroup.value === "attending") {
+			registrationFilter.attending = true;
+		} else if (subgroup.value === "accepted") {
+			registrationFilter.accepted = true;
+		} else if (subgroup.value === "applied") {
+			registrationFilter.applied = true;
+		}
 	}
 	let branch = document.getElementById("branches-filter") as HTMLInputElement;
 	if (branch.value) {
@@ -385,7 +386,7 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	button.disabled = true;
 
 	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
-	let tag: string = tagInput.value.trim().toLowerCase();
+	let tag = tagInput.value.trim().toLowerCase();
 	if (!tag) {
 		alert("Please enter a tag name");
 		button.disabled = false;
@@ -536,10 +537,10 @@ const subscriptionQuery = gql`subscription {
 client.subscribe({
 	query: subscriptionQuery,
 }).subscribe({
-  	next (response: {data: GQL.ISubscription}) {
-  		if (!response.data || !response.data.tag_change) {
-  			return;
-  		}
+	next (response: {data: GQL.ISubscription}) {
+		if (!response.data || !response.data.tag_change) {
+			return;
+		}
 
 		let attendee = response.data.tag_change;
 
@@ -576,7 +577,7 @@ client.subscribe({
 			button.classList.remove("checked-in");
 			status.textContent = "";
 		}
-  	}
+	}
 });
 
 // Update check in relative times every minute the lazy way
