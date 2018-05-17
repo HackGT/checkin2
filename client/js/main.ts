@@ -115,11 +115,8 @@ function delay (milliseconds: number) {
 	});
 }
 
-function statusFormatter (time: string, by: string | null): string {
+function statusFormatter (time: string, by: string): string {
 	// Escape possible HTML in username
-	if (by === null) {
-		by = "unknown";
-	}
 	by = by.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 	const date: Date = new Date(time);
 	return `Checked in <abbr title="${moment(date).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
