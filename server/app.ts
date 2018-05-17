@@ -26,6 +26,7 @@ let postParser = bodyParser.urlencoded({
 });
 
 import * as mongoose from "mongoose";
+import * as json2csv from "json2csv";
 
 const PORT = config.server.port;
 const MONGO_URL = config.server.mongo;
@@ -83,7 +84,7 @@ mongoose.connect(MONGO_URL, {
 });
 export {mongoose};
 
-import {User, Tag} from "./schema";
+import {User, IAttendee, IAttendeeMongoose, Attendee, Tag} from "./schema";
 
 // Promise version of crypto.pbkdf2()
 export function pbkdf2Async (...params: any[]) {
@@ -170,6 +171,15 @@ export function printHackGTMetricsEvent(args: {user: string, tag: string}, userI
 		await defaultTag.save();
 	}
 })();
+
+function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
+	return {
+		name: attendee.name,
+		emails: attendee.emails,
+		id: attendee.id,
+		tags: attendee.tags
+	};
+}
 
 let apiRouter = express.Router();
 // User routes
@@ -292,6 +302,49 @@ apiRouter.route("/user/login").post(postParser, async (request, response) => {
 		console.error(e);
 		response.status(500).json({
 			"error": "An error occurred while logging in"
+		});
+	}
+});
+
+apiRouter.route("/data/export").get(authenticateWithReject, async (request, response) => {
+	try {
+		let attendees: IAttendeeMongoose[] = await Attendee.find();
+		let attendeesSimplified: {
+			id: string;
+			name: string;
+			emails: string;
+			tag: string;
+			checked_in: string;
+			checked_in_date: string;
+		 }[] = [];
+		for (let attendee of attendees.map(simplifyAttendee)) {
+			let id = attendee.id;
+			let emails = attendee.emails.join(", ");
+			let name = attendee.name;
+			Object.keys(attendee.tags).forEach(tag => {
+				let checkedInDate = attendee.tags[tag].checked_in_date;
+				attendeesSimplified.push({
+					id: id,
+					name: name || "",
+					emails: emails,
+					tag: tag,
+					checked_in: attendee.tags[tag].checked_in ? "Checked in" : "",
+					checked_in_date: checkedInDate ? checkedInDate.toISOString() : ""
+				});
+			});
+		}
+		if (attendeesSimplified.length === 0) {
+			response.status(400).type("text/plain").end("No data to export");
+			return;
+		}
+		response.status(200).type("text/csv").attachment("export.csv");
+		response.write(json2csv({ data: attendeesSimplified, fields: Object.keys(attendeesSimplified[0])}));
+		response.end();
+	}
+	catch (err) {
+		console.error(err);
+		response.status(500).json({
+			"error": "An error occurred while exporting data"
 		});
 	}
 });

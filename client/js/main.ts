@@ -159,6 +159,42 @@ function checkIn (e: Event) {
 	});
 }
 
+function attachUserDeleteHandlers () {
+	let deleteButtons = document.querySelectorAll("#manage-users .actions > button");
+	for (let i = 0; i < deleteButtons.length; i++) {
+		deleteButtons[i].addEventListener("click", e => {
+			let source = (<HTMLButtonElement> e.target)!;
+			let username: string = source.parentElement!.parentElement!.dataset.username!;
+			let extraWarn: boolean = !!source.parentElement!.querySelector(".status");
+			const extraWarnMessage = `**YOU ARE TRYING TO DELETE THE ACCOUNT THAT YOU ARE CURRENTLY LOGGED IN WITH. THIS WILL DELETE YOUR USER AND LOG YOU OUT.**`;
+
+			let shouldContinue: boolean = confirm(`${extraWarn ? extraWarnMessage + "\n\n": ""}Are you sure that you want to delete the user '${username}'?`);
+			if (!shouldContinue)
+				return;
+
+			source.disabled = true;
+			qwest.delete("/api/user/update", {
+				username: username
+			}).then((xhr, response) => {
+				let toRemove = document.querySelector(`li[data-username="${username}"]`);
+				if (toRemove && toRemove.parentElement) {
+					toRemove.parentElement.removeChild(toRemove);
+				}
+				// Reattach button event handlers
+				attachUserDeleteHandlers();
+
+				if (response.reauth) {
+					window.location.reload();
+				}
+			}).catch((e, xhr, response) => {
+				alert(response.error);
+			}).complete(() => {
+				source.disabled = false;
+			});
+		});
+	}
+}
+
 let queryField = <HTMLInputElement> document.getElementById("query")!;
 queryField.addEventListener("keyup", e => {
 	loadAttendees();
@@ -183,7 +219,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	let tag = tagSelector.value;
 
 	// Get checked question options
-	let checked = [];
+	let checked: string[] = [];
 	let checkedElems = document.querySelectorAll("#question-options input:checked") as NodeListOf<HTMLInputElement>;
 	for (let i = 0; i < checkedElems.length; i++) {
 		checked.push(checkedElems[i].value);
@@ -580,6 +616,7 @@ client.subscribe({
 	}
 });
 
+attachUserDeleteHandlers()
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (States["checkin"].isDisplayed) {
