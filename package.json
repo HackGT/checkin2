@@ -1,6 +1,6 @@
 {
   "name": "checkin2",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "description": "Check-in for HackGT events",
   "main": "app.js",
   "scripts": {
@@ -17,7 +17,7 @@
   },
   "dependencies": {
     "apollo-cache-inmemory": "^1.1.9",
-    "apollo-client": "^2.0.0-rc.7",
+    "apollo-client": "^2.3.1",
     "apollo-link-http": "^1.5.2",
     "apollo-link-ws": "^1.0.7",
     "body-parser": "^1.17.1",
@@ -29,7 +29,7 @@
     "escape-string-regexp": "^1.0.5",
     "express": "^4.15.2",
     "git-rev-sync": "^1.9.0",
-    "graphql": "^0.11.7",
+    "graphql": "^0.12.3",
     "graphql-server-express": "^1.1.2",
     "graphql-subscriptions": "^0.5.8",
     "graphql-tag": "^2.4.2",
@@ -55,7 +55,7 @@
     "@types/csv-parse": "^1.1.6",
     "@types/escape-string-regexp": "0.0.31",
     "@types/express": "^4.0.34",
-    "@types/graphql": "^0.11.8",
+    "@types/graphql": "^0.12.3",
     "@types/handlebars": "^4.0.32",
     "@types/mocha": "^2.2.38",
     "@types/mongoose": "^4.7.19",
