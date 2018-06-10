@@ -20,9 +20,18 @@ curl -s 'https://raw.githubusercontent.com/HackGT/registration/master/api.graphq
 ./node_modules/.bin/graphql-typewriter -i ./api.graphql
 mv ./api.graphql.types.ts ./server/graphql.types.ts
 
+# Generate types for client side queries and responses
+./node_modules/.bin/apollo-codegen introspect-schema \
+                                   ./api.graphql \
+                                   --output ./apis/checkin.schema.json
+./node_modules/.bin/gql2ts \
+	-o ./apis/checkin.d.ts \
+	./apis/checkin.schema.json
+
 # Compile
 ./node_modules/typescript/bin/tsc -p server/
 ./node_modules/typescript/bin/tsc -p client/
+./node_modules/typescript/bin/tsc -p test/
 
 # Bundle client side js
 ./node_modules/.bin/browserify ./client/js/main.js -o ./client/js/bundle.js
