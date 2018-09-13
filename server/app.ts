@@ -33,7 +33,6 @@ const MONGO_URL = config.server.mongo;
 const STATIC_ROOT = "../client";
 
 const VERSION_NUMBER = JSON.parse(fs.readFileSync(path.resolve(__dirname, "../package.json"), "utf8")).version;
-const VERSION_HASH = require("git-rev-sync").short();
 
 export let app = express();
 
@@ -372,7 +371,7 @@ app.route("/").get(authenticateWithRedirect, async (request, response) => {
 
 	response.send(indexTemplate({
 		username: response.locals.username,
-		version: `v${VERSION_NUMBER} @ ${VERSION_HASH}`,
+		version: `v${VERSION_NUMBER}`,
 		tags,
 		userInfo
 	}));
@@ -408,7 +407,7 @@ const schema = setupGraphQlRoutes(app, registration);
 const server = createServer(app);
 
 server.listen(PORT, () => {
-	console.log(`Check in system v${VERSION_NUMBER} @ ${VERSION_HASH} started on port ${PORT}`);
+	console.log(`Check in system v${VERSION_NUMBER} started on port ${PORT}`);
 
 	new SubscriptionServer({
 		execute,

@@ -28,7 +28,6 @@
     "csv-parse": "^1.2.0",
     "escape-string-regexp": "^1.0.5",
     "express": "^4.15.2",
-    "git-rev-sync": "^1.9.0",
     "graphql": "^0.12.3",
     "graphql-server-express": "^1.1.2",
     "graphql-subscriptions": "^0.5.8",
