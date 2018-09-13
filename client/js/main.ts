@@ -227,7 +227,8 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 	let subgroup = document.getElementById("attending-filter") as HTMLInputElement;
 	if (subgroup.value) {
 		if (subgroup.value === "attending") {
-			registrationFilter.attending = true;
+			registrationFilter.confirmed = true;
+			registrationFilter.accepted = true;
 		} else if (subgroup.value === "accepted") {
 			registrationFilter.accepted = true;
 		} else if (subgroup.value === "applied") {

@@ -121,7 +121,7 @@ input UserFilter {
   # If the user has been accepted to the event
   accepted: Boolean
   # If the user has indicated that he or she is attending
-  attending: Boolean
+  confirmed: Boolean
   # The type of application a user filled out (e.g. Mentor, Participant)
   application_branch: String
   # The type of confirmation a user filled out (e.g. Needs Reimbursement)
