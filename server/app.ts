@@ -80,7 +80,7 @@ app.use(morgan("hackgt"));
 
 (mongoose as any).Promise = global.Promise;
 mongoose.connect(MONGO_URL, {
-	useMongoClient: true
+	useNewUrlParser: true
 });
 export {mongoose};
 
