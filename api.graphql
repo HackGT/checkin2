@@ -86,8 +86,10 @@ type User {
   accepted: Boolean!
   # If the user has been accepted and notified of his or her acceptance
   accepted_and_notified: Boolean!
-  # If the user has indicated that he or she is attending
-  attending: Boolean!
+  # If the user has submitted a confirmation
+  confirmed: Boolean!
+  # A users assigned confirmation branch
+  confirmationBranch: String
 
   # A users application phase answers
   # null if user has not filled out this phase
