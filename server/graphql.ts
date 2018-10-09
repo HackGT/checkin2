@@ -126,7 +126,14 @@ function resolver(registration: Registration): IResolver {
 						},
 						checked_in: attendee.tags[tag].checked_in,
 						checked_in_date: date ? date.toISOString() : "",
-						checked_in_by: attendee.tags[tag].checked_in_by || ""
+						checked_in_by: attendee.tags[tag].checked_in_by || "",
+						details: attendee.tags[tag].details.map((elem) => {
+							return {
+								checked_in: elem.checked_in,
+								checked_in_date: elem.checked_in_date.toISOString(),
+								checked_in_by: elem.checked_in_by
+							}
+						})
 					};
 				});
 			}
@@ -170,11 +177,20 @@ function resolver(registration: Registration): IResolver {
 				}
 				const loggedInUser = await getLoggedInUser(ctx);
 				const date = new Date();
+				const username = loggedInUser.user ? loggedInUser.user.username : "";
+
 				attendee.tags[args.tag] = {
 					checked_in: true,
 					checked_in_date: date,
-					checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+					checked_in_by: username,
+					details: attendee.tags[args.tag] ? attendee.tags[args.tag].details : []
 				}
+
+				attendee.tags[args.tag].details.push({
+					checked_in: true,
+					checked_in_date: date,
+					checked_in_by: username
+				});
 
 				attendee.markModified('tags');
 				await attendee.save();
@@ -222,11 +238,22 @@ function resolver(registration: Registration): IResolver {
 					});
 				}
 				const loggedInUser = await getLoggedInUser(ctx);
+				const date = new Date();
+				const username = loggedInUser.user ? loggedInUser.user.username : "";
+
 				attendee.tags[args.tag] = {
 					checked_in: false,
-					checked_in_date: new Date(),
-					checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+					checked_in_date: date,
+					checked_in_by: username,
+					details: attendee.tags[args.tag] ? attendee.tags[args.tag].details : []
 				}
+
+				attendee.tags[args.tag].details.push({
+					checked_in: false,
+					checked_in_date: date,
+					checked_in_by: username
+				});
+
 				attendee.markModified('tags');
 				await attendee.save();
 
