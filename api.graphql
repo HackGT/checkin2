@@ -36,6 +36,9 @@ type Query {
   question_branches: [String!]!
   # All possible question names, or names of question in a branch
   question_names(branch: String): [String!]
+  # Counts of checked in users per tag.
+  # Only includes tags that have at least one user checked in.
+  tag_counts(tags: [String!]): [TagData]!
 }
 
 # The root subscription type, all subscribes go through here
@@ -175,4 +178,11 @@ type File {
   path: String!
   # The size of the file in bytes
   size: Int!
+}
+
+# Aggregated count data for a tag
+type TagData {
+  name: String!
+  # Count of checked in users
+  count: Int!
 }

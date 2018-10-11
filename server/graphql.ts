@@ -91,7 +91,48 @@ function resolver(registration: Registration): IResolver {
 			/**
 			 * All possible question names, or names of question in a branch
 			 */
-			question_names: registration.forward({})
+			question_names: registration.forward({}),
+			/**
+			 * Counts of checked in users per tag
+			 */
+			tag_counts: async (prev, args, ctx) => {
+				const tagsQuery = args.tags ? {
+					"tags.k": {$in: args.tags}
+				} : {};
+
+				const counts = await Attendee.aggregate([
+					{
+						$project: {
+							tags: {
+								$objectToArray: "$tags" 
+							}
+						}
+					},
+					{
+						$unwind: "$tags"
+					},
+					{
+						$match: {
+							"tags.v.checked_in": true,
+							...tagsQuery
+						}
+					},
+					{
+						$group: {
+							_id: "$tags.k", 
+							count: {
+								$sum: 1
+							}
+						}
+					}
+				]);
+
+				return counts.map(elem => ({
+					name: elem._id, 
+					count: elem.count
+				}));
+			}
+			
 		},
 		UserAndTags: {
 			user: (prev, args, ctx) => {
