@@ -56,6 +56,15 @@ type Tag {
   name: String!
 }
 
+# Record of checked in / checked out activity
+type TagDetail {
+  checked_in: Boolean!
+  # Date when attendee was checked in or out
+  checked_in_date: String!
+  # The username of the admin that checked thte attendee in or out
+  checked_in_by: String! 
+}
+
 type TagState {
   tag: Tag!
   checked_in: Boolean!
@@ -63,6 +72,8 @@ type TagState {
   checked_in_date: String
   # The username of the admin that checked the attendee in
   checked_in_by: String!
+  # An array of previous checked in / checked out events
+  details: [TagDetail]!
 }
 
 # NOTE: Type names that forward to registration must match the type names

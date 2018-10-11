@@ -29,10 +29,17 @@ export const User = mongoose.model<IUserMongoose>("User", new mongoose.Schema({
 	auth_keys: [String]
 }));
 
+export interface ITagDetailItem {
+	checked_in: boolean;
+	checked_in_date: Date;
+	checked_in_by: string;
+}
+
 export interface ITagItem {
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
+	details: ITagDetailItem[];
 }
 
 export interface ITags {
