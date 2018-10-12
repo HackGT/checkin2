@@ -49,7 +49,12 @@ function resolver(registration: Registration): IResolver {
 			 * Get a list of unique tags currently available to set.
 			 */
 			tags: async (prev, args, ctx) => {
-				return Tag.find();
+				const results = await Tag.find();
+				return results.map(elem => ({
+					name: elem.name,
+					start: elem.start ? elem.start.toISOString() : "",
+					end: elem.end ? elem.end.toISOString() : ""
+				}));
 			},
 			/**
 			 * Retrieve user through a user ID or through the token passed to
@@ -313,9 +318,16 @@ function resolver(registration: Registration): IResolver {
 					return null;
 				}
 
-				const tag = new Tag({ name: args.tag });
+				let tag = new Tag({ name: args.tag });
+				if (args.start) tag.start = new Date(args.start);
+				if (args.end) tag.end = new Date(args.end);
 				await tag.save();
-				return { name: args.tag };
+
+				return {
+					name: args.tag,
+					start: args.start ? args.start : "",
+					end: args.end ? args.end : ""
+				};
 			}
 		},
 		Subscription: {
