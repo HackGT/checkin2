@@ -17,7 +17,8 @@ type Mutation {
 # The root query type, use to query data
 type Query {
   # Get a list of unique tags currently available to set.
-  tags: [Tag!]!
+  # set only_current to true to only get events that are currently happening based on their start/end times
+  tags(only_current: Boolean): [Tag!]!
   # Retrieve user through a user ID or through the token passed to
   # Query. Leave id empty if you'd like to view the currently logged in
   # user.

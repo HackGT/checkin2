@@ -49,7 +49,14 @@ function resolver(registration: Registration): IResolver {
 			 * Get a list of unique tags currently available to set.
 			 */
 			tags: async (prev, args, ctx) => {
-				const results = await Tag.find();
+				const curr = new Date();
+				const query = args.only_current ? {
+					$and: [
+						{start: {$lte: curr}},
+						{end: {$gte: curr}}
+					]
+				} : {};
+				const results = await Tag.find(query);
 				return results.map(elem => ({
 					name: elem.name,
 					start: elem.start ? elem.start.toISOString() : "",
