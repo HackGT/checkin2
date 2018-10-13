@@ -76,6 +76,8 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 // Master list of available tags
 export interface ITag {
 	name: string;
+	start?: Date;
+	end?: Date;
 }
 
 export type ITagMongoose = ITag & mongoose.Document;
@@ -85,5 +87,11 @@ export const Tag = mongoose.model<ITagMongoose>("Tag", new mongoose.Schema({
 		type: String,
 		required: true,
 		unique: true
+	},
+	start: {
+		type: Date
+	},
+	end: {
+		type: Date
 	}
 }));
