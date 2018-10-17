@@ -122,13 +122,13 @@ export function printHackGTMetricsEvent(args: {user: string, tag: string}, userI
 		hackgtmetricsversion: 1,
 		serviceName: process.env.ROOT_URL,
 		values: {
-			value: 1
+			value: 1,
+			user: args.user,
+			name: userInfo.user.name,
+			email: userInfo.user.email
 		},
 		tags: {
 			checkinTag: args.tag,
-			id: args.user,
-			name: userInfo.user.name,
-			email: userInfo.user.email,
 			check_in: checkinStatus,
 			checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
 		}
