@@ -71,7 +71,7 @@
 							</div>
 							<select class="mdc-select" style="max-width: 300px; display: none;" id="checked-in-filter">
 								<option value="" default selected>All attendees</option>
-								<option value="true">Checked in attendees</option>
+								<option value="true">Checked-in attendees</option>
 								<option value="false">Non checked in attendees</option>
 							</select>
 							<em id="loading-status">Loading...</em>
@@ -160,6 +160,27 @@
 							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
 								<input class="mdc-textfield__input" type="text" id="new-tag-name">
 								<label class="mdc-textfield__label" for="new-tag-name">Tag Name</label>
+							</div>
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="datetime-local" id="new-tag-start-dt">
+								<label class="mdc-textfield__label mdc-textfield__label--float-above" for="new-tag-start-dt">Start Date/Time (Optional)</label>
+							</div>
+							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+								<input class="mdc-textfield__input" type="datetime-local" id="new-tag-end-dt">
+								<label class="mdc-textfield__label mdc-textfield__label--float-above" for="new-tag-end-dt">End Date/Time (Optional)</label>
+							</div>
+							<div class="mdc-form-field">
+								<div class="mdc-checkbox">
+									<input type="checkbox" id="tag-warn-duplicate" class="mdc-checkbox__native-control" value="tag-warn-duplicate">
+									<div class="mdc-checkbox__background">
+										<svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+											<path class="mdc-checkbox__checkmark__path" fill="none" stroke="white" d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
+										</svg>
+										<div class="mdc-checkbox__mixedmark"></div>
+									</div>
+								</div>
+
+								<label for="tag-warn-duplicate">Prevent duplicate check in/outs</label>
 							</div>
 							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-new-tag">Add</button>
 						</section>
