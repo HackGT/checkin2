@@ -3,13 +3,13 @@
 declare let mdc: any;
 declare let moment: any;
 
-import { ApolloClient } from "apollo-client";
-import { split } from "apollo-link";
-import { createHttpLink } from "apollo-link-http";
-import { InMemoryCache } from 'apollo-cache-inmemory';
-import { WebSocketLink } from "apollo-link-ws";
-import { SubscriptionClient } from "subscriptions-transport-ws";
-import { getOperationAST } from 'graphql';
+import {ApolloClient} from "apollo-client";
+import {split} from "apollo-link";
+import {createHttpLink} from "apollo-link-http";
+import {InMemoryCache} from 'apollo-cache-inmemory';
+import {WebSocketLink} from "apollo-link-ws";
+import {SubscriptionClient} from "subscriptions-transport-ws";
+import {getOperationAST} from 'graphql';
 import gql from 'graphql-tag';
 
 const httpLink = createHttpLink({
@@ -317,7 +317,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 					let tagInfo = attendee.tags.filter(curr => curr.tag.name === tag );
 
 					if (tagInfo.length > 0 && tagInfo[0].checked_in) {
-						button.textContent = "Uncheck in";
+						button.textContent = "Check out";
 						button.classList.add("checked-in");
 
 						let date = tagInfo[0].checked_in_date;
@@ -600,7 +600,7 @@ client.subscribe({
 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
 		if (attendeeTag.checked_in) {
-			button.textContent = "Uncheck in";
+			button.textContent = "Check out";
 			button.classList.add("checked-in");
 			if (attendeeTag.checked_in_date && attendeeTag.checked_in_by) {
 				status.innerHTML = statusFormatter(attendeeTag.checked_in_date, attendeeTag.checked_in_by);
