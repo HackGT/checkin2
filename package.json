@@ -44,6 +44,7 @@
     "request-promise-native": "^1.0.5",
     "serve-static": "^1.12.1",
     "subscriptions-transport-ws": "^0.9.1",
+    "sweetalert2": "^7.33.1",
     "ws": "^3.2.0"
   },
   "devDependencies": {
