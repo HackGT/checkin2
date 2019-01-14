@@ -11,7 +11,7 @@ type Mutation {
   # Check-out a user by specifying the tag name
   check_out(user: ID!, tag: String!): UserAndTags
   # Add tag to all users
-  add_tag(tag: String!, start: String, end: String): Tag
+  add_tag(tag: String!, start: String, end: String, warnOnDuplicates: Boolean = false): Tag
 }
 
 # The root query type, use to query data
@@ -62,6 +62,8 @@ type Tag {
   start: String
   # The end time of the event associated with the tag
   end: String
+  # Whether to error on a repeated check in/out event for a user and this tag
+  warnOnDuplicates: Boolean
 }
 
 # Record of checked in / checked out activity

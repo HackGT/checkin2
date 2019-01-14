@@ -78,6 +78,7 @@ export interface ITag {
 	name: string;
 	start?: Date;
 	end?: Date;
+	warnOnDuplicates: Boolean;
 }
 
 export type ITagMongoose = ITag & mongoose.Document;
@@ -93,5 +94,9 @@ export const Tag = mongoose.model<ITagMongoose>("Tag", new mongoose.Schema({
 	},
 	end: {
 		type: Date
+	},
+	warnOnDuplicates: {
+		type: Boolean,
+		default: false
 	}
 }));

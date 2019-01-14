@@ -11,6 +11,7 @@ import {WebSocketLink} from "apollo-link-ws";
 import {SubscriptionClient} from "subscriptions-transport-ws";
 import {getOperationAST} from 'graphql';
 import gql from 'graphql-tag';
+import swal from 'sweetalert2';
 
 const httpLink = createHttpLink({
 	uri: "/graphql",
@@ -420,36 +421,63 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	button.disabled = true;
 
 	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
+	let tagStart = <HTMLInputElement> document.getElementById("new-tag-start-dt");
+	let tagEnd = <HTMLInputElement> document.getElementById("new-tag-end-dt");
+	let tagWarnDuplicates = <HTMLInputElement> document.getElementById("tag-warn-duplicate");
+
 	let tag = tagInput.value.trim().toLowerCase();
 	if (!tag) {
-		alert("Please enter a tag name");
+		swal("Enter a tag name", "", "warning");
 		button.disabled = false;
 		return;
 	}
 
-	const mutation = gql `mutation Tag($tag: String!) {
-		add_tag(tag: $tag) {
+	const mutation = gql `
+	mutation Tag($tag: String!, $start: String, $end: String, $warnOnDuplicates: Boolean = false) {
+		add_tag(tag: $tag, start: $start, end: $end, warnOnDuplicates: $warnOnDuplicates) {
 			name
+            start
+            end
+            warnOnDuplicates
 		}
 	}`;
 
 	client.mutate({
 		mutation: mutation,
 		variables: {
-			tag: tag
+			tag: tag,
+            start: tagStart.value,
+            end: tagEnd.value,
+            warnOnDuplicates: tagWarnDuplicates.checked
 		}
 	}).then(response => {
 		// Add to tag selectors
 		updateTagSelectors([tag]);
-		
-		// Clear form
-		tagInput.value = "";
-		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
-		alert("Successfully added tag to attendee(s)!");
+
+		// if the API returns null, the tag already exists, so show a warning
+		if (response && response.hasOwnProperty("data")
+			&& response.data && response.data.hasOwnProperty("add_tag")
+			&& !response.data.add_tag) {
+			swal({
+				title: "Tag already exists",
+				html: `The tag <strong>${tag}</strong> already exists.  Try again with a different name.`,
+				type: "warning"
+			});
+		} else {
+			document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
+			swal("Got it!", "Successfully created tag", "success");
+
+			// Clear form
+			tagInput.value = "";
+			tagStart.value = "";
+			tagEnd.value = "";
+			tagWarnDuplicates.checked = false;
+		}
+
 		button.disabled = false;
 	}).catch(error => {
 		console.error(error);
-		alert("An error occurred while adding the tag");	
+		swal("Nah fam 🤚", "Unable to create new tag", "error");
 		button.disabled = false;	
 	});
 });
@@ -614,7 +642,7 @@ client.subscribe({
 	}
 });
 
-attachUserDeleteHandlers()
+attachUserDeleteHandlers();
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (States["checkin"].isDisplayed) {
