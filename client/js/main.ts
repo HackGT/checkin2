@@ -152,7 +152,7 @@ function checkIn (e: Event) {
 		button.disabled = false;
 	}).catch(error => {
 		console.error(error);
-		alert("Error checking in participant");
+		swal("Nah fam ✋", "An error is preventing us from checking in this user", "error");
 		button.disabled = false;
 	});
 }
