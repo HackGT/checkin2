@@ -197,9 +197,11 @@ function resolver(registration: Registration): IResolver {
              */
             check_in: async (prev, args, ctx, schema) => {
                 // Return none if tag doesn't exist
-                if (!(await Tag.findOne({ name: args.tag })) || !schema) {
+                const tagDetails = await Tag.findOne({ name: args.tag });
+                if (!(tagDetails) || !schema) {
                     return null;
                 }
+                console.log("warnOnDuplicates: " + tagDetails.warnOnDuplicates);
 
                 let attendee = await Attendee.findOne({
                     id: args.user
@@ -231,6 +233,25 @@ function resolver(registration: Registration): IResolver {
                 const loggedInUser = await getLoggedInUser(ctx);
                 const date = new Date();
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
+
+                const pastCheckins = attendee.tags[args.tag];
+                if (pastCheckins && pastCheckins.details) {
+                    if (pastCheckins.details.length === 0) {
+                        console.log("Valid checkin because no details exist");
+                    } else {
+                        const details = pastCheckins.details[pastCheckins.details.length - 1];
+                        if (details.checked_in && tagDetails.warnOnDuplicates) {
+                            console.log("DUPLICATE CHECK-IN");
+                            throw new GraphQLError("Duplicate check-in attempt");
+                        } else if (details.checked_in && !tagDetails.warnOnDuplicates) {
+                            console.log("Duplicate check-in but calling it OK because warnOnDuplicates is false");
+                        } else {
+                            console.log("Valid checkin");
+                        }
+                    }
+                } else {
+                    console.log("Valid checkin?  Yes -- no details objects");
+                }
 
                 attendee.tags[args.tag] = {
                     checked_in: true,
