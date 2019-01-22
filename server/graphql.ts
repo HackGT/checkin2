@@ -57,10 +57,12 @@ function resolver(registration: Registration): IResolver {
                     ]
                 } : {};
                 const results = await Tag.find(query);
+                console.log("*** Results are:");
+                console.log(results);
                 return results.map(elem => ({
                     name: elem.name,
                     start: elem.start ? elem.start.toISOString() : "",
-                    end: elem.end ? elem.end.toISOString() : ""
+                    end: elem.end ? elem.end.toISOString() : "",
                 }));
             },
             /**
@@ -177,14 +179,17 @@ function resolver(registration: Registration): IResolver {
                         tag: {
                             name: tag
                         },
+                        checkin_success: attendee.tags[tag].checkin_success,
                         checked_in: attendee.tags[tag].checked_in,
                         checked_in_date: date ? date.toISOString() : "",
                         checked_in_by: attendee.tags[tag].checked_in_by || "",
+                        //TODO: also return a "most recent successful check in/out" object (still a TagDetailItem type though)
                         details: attendee.tags[tag].details.map((elem) => {
                             return {
                                 checked_in: elem.checked_in,
                                 checked_in_date: elem.checked_in_date.toISOString(),
-                                checked_in_by: elem.checked_in_by
+                                checked_in_by: elem.checked_in_by,
+                                checkin_success: elem.checkin_success
                             }
                         })
                     };
@@ -235,25 +240,31 @@ function resolver(registration: Registration): IResolver {
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
 
                 const pastCheckins = attendee.tags[args.tag];
+                let success;
                 if (pastCheckins && pastCheckins.details) {
                     if (pastCheckins.details.length === 0) {
                         console.log("Valid checkin because no details exist");
+                        success = true;
                     } else {
                         const details = pastCheckins.details[pastCheckins.details.length - 1];
                         if (details.checked_in && tagDetails.warnOnDuplicates) {
                             console.log("DUPLICATE CHECK-IN");
-                            throw new GraphQLError("Duplicate check-in attempt");
+                            success = false;
                         } else if (details.checked_in && !tagDetails.warnOnDuplicates) {
                             console.log("Duplicate check-in but calling it OK because warnOnDuplicates is false");
+                            success = true;
                         } else {
                             console.log("Valid checkin");
+                            success = true;
                         }
                     }
                 } else {
                     console.log("Valid checkin?  Yes -- no details objects");
+                    success = true;
                 }
-
+                // TODO: for a failed attempt, consider providing the details of the most recent successful attempt so the client doesn't have to sift through the details array to find it (and possibly do it wrong)
                 attendee.tags[args.tag] = {
+                    checkin_success: success,
                     checked_in: true,
                     checked_in_date: date,
                     checked_in_by: username,
@@ -263,12 +274,14 @@ function resolver(registration: Registration): IResolver {
                 attendee.tags[args.tag].details.push({
                     checked_in: true,
                     checked_in_date: date,
-                    checked_in_by: username
+                    checked_in_by: username,
+                    checkin_success: success
                 });
 
                 attendee.markModified('tags');
                 await attendee.save();
-
+                console.log("User info:");
+                console.log(userInfo);
                 pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
                 printHackGTMetricsEvent(args, userInfo, loggedInUser, true);
@@ -316,6 +329,7 @@ function resolver(registration: Registration): IResolver {
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
 
                 attendee.tags[args.tag] = {
+                    checkin_success: true, // TODO: actually set this value
                     checked_in: false,
                     checked_in_date: date,
                     checked_in_by: username,
@@ -323,9 +337,10 @@ function resolver(registration: Registration): IResolver {
                 };
 
                 attendee.tags[args.tag].details.push({
-                    checked_in: false,
+                    checked_in: false, // TODO: actually set this value
                     checked_in_date: date,
-                    checked_in_by: username
+                    checked_in_by: username,
+                    checkin_success: true
                 });
 
                 attendee.markModified('tags');

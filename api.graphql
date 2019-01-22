@@ -72,12 +72,18 @@ type TagDetail {
   # Date when attendee was checked in or out
   checked_in_date: String!
   # The username of the admin that checked thte attendee in or out
-  checked_in_by: String! 
+  checked_in_by: String!
+  # Whether, at the time this checkin attempt was made, the operation was successful.  If false, the check-in
+  # attempt was rejected.  If true or the tag has warnOnDuplicates = true, the check-in request was accepted.
+  checkin_success: Boolean
 }
 
 type TagState {
   tag: Tag!
   checked_in: Boolean!
+  # If the tag has warnOnDuplicates = false, then this will always return true.  Otherwise, true indicates a valid check-in
+  # and false indicates a duplicate check-in event (e.g., trying to check-in a user for a tag they are already checked into).
+  checkin_success: Boolean
   # Date when the attendee was checked in
   checked_in_date: String
   # The username of the admin that checked the attendee in

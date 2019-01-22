@@ -33,9 +33,11 @@ export interface ITagDetailItem {
 	checked_in: boolean;
 	checked_in_date: Date;
 	checked_in_by: string;
+	checkin_success: boolean;
 }
 
 export interface ITagItem {
+	checkin_success: boolean;
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
@@ -97,6 +99,7 @@ export const Tag = mongoose.model<ITagMongoose>("Tag", new mongoose.Schema({
 	},
 	warnOnDuplicates: {
 		type: Boolean,
+		required: true,
 		default: false
 	}
 }));
