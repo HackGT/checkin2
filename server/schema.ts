@@ -41,6 +41,7 @@ export interface ITagItem {
 	checked_in: boolean;
 	checked_in_date?: Date;
 	checked_in_by?: string;
+	last_successful_checkin?: ITagDetailItem | null;
 	details: ITagDetailItem[];
 }
 

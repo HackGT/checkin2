@@ -88,6 +88,9 @@ type TagState {
   checked_in_date: String
   # The username of the admin that checked the attendee in
   checked_in_by: String!
+  # Details object for the most recent successful check in/out event
+    # TODO: consider renaming
+  last_successful_checkin: TagDetail
   # An array of previous checked in / checked out events
   details: [TagDetail]!
 }

@@ -5,7 +5,7 @@ import * as bodyParser from "body-parser";
 import * as express from "express";
 import {graphiqlExpress, graphqlExpress} from "graphql-server-express";
 import {makeExecutableSchema} from "graphql-tools";
-import {Attendee, Tag} from "./schema";
+import {Attendee, ITag, ITagItem, Tag} from "./schema";
 import {authenticateWithRedirect, authenticateWithReject, getLoggedInUser} from "./middleware";
 import {schema as types} from "./graphql.types";
 import {Registration} from "./inputs/registration";
@@ -38,6 +38,27 @@ interface IResolver {
 
 const TAG_CHANGE = "tag_change";
 
+
+function validateCheckin(pastCheckins: ITagItem, tagDetails: ITag) {
+    let success;
+    if (pastCheckins && pastCheckins.details) {
+        if (pastCheckins.details.length === 0) {
+            success = true;
+        } else {
+            const details = pastCheckins.details[pastCheckins.details.length - 1];
+            if (details.checked_in && tagDetails.warnOnDuplicates) {
+                success = false;
+            } else if (details.checked_in && !tagDetails.warnOnDuplicates) {
+                success = true;
+            } else {
+                success = true;
+            }
+        }
+    } else {
+        success = true;
+    }
+    return success;
+}
 
 /**
  * GraphQL API
@@ -240,34 +261,14 @@ function resolver(registration: Registration): IResolver {
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
 
                 const pastCheckins = attendee.tags[args.tag];
-                let success;
-                if (pastCheckins && pastCheckins.details) {
-                    if (pastCheckins.details.length === 0) {
-                        console.log("Valid checkin because no details exist");
-                        success = true;
-                    } else {
-                        const details = pastCheckins.details[pastCheckins.details.length - 1];
-                        if (details.checked_in && tagDetails.warnOnDuplicates) {
-                            console.log("DUPLICATE CHECK-IN");
-                            success = false;
-                        } else if (details.checked_in && !tagDetails.warnOnDuplicates) {
-                            console.log("Duplicate check-in but calling it OK because warnOnDuplicates is false");
-                            success = true;
-                        } else {
-                            console.log("Valid checkin");
-                            success = true;
-                        }
-                    }
-                } else {
-                    console.log("Valid checkin?  Yes -- no details objects");
-                    success = true;
-                }
+                let success = validateCheckin(pastCheckins, tagDetails);
                 // TODO: for a failed attempt, consider providing the details of the most recent successful attempt so the client doesn't have to sift through the details array to find it (and possibly do it wrong)
                 attendee.tags[args.tag] = {
                     checkin_success: success,
                     checked_in: true,
                     checked_in_date: date,
                     checked_in_by: username,
+                    last_successful_checkin: null,
                     details: attendee.tags[args.tag] ? attendee.tags[args.tag].details : []
                 };
 
@@ -284,6 +285,7 @@ function resolver(registration: Registration): IResolver {
                 console.log(userInfo);
                 pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
+                // TODO: metrics event for successful/failed check-in
                 printHackGTMetricsEvent(args, userInfo, loggedInUser, true);
                 return userInfo;
             },
