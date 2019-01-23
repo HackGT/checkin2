@@ -39,7 +39,7 @@ interface IResolver {
 const TAG_CHANGE = "tag_change";
 
 
-function validateCheckin(pastCheckins: ITagItem, tagDetails: ITag, checkIn: boolean) {
+function validateCheckin(pastCheckins: ITagItem, tagDetails: ITag, checkIn: boolean): boolean {
     if (!tagDetails.warnOnDuplicates) { // return true if tag allows duplicate check in/outs
         return true;
     }
@@ -58,14 +58,11 @@ function validateCheckin(pastCheckins: ITagItem, tagDetails: ITag, checkIn: bool
     return checkIn; // same logic as for above with pastCheckins.details.length === 0
 }
 
-function getLastSuccessfulCheckin(pastCheckIns: ITagItem, checkIn: boolean) {
-    let details;
-    if (pastCheckIns && pastCheckIns.details) {
-        details = pastCheckIns.details;
-    } else {
+function getLastSuccessfulCheckin(pastCheckins: ITagItem, checkIn: boolean): ITagDetailItem | null {
+    if (!pastCheckins || !pastCheckins.details) {
         return null;
     }
-
+    let { details } = pastCheckins; // ES6 destructuring, so this is equivalent to let details = pastCheckins.details
 
     for (let i = details.length - 1; i >= 0; i--) { // start at the end b/c later check-in/out events will be at the end of the array
         const event = details[i];
@@ -245,7 +242,7 @@ function resolver(registration: Registration): IResolver {
             check_in: async (prev, args, ctx, schema) => {
                 // Return none if tag doesn't exist
                 const tagDetails = await Tag.findOne({ name: args.tag });
-                if (!(tagDetails) || !schema) {
+                if (!tagDetails || !schema) {
                     return null;
                 }
 
@@ -318,7 +315,7 @@ function resolver(registration: Registration): IResolver {
             check_out: async (prev, args, ctx, schema) => {
                 // Return none if tag doesn't exist
                 const tagDetails = await Tag.findOne({ name: args.tag });
-                if (!(tagDetails) || !schema) {
+                if (!tagDetails || !schema) {
                     return null;
                 }
 
@@ -400,7 +397,10 @@ function resolver(registration: Registration): IResolver {
                     throw new GraphQLError("Invalid dates: the tag's end date must be after its start date");
                 }
                 if (!tag.start && tag.end) {
-                    throw new Error("If a tag has an end date defined, it must also have a start date defined");
+                    throw new GraphQLError("If a tag has an end date defined, it must also have a start date defined");
+                }
+                if (tag.start && !tag.end) {
+                    throw new GraphQLError("If a tag has a start date defined, it must also have an end date defined");
                 }
                 tag.warnOnDuplicates = args.warnOnDuplicates;
                 await tag.save();
