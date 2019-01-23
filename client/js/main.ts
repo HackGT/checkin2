@@ -185,7 +185,7 @@ function attachUserDeleteHandlers () {
 					window.location.reload();
 				}
 			}).catch((e, xhr, response) => {
-				alert(response.error);
+				swal("Unable to process request", response.error, "error");
 			}).complete(() => {
 				source.disabled = false;
 			});
@@ -360,7 +360,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 			status.innerHTML = `Found ${attendees.length} attendee${attendees.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
 		}).catch(error => {
 			console.error(error);
-			alert("Error fetching participants");
+			swal("Nah fam ✋", "Error fetching participants", "error");
 		});
 }
 
@@ -401,15 +401,15 @@ document.getElementById("add-update-user")!.addEventListener("click", e => {
 		password: password
 	}).then((xhr, response) => {
 		if (response.created) {
-			alert(`User '${username}' was successfully created`);
+			swal("Got it!", `User '${username}' was successfully created`, "success");
 		}
 		else {
-			alert(`Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`);
+			swal("Got it!", `Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`, "success");
 		}
 		window.location.reload();
 
 	}).catch((e, xhr, response) => {
-		alert(response.error);
+		swal("Unable to process request", response.error, "error");
 	}).complete(() => {
 		button.disabled = false;
 	});
@@ -510,7 +510,7 @@ client.query<GQL.IQuery>({
 	}	
 }).catch(error => {
 	console.error(error);
-	alert("Error fetching registration question names");
+	swal("Nah fam ✋", "Error fetching registration question names", "error");
 });
 
 // Toggle display of question checkboxes
@@ -548,7 +548,7 @@ client.query<GQL.IQuery>({
 	}	
 }).catch(error => {
 	console.error(error);
-	alert("Error fetching registration application branches");
+	swal("Nah fam ✋", "Error fetching registration application branches", "error");
 });
 
 // Populate confirmation branch options
@@ -566,7 +566,7 @@ client.query<GQL.IQuery>({
 	}	
 }).catch(error => {
 	console.error(error);
-	alert("Error fetching registration confirmation branches");	
+	swal("Nah fam ✋", "Error fetching registration confirmation branches", "error");
 });
 
 document.getElementById("branches-filter")!.addEventListener("change", e => {
