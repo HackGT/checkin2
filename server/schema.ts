@@ -39,9 +39,9 @@ export interface ITagDetailItem {
 export interface ITagItem {
 	checkin_success: boolean;
 	checked_in: boolean;
-	checked_in_date?: Date;
-	checked_in_by?: string;
-	last_successful_checkin?: ITagDetailItem | null;
+	checked_in_date: Date;
+	checked_in_by: string;
+	last_successful_checkin: ITagDetailItem | null;
 	details: ITagDetailItem[];
 }
 
