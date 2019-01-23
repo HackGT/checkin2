@@ -307,6 +307,7 @@ function resolver(registration: Registration): IResolver {
                 pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
                 // TODO: metrics event for successful/failed check-in
+                // TODO: duplicate check-ins (regardless of success) will currently produce 2 HackGTMetrics events
                 printHackGTMetricsEvent(args, userInfo, loggedInUser, true);
                 return userInfo;
             },
@@ -378,6 +379,7 @@ function resolver(registration: Registration): IResolver {
 
                 pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
+                // TODO: duplicate check-ins (regardless of success) will currently produce 2 HackGTMetrics events
                 printHackGTMetricsEvent(args, userInfo, loggedInUser, false);
                 return userInfo;
             },
