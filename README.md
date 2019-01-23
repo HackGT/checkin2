@@ -27,8 +27,7 @@ A [Dockerfile](Dockerfile) is provided for convenience.
     npm test # Optional: run tests
     npm start
 
-You can also run `npm run build-start` to quickly compile and then start Checkin.  If running on Windows, you'll need to complete
-these steps in Bash on Ubuntu on Windows or in a Linux virtual machine since the compile process involves running a bash script.
+You can also run `npm run build-start` to quickly compile and then start Checkin.  If running on Windows, you'll need to complete these steps in Bash on Ubuntu on Windows or in a Linux virtual machine since the compile process involves running a bash script.
 
 Environment Variable | Description
 ---------------------|------------
