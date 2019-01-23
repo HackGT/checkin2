@@ -39,25 +39,42 @@ interface IResolver {
 const TAG_CHANGE = "tag_change";
 
 
-function validateCheckin(pastCheckins: ITagItem, tagDetails: ITag) {
-    let success;
+function validateCheckin(pastCheckins: ITagItem, tagDetails: ITag, checkIn: boolean) {
+    if (!tagDetails.warnOnDuplicates) { // return true if tag allows duplicate check in/outs
+        return true;
+    }
+
     if (pastCheckins && pastCheckins.details) {
         if (pastCheckins.details.length === 0) {
-            success = true;
+            return checkIn; // if there are no prior check in/out events, then return false for check outs (can't check out if not checked in)
         } else {
-            const details = pastCheckins.details[pastCheckins.details.length - 1];
-            if (details.checked_in && tagDetails.warnOnDuplicates) {
-                success = false;
-            } else if (details.checked_in && !tagDetails.warnOnDuplicates) {
-                success = true;
-            } else {
-                success = true;
-            }
+            const details = pastCheckins.details[pastCheckins.details.length - 1]; // get the most recent check in/out event
+            // This is a duplicate check in/out
+            // Ends up being true when checkIn and details.checked_in are not the same (i.e., the old check in/out state
+            //   does not match the new check in/out state)
+            return checkIn == details.checked_in;
         }
-    } else {
-        success = true;
     }
-    return success;
+    return checkIn; // same logic as for above with pastCheckins.details.length === 0
+}
+
+function getLastSuccessfulCheckin(pastCheckIns: ITagItem, checkIn: boolean) {
+    let details;
+    if (pastCheckIns && pastCheckIns.details) {
+        details = pastCheckIns.details;
+    } else {
+        return null;
+    }
+
+
+    for (let i = details.length - 1; i >= 0; i--) { // start at the end b/c later check-in/out events will be at the end of the array
+        const event = details[i];
+        if (event.checked_in === checkIn && event.checkin_success) {
+            return event;
+        }
+    }
+
+    return null;
 }
 
 /**
@@ -78,8 +95,7 @@ function resolver(registration: Registration): IResolver {
                     ]
                 } : {};
                 const results = await Tag.find(query);
-                console.log("*** Results are:");
-                console.log(results);
+
                 return results.map(elem => ({
                     name: elem.name,
                     start: elem.start ? elem.start.toISOString() : "",
@@ -195,7 +211,7 @@ function resolver(registration: Registration): IResolver {
                 }
                 return Object.keys(attendee.tags).map(tag => {
                     const date = attendee.tags[tag].checked_in_date;
-
+                    const lastSuccess = attendee.tags[tag].last_successful_checkin;
                     return {
                         tag: {
                             name: tag
@@ -204,7 +220,12 @@ function resolver(registration: Registration): IResolver {
                         checked_in: attendee.tags[tag].checked_in,
                         checked_in_date: date ? date.toISOString() : "",
                         checked_in_by: attendee.tags[tag].checked_in_by || "",
-                        //TODO: also return a "most recent successful check in/out" object (still a TagDetailItem type though)
+                        last_successful_checkin: lastSuccess ? {
+                            checked_in: lastSuccess.checked_in,
+                            checked_in_date: lastSuccess.checked_in_date.toISOString(),
+                            checked_in_by: lastSuccess.checked_in_by,
+                            checkin_success: lastSuccess.checkin_success
+                        } : null,
                         details: attendee.tags[tag].details.map((elem) => {
                             return {
                                 checked_in: elem.checked_in,
@@ -219,7 +240,7 @@ function resolver(registration: Registration): IResolver {
         },
         Mutation: {
             /**
-             * Check-in a user by specifying the tag name
+             * Check in a user by specifying the tag name
              */
             check_in: async (prev, args, ctx, schema) => {
                 // Return none if tag doesn't exist
@@ -227,7 +248,6 @@ function resolver(registration: Registration): IResolver {
                 if (!(tagDetails) || !schema) {
                     return null;
                 }
-                console.log("warnOnDuplicates: " + tagDetails.warnOnDuplicates);
 
                 let attendee = await Attendee.findOne({
                     id: args.user
@@ -261,8 +281,7 @@ function resolver(registration: Registration): IResolver {
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
 
                 const pastCheckins = attendee.tags[args.tag];
-                let success = validateCheckin(pastCheckins, tagDetails);
-                // TODO: for a failed attempt, consider providing the details of the most recent successful attempt so the client doesn't have to sift through the details array to find it (and possibly do it wrong)
+                const success = validateCheckin(pastCheckins, tagDetails, true);
                 attendee.tags[args.tag] = {
                     checkin_success: success,
                     checked_in: true,
@@ -279,10 +298,12 @@ function resolver(registration: Registration): IResolver {
                     checkin_success: success
                 });
 
+                // Make sure we include the latest details element for last_successful_checkin
+                attendee.tags[args.tag].last_successful_checkin = getLastSuccessfulCheckin(attendee.tags[args.tag], true);
+
                 attendee.markModified('tags');
                 await attendee.save();
-                console.log("User info:");
-                console.log(userInfo);
+
                 pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
                 // TODO: metrics event for successful/failed check-in
@@ -295,7 +316,8 @@ function resolver(registration: Registration): IResolver {
              */
             check_out: async (prev, args, ctx, schema) => {
                 // Return none if tag doesn't exist
-                if (!(await Tag.findOne({ name: args.tag })) || !schema) {
+                const tagDetails = await Tag.findOne({ name: args.tag });
+                if (!(tagDetails) || !schema) {
                     return null;
                 }
 
@@ -329,21 +351,27 @@ function resolver(registration: Registration): IResolver {
                 const loggedInUser = await getLoggedInUser(ctx);
                 const date = new Date();
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
-
+                const pastCheckins = attendee.tags[args.tag];
+                const success = validateCheckin(pastCheckins, tagDetails, false);
                 attendee.tags[args.tag] = {
-                    checkin_success: true, // TODO: actually set this value
+                    checkin_success: success,
                     checked_in: false,
                     checked_in_date: date,
                     checked_in_by: username,
+                    last_successful_checkin: null,
                     details: attendee.tags[args.tag] ? attendee.tags[args.tag].details : []
                 };
 
                 attendee.tags[args.tag].details.push({
-                    checked_in: false, // TODO: actually set this value
+                    checked_in: false,
                     checked_in_date: date,
                     checked_in_by: username,
-                    checkin_success: true
+                    checkin_success: success
                 });
+
+                // Make sure we include the latest details element for last_successful_checkin
+                attendee.tags[args.tag].last_successful_checkin = getLastSuccessfulCheckin(attendee.tags[args.tag], false);
+
 
                 attendee.markModified('tags');
                 await attendee.save();
