@@ -5,7 +5,7 @@ import * as bodyParser from "body-parser";
 import * as express from "express";
 import {graphiqlExpress, graphqlExpress} from "graphql-server-express";
 import {makeExecutableSchema} from "graphql-tools";
-import {Attendee, ITag, ITagItem, Tag} from "./schema";
+import {Attendee, ITag, ITagDetailItem, ITagItem, Tag} from "./schema";
 import {authenticateWithRedirect, authenticateWithReject, getLoggedInUser} from "./middleware";
 import {schema as types} from "./graphql.types";
 import {Registration} from "./inputs/registration";
@@ -52,7 +52,7 @@ function validateCheckin(pastCheckins: ITagItem, tagDetails: ITag, checkIn: bool
             // This is a duplicate check in/out
             // Ends up being true when checkIn and details.checked_in are not the same (i.e., the old check in/out state
             //   does not match the new check in/out state)
-            return checkIn == details.checked_in;
+            return checkIn != details.checked_in;
         }
     }
     return checkIn; // same logic as for above with pastCheckins.details.length === 0
