@@ -11,22 +11,21 @@ import * as compression from "compression";
 import * as bodyParser from "body-parser";
 import * as cookieParser from "cookie-parser";
 import * as Handlebars from "handlebars";
-import { Registration } from "./inputs/registration";
-import { config } from "./config";
-import { authenticateWithReject, authenticateWithRedirect, validateHostCallback } from "./middleware";
-import { setupRoutes as setupGraphQlRoutes } from "./graphql";
-import { IUser } from "./schema";
+import {Registration} from "./inputs/registration";
+import {config} from "./config";
+import {authenticateWithRedirect, authenticateWithReject, validateHostCallback} from "./middleware";
+import {setupRoutes as setupGraphQlRoutes} from "./graphql";
+import {Attendee, IAttendee, IAttendeeMongoose, IUser, Tag, User} from "./schema";
 
-import { createServer } from "http";
-import { SubscriptionServer } from "subscriptions-transport-ws";
-import { execute, subscribe } from "graphql";
+import {createServer} from "http";
+import {SubscriptionServer} from "subscriptions-transport-ws";
+import {execute, subscribe} from "graphql";
+import * as mongoose from "mongoose";
+import * as json2csv from "json2csv";
 
 let postParser = bodyParser.urlencoded({
 	extended: false
 });
-
-import * as mongoose from "mongoose";
-import * as json2csv from "json2csv";
 
 const PORT = config.server.port;
 const MONGO_URL = config.server.mongo;
@@ -83,8 +82,6 @@ mongoose.connect(MONGO_URL, {
 });
 export {mongoose};
 
-import {User, IAttendee, IAttendeeMongoose, Attendee, Tag} from "./schema";
-
 // Promise version of crypto.pbkdf2()
 export function pbkdf2Async (...params: any[]) {
 	return new Promise<Buffer>((resolve, reject) => {
@@ -117,7 +114,7 @@ export function readFileAsync (filename: string): Promise<string> {
  * @param loggedInUser Logged in CheckIn admin
  * @param checkinStatus Truthy to indicate if user was checked in or out of the given tag
  */
-export function printHackGTMetricsEvent(args: {user: string, tag: string}, userInfo: any, loggedInUser :{admin: boolean; user?: IUser;} , checkinStatus: boolean) {
+export function printHackGTMetricsEvent(args: {user: string, tag: string}, userInfo: any, loggedInUser :{admin: boolean; user?: IUser;} , checkinStatus: boolean, checkin_success: boolean) {
 	console.log(JSON.stringify({
 		hackgtmetricsversion: 1,
 		serviceName: process.env.ROOT_URL,
@@ -130,7 +127,8 @@ export function printHackGTMetricsEvent(args: {user: string, tag: string}, userI
 		tags: {
 			checkinTag: args.tag,
 			check_in: checkinStatus,
-			checked_in_by: loggedInUser.user ? loggedInUser.user.username : ""
+			checked_in_by: loggedInUser.user ? loggedInUser.user.username : "",
+			checkin_success: checkin_success
 		}
 	}));
 }

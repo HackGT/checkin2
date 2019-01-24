@@ -5,7 +5,7 @@ import * as bodyParser from "body-parser";
 import * as express from "express";
 import {graphiqlExpress, graphqlExpress} from "graphql-server-express";
 import {makeExecutableSchema} from "graphql-tools";
-import {Attendee, ITag, ITagDetailItem, ITagItem, Tag} from "./schema";
+import {Attendee, ITagDetailItem, ITagItem, Tag} from "./schema";
 import {authenticateWithRedirect, authenticateWithReject, getLoggedInUser} from "./middleware";
 import {schema as types} from "./graphql.types";
 import {Registration} from "./inputs/registration";
@@ -39,11 +39,7 @@ interface IResolver {
 const TAG_CHANGE = "tag_change";
 
 
-function validateCheckin(pastCheckins: ITagItem, tagDetails: ITag, checkIn: boolean): boolean {
-    if (!tagDetails.warnOnDuplicates) { // return true if tag allows duplicate check in/outs
-        return true;
-    }
-
+function validateCheckin(pastCheckins: ITagItem, checkIn: boolean): boolean {
     if (pastCheckins && pastCheckins.details) {
         if (pastCheckins.details.length === 0) {
             return checkIn; // if there are no prior check in/out events, then return false for check outs (can't check out if not checked in)
@@ -278,7 +274,11 @@ function resolver(registration: Registration): IResolver {
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
 
                 const pastCheckins = attendee.tags[args.tag];
-                const success = validateCheckin(pastCheckins, tagDetails, true);
+
+
+                const validCheckin = validateCheckin(pastCheckins, true);
+                let success = !tagDetails.warnOnDuplicates ? true : validCheckin;
+
                 attendee.tags[args.tag] = {
                     checkin_success: success,
                     checked_in: true,
@@ -303,9 +303,9 @@ function resolver(registration: Registration): IResolver {
 
                 pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
-                // TODO: metrics event for successful/failed check-in
-                // TODO: duplicate check-ins (regardless of success) will currently produce 2 HackGTMetrics events
-                printHackGTMetricsEvent(args, userInfo, loggedInUser, true);
+                // validCheckin indicates duplicate check in/out events regardless of warnOnDuplicates,
+                //    which means we can still get accurate metrics for tags with warnOnDuplicates = false
+                printHackGTMetricsEvent(args, userInfo, loggedInUser, true, validCheckin);
                 return userInfo;
             },
 
@@ -350,7 +350,10 @@ function resolver(registration: Registration): IResolver {
                 const date = new Date();
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
                 const pastCheckins = attendee.tags[args.tag];
-                const success = validateCheckin(pastCheckins, tagDetails, false);
+                const validCheckin = validateCheckin(pastCheckins, false);
+                let success = (!tagDetails.warnOnDuplicates && pastCheckins && pastCheckins.details
+                    && pastCheckins.details.length > 0) ? true : validCheckin;
+
                 attendee.tags[args.tag] = {
                     checkin_success: success,
                     checked_in: false,
@@ -376,8 +379,9 @@ function resolver(registration: Registration): IResolver {
 
                 pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
 
-                // TODO: duplicate check-ins (regardless of success) will currently produce 2 HackGTMetrics events
-                printHackGTMetricsEvent(args, userInfo, loggedInUser, false);
+                // validCheckin indicates duplicate check in/out events regardless of warnOnDuplicates,
+                //    which means we can still get accurate metrics for tags with warnOnDuplicates = false
+                printHackGTMetricsEvent(args, userInfo, loggedInUser, false, validCheckin);
                 return userInfo;
             },
 
