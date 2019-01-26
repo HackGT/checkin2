@@ -1,13 +1,14 @@
 {
   "name": "checkin2",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Check-in for HackGT events",
   "main": "app.js",
   "scripts": {
     "pretest": "npm run build",
     "test": "./node_modules/mocha/bin/mocha",
     "build": "./build.sh",
-    "start": "node server/app.js"
+    "start": "node server/app.js",
+    "build-start": "npm run build && npm start"
   },
   "license": "MIT",
   "author": {
@@ -43,6 +44,7 @@
     "request-promise-native": "^1.0.5",
     "serve-static": "^1.12.1",
     "subscriptions-transport-ws": "^0.9.1",
+    "sweetalert2": "^7.33.1",
     "ws": "^3.2.0"
   },
   "devDependencies": {

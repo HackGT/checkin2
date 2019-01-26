@@ -8,7 +8,7 @@ secrets:
 
 env:
   PRODUCTION: true
-  REGISTRATION_GRAPHQL: "https://registration.build.hack.gt/graphql"
+  REGISTRATION_GRAPHQL: "https://registration.dev.hack.gt/graphql"
 
 wants:
     mongo: true

@@ -3,14 +3,15 @@
 declare let mdc: any;
 declare let moment: any;
 
-import { ApolloClient } from "apollo-client";
-import { split } from "apollo-link";
-import { createHttpLink } from "apollo-link-http";
-import { InMemoryCache } from 'apollo-cache-inmemory';
-import { WebSocketLink } from "apollo-link-ws";
-import { SubscriptionClient } from "subscriptions-transport-ws";
-import { getOperationAST } from 'graphql';
+import {ApolloClient} from "apollo-client";
+import {split} from "apollo-link";
+import {createHttpLink} from "apollo-link-http";
+import {InMemoryCache} from 'apollo-cache-inmemory';
+import {WebSocketLink} from "apollo-link-ws";
+import {SubscriptionClient} from "subscriptions-transport-ws";
+import {getOperationAST} from 'graphql';
 import gql from 'graphql-tag';
+import swal from 'sweetalert2';
 
 const httpLink = createHttpLink({
 	uri: "/graphql",
@@ -151,7 +152,7 @@ function checkIn (e: Event) {
 		button.disabled = false;
 	}).catch(error => {
 		console.error(error);
-		alert("Error checking in participant");
+		swal("Nah fam ✋", "An error is preventing us from checking in this user", "error");
 		button.disabled = false;
 	});
 }
@@ -184,7 +185,7 @@ function attachUserDeleteHandlers () {
 					window.location.reload();
 				}
 			}).catch((e, xhr, response) => {
-				alert(response.error);
+				swal("Unable to process request", response.error, "error");
 			}).complete(() => {
 				source.disabled = false;
 			});
@@ -317,7 +318,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 					let tagInfo = attendee.tags.filter(curr => curr.tag.name === tag );
 
 					if (tagInfo.length > 0 && tagInfo[0].checked_in) {
-						button.textContent = "Uncheck in";
+						button.textContent = "Check out";
 						button.classList.add("checked-in");
 
 						let date = tagInfo[0].checked_in_date;
@@ -359,7 +360,7 @@ function loadAttendees (filter: string = queryField.value, checkedIn: string = c
 			status.innerHTML = `Found ${attendees.length} attendee${attendees.length === 1 ? "" : "s"} (<code>${tag}</code>)`;
 		}).catch(error => {
 			console.error(error);
-			alert("Error fetching participants");
+			swal("Nah fam ✋", "Error fetching participants", "error");
 		});
 }
 
@@ -400,15 +401,15 @@ document.getElementById("add-update-user")!.addEventListener("click", e => {
 		password: password
 	}).then((xhr, response) => {
 		if (response.created) {
-			alert(`User '${username}' was successfully created`);
+			swal("Got it!", `User '${username}' was successfully created`, "success");
 		}
 		else {
-			alert(`Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`);
+			swal("Got it!", `Password for user '${username}' successfully updated. All active sessions with this account will need to log in again.`, "success");
 		}
 		window.location.reload();
 
 	}).catch((e, xhr, response) => {
-		alert(response.error);
+		swal("Unable to process request", response.error, "error");
 	}).complete(() => {
 		button.disabled = false;
 	});
@@ -420,36 +421,63 @@ document.getElementById("add-new-tag")!.addEventListener("click", e => {
 	button.disabled = true;
 
 	let tagInput = <HTMLInputElement> document.getElementById("new-tag-name");
+	let tagStart = <HTMLInputElement> document.getElementById("new-tag-start-dt");
+	let tagEnd = <HTMLInputElement> document.getElementById("new-tag-end-dt");
+	let tagWarnDuplicates = <HTMLInputElement> document.getElementById("tag-warn-duplicate");
+
 	let tag = tagInput.value.trim().toLowerCase();
 	if (!tag) {
-		alert("Please enter a tag name");
+		swal("Enter a tag name", "", "warning");
 		button.disabled = false;
 		return;
 	}
 
-	const mutation = gql `mutation Tag($tag: String!) {
-		add_tag(tag: $tag) {
+	const mutation = gql `
+	mutation Tag($tag: String!, $start: String, $end: String, $warnOnDuplicates: Boolean = false) {
+		add_tag(tag: $tag, start: $start, end: $end, warnOnDuplicates: $warnOnDuplicates) {
 			name
+            start
+            end
+            warnOnDuplicates
 		}
 	}`;
 
 	client.mutate({
 		mutation: mutation,
 		variables: {
-			tag: tag
+			tag: tag,
+            start: tagStart.value,
+            end: tagEnd.value,
+            warnOnDuplicates: tagWarnDuplicates.checked
 		}
 	}).then(response => {
 		// Add to tag selectors
 		updateTagSelectors([tag]);
-		
-		// Clear form
-		tagInput.value = "";
-		document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
-		alert("Successfully added tag to attendee(s)!");
+
+		// if the API returns null, the tag already exists, so show a warning
+		if (response && response.hasOwnProperty("data")
+			&& response.data && response.data.hasOwnProperty("add_tag")
+			&& !response.data.add_tag) {
+			swal({
+				title: "Tag already exists",
+				html: `The tag <strong>${tag}</strong> already exists.  Try again with a different name.`,
+				type: "warning"
+			});
+		} else {
+			document.querySelector(`label[for="new-tag-name"]`)!.classList.remove("mdc-textfield__label--float-above");
+			swal("Got it!", "Successfully created tag", "success");
+
+			// Clear form
+			tagInput.value = "";
+			tagStart.value = "";
+			tagEnd.value = "";
+			tagWarnDuplicates.checked = false;
+		}
+
 		button.disabled = false;
 	}).catch(error => {
 		console.error(error);
-		alert("An error occurred while adding the tag");	
+		swal("Nah fam 🤚", "Unable to create new tag", "error");
 		button.disabled = false;	
 	});
 });
@@ -482,7 +510,7 @@ client.query<GQL.IQuery>({
 	}	
 }).catch(error => {
 	console.error(error);
-	alert("Error fetching registration question names");
+	swal("Nah fam ✋", "Error fetching registration question names", "error");
 });
 
 // Toggle display of question checkboxes
@@ -520,7 +548,7 @@ client.query<GQL.IQuery>({
 	}	
 }).catch(error => {
 	console.error(error);
-	alert("Error fetching registration application branches");
+	swal("Nah fam ✋", "Error fetching registration application branches", "error");
 });
 
 // Populate confirmation branch options
@@ -538,7 +566,7 @@ client.query<GQL.IQuery>({
 	}	
 }).catch(error => {
 	console.error(error);
-	alert("Error fetching registration confirmation branches");	
+	swal("Nah fam ✋", "Error fetching registration confirmation branches", "error");
 });
 
 document.getElementById("branches-filter")!.addEventListener("change", e => {
@@ -600,7 +628,7 @@ client.subscribe({
 		let status = <HTMLSpanElement> document.querySelector(`#${button.parentElement!.parentElement!.id} > .actions > span.status`)!;
 
 		if (attendeeTag.checked_in) {
-			button.textContent = "Uncheck in";
+			button.textContent = "Check out";
 			button.classList.add("checked-in");
 			if (attendeeTag.checked_in_date && attendeeTag.checked_in_by) {
 				status.innerHTML = statusFormatter(attendeeTag.checked_in_date, attendeeTag.checked_in_by);
@@ -614,7 +642,7 @@ client.subscribe({
 	}
 });
 
-attachUserDeleteHandlers()
+attachUserDeleteHandlers();
 // Update check in relative times every minute the lazy way
 setInterval(() => {
 	if (States["checkin"].isDisplayed) {

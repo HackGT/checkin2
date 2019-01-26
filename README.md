@@ -27,8 +27,12 @@ A [Dockerfile](Dockerfile) is provided for convenience.
     npm test # Optional: run tests
     npm start
 
+You can also run `npm run build-start` to quickly compile and then start Checkin.  If running on Windows, you'll need to complete these steps in Bash on Ubuntu on Windows or in a Linux virtual machine since the compile process involves running a bash script.
+
 Environment Variable | Description
 ---------------------|------------
+ADMIN_KEY_SECRET | API key for an admin account in the specified instance of [registration](https://github.com/hackgt/registration)
+REGISTRATION_GRAPHQL | URL for the [registration](https://github.com/hackgt/registration) instance GraphQL API to connect to (e.g., https://registation.hack.gt/graphql)
 PORT | The port the check in system should run on (default: `3000`)
 MONGO_URL | The URL to the MongoDB server including the database (default: `mongodb://localhost/checkin`)
 

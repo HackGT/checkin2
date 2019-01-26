@@ -46,3 +46,6 @@ apis/*
 
 # just emacs things
 .#*
+
+# IntelliJ
+.idea/

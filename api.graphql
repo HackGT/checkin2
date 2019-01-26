@@ -11,7 +11,7 @@ type Mutation {
   # Check-out a user by specifying the tag name
   check_out(user: ID!, tag: String!): UserAndTags
   # Add tag to all users
-  add_tag(tag: String!, start: String, end: String): Tag
+  add_tag(tag: String!, start: String, end: String, warnOnDuplicates: Boolean = false): Tag
 }
 
 # The root query type, use to query data
@@ -62,6 +62,8 @@ type Tag {
   start: String
   # The end time of the event associated with the tag
   end: String
+  # Whether to error on a repeated check in/out event for a user and this tag
+  warnOnDuplicates: Boolean
 }
 
 # Record of checked in / checked out activity
@@ -70,16 +72,24 @@ type TagDetail {
   # Date when attendee was checked in or out
   checked_in_date: String!
   # The username of the admin that checked thte attendee in or out
-  checked_in_by: String! 
+  checked_in_by: String!
+  # Whether, at the time this checkin attempt was made, the operation was successful.  If false, the check-in
+  # attempt was rejected.  If true or the tag has warnOnDuplicates = true, the check-in request was accepted.
+  checkin_success: Boolean!
 }
 
 type TagState {
   tag: Tag!
   checked_in: Boolean!
+  # If the tag has warnOnDuplicates = false, then this will always return true.  Otherwise, true indicates a valid check-in
+  # and false indicates a duplicate check-in event (e.g., trying to check-in a user for a tag they are already checked into).
+  checkin_success: Boolean!
   # Date when the attendee was checked in
-  checked_in_date: String
+  checked_in_date: String!
   # The username of the admin that checked the attendee in
   checked_in_by: String!
+  # Details object for the most recent successful check in/out
+  last_successful_checkin: TagDetail
   # An array of previous checked in / checked out events
   details: [TagDetail]!
 }
