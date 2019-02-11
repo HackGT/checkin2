@@ -242,6 +242,14 @@ function resolver(registration: Registration): IResolver {
                     return null;
                 }
 
+                // If warnOnDuplicates is not set for this tag, set it to true (most restrictive option)
+                if (!tagDetails.hasOwnProperty("warnOnDuplicates")
+                    || tagDetails.warnOnDuplicates === null
+                    || typeof tagDetails.warnOnDuplicates === "undefined") {
+                    tagDetails.warnOnDuplicates = true;
+                    await tagDetails.save();
+                }
+
                 let attendee = await Attendee.findOne({
                     id: args.user
                 });
@@ -317,6 +325,14 @@ function resolver(registration: Registration): IResolver {
                 const tagDetails = await Tag.findOne({ name: args.tag });
                 if (!tagDetails || !schema) {
                     return null;
+                }
+
+                // If warnOnDuplicates is not set for this tag, set it to true (most restrictive option)
+                if (!tagDetails.hasOwnProperty("warnOnDuplicates")
+                    || tagDetails.warnOnDuplicates === null
+                    || typeof tagDetails.warnOnDuplicates === "undefined") {
+                    tagDetails.warnOnDuplicates = true;
+                    await tagDetails.save();
                 }
 
                 let attendee = await Attendee.findOne({
