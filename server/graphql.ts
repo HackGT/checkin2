@@ -243,9 +243,7 @@ function resolver(registration: Registration): IResolver {
                 }
 
                 // If warnOnDuplicates is not set for this tag, set it to true (most restrictive option)
-                if (!tagDetails.hasOwnProperty("warnOnDuplicates")
-                    || tagDetails.warnOnDuplicates === null
-                    || typeof tagDetails.warnOnDuplicates === "undefined") {
+                if (!tagDetails.warnOnDuplicates) {
                     tagDetails.warnOnDuplicates = true;
                     await tagDetails.save();
                 }
@@ -328,9 +326,7 @@ function resolver(registration: Registration): IResolver {
                 }
 
                 // If warnOnDuplicates is not set for this tag, set it to true (most restrictive option)
-                if (!tagDetails.hasOwnProperty("warnOnDuplicates")
-                    || tagDetails.warnOnDuplicates === null
-                    || typeof tagDetails.warnOnDuplicates === "undefined") {
+                if (!tagDetails.warnOnDuplicates) {
                     tagDetails.warnOnDuplicates = true;
                     await tagDetails.save();
                 }
