@@ -1,6 +1,6 @@
 {
   "name": "checkin2",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "description": "Check-in for HackGT events",
   "main": "app.js",
   "scripts": {
