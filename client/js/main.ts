@@ -169,7 +169,10 @@ function checkIn(e: Event) {
                 }
             }
             if (!checkin_success) {
-                swal("Glitch in the matrix", "Your local check-in data is out-of-date.  Please refresh the page to continue", "error");
+                swal({ title: "Glitch in the matrix",
+                    text: "Your local check-in data is out-of-date.  Please refresh the page to continue",
+                    type: "error",
+                    confirmButtonText: "Refresh" }).then(() => window.location.reload());
             }
         } else {
             swal("Empty server response", "The server didn't respond with the expected data", "error");
