@@ -157,20 +157,17 @@ function checkIn(e: Event) {
         }
     }).then(response => {
         button.disabled = false;
-        console.log(response);
 
         if (response && response.data) {
-            console.log("inside")
             let checkin_success = null;
             for (let i = 0; i < response.data.check_in.tags.length; i++) {
                 let tagData = response.data.check_in.tags[i];
-                console.log(tagData.tag.name, tag);
+
                 if (tagData.tag.name === tag) {
                     checkin_success = tagData.checkin_success;
                     break;
                 }
             }
-            console.log("checkin_success", checkin_success)
             if (!checkin_success) {
                 swal("Glitch in the matrix", "Your local check-in data is out-of-date.  Please refresh the page to continue", "error");
             }
