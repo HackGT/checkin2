@@ -58,7 +58,7 @@ function getLastSuccessfulCheckin(pastCheckins: ITagItem, checkIn: boolean): ITa
     if (!pastCheckins || !pastCheckins.details) {
         return null;
     }
-    let { details } = pastCheckins; // ES6 destructuring, so this is equivalent to let details = pastCheckins.details
+    let {details} = pastCheckins; // ES6 destructuring, so this is equivalent to let details = pastCheckins.details
 
     for (let i = details.length - 1; i >= 0; i--) { // start at the end b/c later check-in/out events will be at the end of the array
         const event = details[i];
@@ -245,7 +245,9 @@ function resolver(registration: Registration): IResolver {
                 }
 
                 // If warnOnDuplicates is not set for this tag, set it to true (most restrictive option)
-                if (!tagDetails.warnOnDuplicates) {
+                // console.log here to better identify what's happening here in prod
+                console.log("tagDetails.warnOnDuplicates", tagDetails.warnOnDuplicates);
+                if (tagDetails.warnOnDuplicates == null) {
                     tagDetails.warnOnDuplicates = true;
                     await tagDetails.save();
                 }
@@ -323,11 +325,11 @@ function resolver(registration: Registration): IResolver {
              */
             add_tag: async (prev, args, ctx, schema) => {
                 // Return none if the tag already exists (prevent duplicates)
-                if (await Tag.findOne({ name: args.tag })) {
+                if (await Tag.findOne({name: args.tag})) {
                     return null;
                 }
 
-                let tag = new Tag({ name: args.tag });
+                let tag = new Tag({name: args.tag});
                 if (args.start) tag.start = new Date(args.start);
                 if (args.end) tag.end = new Date(args.end);
                 if (tag.start && tag.end && tag.start >= tag.end) {
