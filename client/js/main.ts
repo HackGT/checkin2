@@ -192,31 +192,40 @@ function attachUserDeleteHandlers() {
             let source = (<HTMLButtonElement>e.target)!;
             let username: string = source.parentElement!.parentElement!.dataset.username!;
             let extraWarn: boolean = !!source.parentElement!.querySelector(".status");
-            const extraWarnMessage = `**YOU ARE TRYING TO DELETE THE ACCOUNT THAT YOU ARE CURRENTLY LOGGED IN WITH. THIS WILL DELETE YOUR USER AND LOG YOU OUT.**`;
+            const extraWarnMessage = `<strong><em>YOU ARE TRYING TO DELETE THE ACCOUNT THAT YOU ARE CURRENTLY LOGGED IN 
+                                         WITH. THIS WILL DELETE YOUR USER AND LOG YOU OUT.</em></strong>`;
 
-            let shouldContinue: boolean = confirm(`${extraWarn ? extraWarnMessage + "\n\n" : ""}Are you sure that you want to delete the user '${username}'?`);
-            if (!shouldContinue)
-                return;
+           swal({
+                title: `Delete ${username}?`,
+                html: `${extraWarn ? extraWarnMessage + "<br /><br />" : ""}<strong>${username}</strong> will be permanently deleted!`,
+                type: 'warning',
+                showCancelButton: true,
+                confirmButtonText: "Delete",
+                confirmButtonColor: "#dc3545"
+            }).then(result => {
+                if (result.value) {
+                    source.disabled = true;
+                    qwest.delete("/api/user/update", {
+                        username: username
+                    }).then((xhr, response) => {
+                        let toRemove = document.querySelector(`li[data-username="${username}"]`);
+                        if (toRemove && toRemove.parentElement) {
+                            toRemove.parentElement.removeChild(toRemove);
+                        }
+                        // Reattach button event handlers
+                        attachUserDeleteHandlers();
 
-            source.disabled = true;
-            qwest.delete("/api/user/update", {
-                username: username
-            }).then((xhr, response) => {
-                let toRemove = document.querySelector(`li[data-username="${username}"]`);
-                if (toRemove && toRemove.parentElement) {
-                    toRemove.parentElement.removeChild(toRemove);
+                        if (response.reauth) {
+                            window.location.reload();
+                        }
+                    }).catch((e, xhr, response) => {
+                        swal("Couldn't delete user", response.error, "error");
+                    }).complete(() => {
+                        source.disabled = false;
+                    });
                 }
-                // Reattach button event handlers
-                attachUserDeleteHandlers();
+           });
 
-                if (response.reauth) {
-                    window.location.reload();
-                }
-            }).catch((e, xhr, response) => {
-                swal("Unable to process request", response.error, "error");
-            }).complete(() => {
-                source.disabled = false;
-            });
         });
     }
 }
