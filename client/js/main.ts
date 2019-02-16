@@ -303,9 +303,6 @@ function loadAttendees(filter: string = queryField.value, checkedIn: string = ch
                 tag {
                     name
                 }
-                checked_in
-                checked_in_by
-                checked_in_date
                 last_successful_checkin {
                     checked_in
                     checked_in_by
