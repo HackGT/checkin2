@@ -201,6 +201,7 @@ function attachUserDeleteHandlers() {
                 type: 'warning',
                 showCancelButton: true,
                 confirmButtonText: "Delete",
+                focusCancel: true,
                 confirmButtonColor: "#dc3545"
             }).then(result => {
                 if (result.value) {
