@@ -101,6 +101,6 @@ export const Tag = mongoose.model<ITagMongoose>("Tag", new mongoose.Schema({
 	warnOnDuplicates: {
 		type: Boolean,
 		required: true,
-		default: false
+		default: true
 	}
 }));
