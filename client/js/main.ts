@@ -6,12 +6,12 @@ declare let moment: any;
 import {ApolloClient} from "apollo-client";
 import {split} from "apollo-link";
 import {createHttpLink} from "apollo-link-http";
-import {InMemoryCache} from 'apollo-cache-inmemory';
+import {InMemoryCache} from "apollo-cache-inmemory";
 import {WebSocketLink} from "apollo-link-ws";
 import {SubscriptionClient} from "subscriptions-transport-ws";
-import {getOperationAST} from 'graphql';
-import gql from 'graphql-tag';
-import swal from 'sweetalert2';
+import {getOperationAST} from "graphql";
+import gql from "graphql-tag";
+import swal from "sweetalert2";
 
 const httpLink = createHttpLink({
     uri: "/graphql",
@@ -152,7 +152,7 @@ function checkIn(e: Event) {
         mutation: mutation,
         variables: {
             user: id,
-            tag: tag,
+            tag,
             checkin: checkingIn
         }
     }).then(response => {
@@ -198,7 +198,7 @@ function attachUserDeleteHandlers() {
            swal({
                 title: `Delete ${username}?`,
                 html: `${extraWarn ? extraWarnMessage + "<br /><br />" : ""}<strong>${username}</strong> will be permanently deleted!`,
-                type: 'warning',
+                type: "warning",
                 showCancelButton: true,
                 confirmButtonText: "Delete",
                 focusCancel: true,
