@@ -256,9 +256,8 @@ function resolver(registration: Registration): IResolver {
                     id: args.user
                 });
 
-                const path = args.checkin ? "check_in" : "check_out";
                 const forwarder = registration.forward({
-                    path: `${path}.user`,
+                    path: `check_in.user`,
                     include: [
                         "id",
                         "email",
