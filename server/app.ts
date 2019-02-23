@@ -163,7 +163,8 @@ export function printHackGTMetricsEvent(args: {user: string, tag: string}, userI
 	if (!(await Tag.findOne())) {
 		// Add default tag
 		let defaultTag = new Tag({
-			name: "hackgt"
+			name: "hackgt",
+			warnOnDuplicates: true
 		});
 		await defaultTag.save();
 	}

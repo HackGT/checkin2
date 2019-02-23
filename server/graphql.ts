@@ -58,7 +58,7 @@ function getLastSuccessfulCheckin(pastCheckins: ITagItem, checkIn: boolean): ITa
     if (!pastCheckins || !pastCheckins.details) {
         return null;
     }
-    let { details } = pastCheckins; // ES6 destructuring, so this is equivalent to let details = pastCheckins.details
+    let {details} = pastCheckins; // ES6 destructuring, so this is equivalent to let details = pastCheckins.details
 
     for (let i = details.length - 1; i >= 0; i--) { // start at the end b/c later check-in/out events will be at the end of the array
         const event = details[i];
@@ -205,11 +205,13 @@ function resolver(registration: Registration): IResolver {
                 return Object.keys(attendee.tags).map(tag => {
                     const date = attendee.tags[tag].checked_in_date;
                     const lastSuccess = attendee.tags[tag].last_successful_checkin;
+
                     return {
                         tag: {
                             name: tag
                         },
-                        checkin_success: attendee.tags[tag].checkin_success,
+                        checkin_success: (attendee.tags[tag].checkin_success == null)
+                            ? true : attendee.tags[tag].checkin_success,
                         checked_in: attendee.tags[tag].checked_in,
                         checked_in_date: date ? date.toISOString() : "",
                         checked_in_by: attendee.tags[tag].checked_in_by || "",
@@ -217,14 +219,14 @@ function resolver(registration: Registration): IResolver {
                             checked_in: lastSuccess.checked_in,
                             checked_in_date: lastSuccess.checked_in_date.toISOString(),
                             checked_in_by: lastSuccess.checked_in_by,
-                            checkin_success: lastSuccess.checkin_success
+                            checkin_success: (lastSuccess.checkin_success == null) ? true : lastSuccess.checkin_success
                         } : null,
                         details: attendee.tags[tag].details.map((elem) => {
                             return {
                                 checked_in: elem.checked_in,
                                 checked_in_date: elem.checked_in_date.toISOString(),
                                 checked_in_by: elem.checked_in_by,
-                                checkin_success: elem.checkin_success
+                                checkin_success: (elem.checkin_success == null) ? true : elem.checkin_success
                             }
                         })
                     };
@@ -233,13 +235,21 @@ function resolver(registration: Registration): IResolver {
         },
         Mutation: {
             /**
-             * Check in a user by specifying the tag name
+             * Check in/out a user by specifying the tag name
              */
             check_in: async (prev, args, ctx, schema) => {
                 // Return none if tag doesn't exist
-                const tagDetails = await Tag.findOne({ name: args.tag });
+                const tagDetails = await Tag.findOne({name: args.tag});
                 if (!tagDetails || !schema) {
                     return null;
+                }
+
+                // If warnOnDuplicates is not set for this tag, set it to true (most restrictive option)
+                // console.log here to better identify what's happening here in prod
+                console.log("tagDetails.warnOnDuplicates", tagDetails.warnOnDuplicates);
+                if (tagDetails.warnOnDuplicates == null) {
+                    tagDetails.warnOnDuplicates = true;
+                    await tagDetails.save();
                 }
 
                 let attendee = await Attendee.findOne({
@@ -247,7 +257,7 @@ function resolver(registration: Registration): IResolver {
                 });
 
                 const forwarder = registration.forward({
-                    path: "check_in.user",
+                    path: `check_in.user`,
                     include: [
                         "id",
                         "email",
@@ -276,12 +286,12 @@ function resolver(registration: Registration): IResolver {
                 const pastCheckins = attendee.tags[args.tag];
 
 
-                const validCheckin = validateCheckin(pastCheckins, true);
+                const validCheckin = validateCheckin(pastCheckins, args.checkin);
                 let success = !tagDetails.warnOnDuplicates ? true : validCheckin;
 
                 attendee.tags[args.tag] = {
                     checkin_success: success,
-                    checked_in: true,
+                    checked_in: args.checkin,
                     checked_in_date: date,
                     checked_in_by: username,
                     last_successful_checkin: null,
@@ -289,99 +299,23 @@ function resolver(registration: Registration): IResolver {
                 };
 
                 attendee.tags[args.tag].details.push({
-                    checked_in: true,
+                    checked_in: args.checkin,
                     checked_in_date: date,
                     checked_in_by: username,
                     checkin_success: success
                 });
 
                 // Make sure we include the latest details element for last_successful_checkin
-                attendee.tags[args.tag].last_successful_checkin = getLastSuccessfulCheckin(attendee.tags[args.tag], true);
+                attendee.tags[args.tag].last_successful_checkin = getLastSuccessfulCheckin(attendee.tags[args.tag], args.checkin);
 
                 attendee.markModified('tags');
                 await attendee.save();
 
-                pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
+                pubsub.publish(TAG_CHANGE, {[TAG_CHANGE]: userInfo});
 
                 // validCheckin indicates duplicate check in/out events regardless of warnOnDuplicates,
                 //    which means we can still get accurate metrics for tags with warnOnDuplicates = false
-                printHackGTMetricsEvent(args, userInfo, loggedInUser, true, validCheckin);
-                return userInfo;
-            },
-
-            /**
-             * Check-out a user by specifying the tag name
-             */
-            check_out: async (prev, args, ctx, schema) => {
-                // Return none if tag doesn't exist
-                const tagDetails = await Tag.findOne({ name: args.tag });
-                if (!tagDetails || !schema) {
-                    return null;
-                }
-
-                let attendee = await Attendee.findOne({
-                    id: args.user
-                });
-
-                const forwarder = registration.forward({
-                    path: "check_out.user",
-                    include: [
-                        "id",
-                        "email",
-                        "name"
-                    ],
-                    head: `user(id: "${args.user}")`
-                });
-                const userInfo = await forwarder(prev, args, ctx, schema);
-                if (!userInfo.user) {
-                    return null;
-                }
-
-                // Create attendee if it doesn't already exist
-                if (!attendee) {
-                    attendee = new Attendee({
-                        id: args.user,
-                        name: userInfo.user.name,
-                        emails: userInfo.user.email,
-                        tags: {}
-                    });
-                }
-                const loggedInUser = await getLoggedInUser(ctx);
-                const date = new Date();
-                const username = loggedInUser.user ? loggedInUser.user.username : "";
-                const pastCheckins = attendee.tags[args.tag];
-                const validCheckin = validateCheckin(pastCheckins, false);
-                let success = (!tagDetails.warnOnDuplicates && pastCheckins && pastCheckins.details
-                    && pastCheckins.details.length > 0) ? true : validCheckin;
-
-                attendee.tags[args.tag] = {
-                    checkin_success: success,
-                    checked_in: false,
-                    checked_in_date: date,
-                    checked_in_by: username,
-                    last_successful_checkin: null,
-                    details: attendee.tags[args.tag] ? attendee.tags[args.tag].details : []
-                };
-
-                attendee.tags[args.tag].details.push({
-                    checked_in: false,
-                    checked_in_date: date,
-                    checked_in_by: username,
-                    checkin_success: success
-                });
-
-                // Make sure we include the latest details element for last_successful_checkin
-                attendee.tags[args.tag].last_successful_checkin = getLastSuccessfulCheckin(attendee.tags[args.tag], false);
-
-
-                attendee.markModified('tags');
-                await attendee.save();
-
-                pubsub.publish(TAG_CHANGE, {[TAG_CHANGE] : userInfo});
-
-                // validCheckin indicates duplicate check in/out events regardless of warnOnDuplicates,
-                //    which means we can still get accurate metrics for tags with warnOnDuplicates = false
-                printHackGTMetricsEvent(args, userInfo, loggedInUser, false, validCheckin);
+                printHackGTMetricsEvent(args, userInfo, loggedInUser, args.checkin, validCheckin);
                 return userInfo;
             },
 
@@ -390,11 +324,11 @@ function resolver(registration: Registration): IResolver {
              */
             add_tag: async (prev, args, ctx, schema) => {
                 // Return none if the tag already exists (prevent duplicates)
-                if (await Tag.findOne({ name: args.tag })) {
+                if (await Tag.findOne({name: args.tag})) {
                     return null;
                 }
 
-                let tag = new Tag({ name: args.tag });
+                let tag = new Tag({name: args.tag});
                 if (args.start) tag.start = new Date(args.start);
                 if (args.end) tag.end = new Date(args.end);
                 if (tag.start && tag.end && tag.start >= tag.end) {

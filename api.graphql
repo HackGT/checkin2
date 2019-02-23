@@ -6,10 +6,8 @@ schema {
 
 # The root mutation type, use it to change things
 type Mutation {
-  # Check-in a user by specifying the tag name
-  check_in(user: ID!, tag: String!): UserAndTags
-  # Check-out a user by specifying the tag name
-  check_out(user: ID!, tag: String!): UserAndTags
+  # Check-in or check-out a user by specifying the tag name.  Check-in when checkin is set to true; check-out when checkin is set to false
+  check_in(user: ID!, tag: String!, checkin: Boolean!): UserAndTags
   # Add tag to all users
   add_tag(tag: String!, start: String, end: String, warnOnDuplicates: Boolean = false): Tag
 }
