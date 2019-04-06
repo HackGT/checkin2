@@ -63,10 +63,11 @@
 		<main>
 			<section id="checkin">
 				<div class="card">
-					<div id="catalyst-mode-enabled">
+					{{#if catalyst_mode}}<div id="catalyst-mode-enabled">
 						Catalyst mode is enabled.  All check in and check out actions are logged with your username,
 						and additional verification steps may be required.
 					</div>
+					{{/if}}
 					<div class="card-content">
 						<section class="center">
 
