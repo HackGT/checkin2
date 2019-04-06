@@ -12,6 +12,7 @@ export interface IConfig {
 			username: string;
 			password: string;
 		}
+		catalyst_mode: boolean;
 	}
 	secrets: {
 		adminKey: string;
@@ -31,7 +32,8 @@ export const config: IConfig = {
 		default_admin: {
 			username: envOrDefault("DEFAULT_ADMIN_USER", "admin"),
 			password: envOrDefault("DEFAULT_ADMIN_PASS", "admin"),
-		}
+		},
+		catalyst_mode: envOrDefault("CATALYST_MODE", "false").toLowerCase() === "true"
 	},
 	secrets: {
 		adminKey: env("ADMIN_KEY_SECRET")

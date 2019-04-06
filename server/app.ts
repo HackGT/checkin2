@@ -367,10 +367,11 @@ app.route("/").get(authenticateWithRedirect, async (request, response) => {
 			isActiveSession: user.username === response.locals.username
 		};
 	});
-
+	console.log("Catalyst mode is", config.app.catalyst_mode);
 	response.send(indexTemplate({
 		username: response.locals.username,
 		version: `v${VERSION_NUMBER}`,
+		catalyst_mode: config.app.catalyst_mode,
 		tags,
 		userInfo
 	}));
