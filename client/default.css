@@ -206,3 +206,10 @@ div#button-row {
 	flex: 0 1 100%;
 	text-align: center;
 }
+
+#catalyst-mode-enabled {
+	text-align: center;
+	background: #ffc107;
+	color: white;
+	padding: 5px;
+}
