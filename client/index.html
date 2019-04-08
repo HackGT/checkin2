@@ -1,237 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<title>HackGT Check In</title>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-		<meta name="theme-color" content="#242424"/>
+<head>
+    <title>HackGT Check In</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+    <meta name="theme-color" content="#242424"/>
 
-		<link rel="stylesheet" href="/node_modules/material-components-web/dist/material-components-web.css" />
-		<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
-		<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,700" />
-		<link rel="stylesheet" href="/default.css" />
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/qwest/4.4.5/qwest.min.js"></script>
-		<script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
-	</head>
-	<body class="mdc-typography">
-		<nav class="toolbar">
-			<i class="material-icons mdc-ripple-surface" aria-hidden="true">menu</i>
+    <link rel="stylesheet" href="/node_modules/material-components-web/dist/material-components-web.css" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:400,300,700" />
+    <link rel="stylesheet" href="/default.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qwest/4.4.5/qwest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
+</head>
+<body class="mdc-typography">
+<nav class="toolbar">
+    <i class="material-icons mdc-ripple-surface" aria-hidden="true">menu</i>
 
-			<img src="https://hackgt.com/img/logo.png" alt="" />
-			<h1 class="mdc-typography--title">HackGT Check In</h1>
-		</nav>
+    <img src="https://hackgt.com/img/logo.png" alt="" />
+    <h1 class="mdc-typography--title">HackGT Check In</h1>
+</nav>
 
-		<aside class="mdc-temporary-drawer mdc-typography">
-			<nav class="mdc-temporary-drawer__drawer">
+<aside class="mdc-temporary-drawer mdc-typography">
+    <nav class="mdc-temporary-drawer__drawer">
 
-				<header class="mdc-temporary-drawer__header">
-					<div class="mdc-temporary-drawer__header-content">
-						<span id="username">{{username}}</span>
-						<span id="version">{{version}}</span>
-					</div>
-				</header>
+        <header class="mdc-temporary-drawer__header">
+            <div class="mdc-temporary-drawer__header-content">
+                <span id="username">{{username}}</span>
+                <span id="version">{{version}}</span>
+            </div>
+        </header>
 
-				<nav id="icon-with-text-demo" class="mdc-temporary-drawer__content mdc-list">
-					<a class="mdc-list-item mdc-temporary-drawer--selected" href="#" id="open-checkin">
-						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">format_list_bulleted</i>
-						Check in
-					</a>
-					<a class="mdc-list-item" href="#">
-						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">assignment</i>
-						<select class="mdc-list-item tags" id="tag-choose">
-							{{#each tags}}
-								<option>{{this}}</option>
-							{{/each}}
-						</select>
-					</a>
-					<a class="mdc-list-item" href="#tags" id="open-tags">
-						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">mode_edit</i>
-						Create tag
-					</a>					
-					<a class="mdc-list-item" href="#users" id="open-users">
-						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">account_box</i>
-						Configure users
-					</a>
-					<a class="mdc-list-item" href="/login">
-						<i class="material-icons mdc-list-item__start-detail" aria-hidden="true">exit_to_app</i>
-						Log out
-					</a>
-				</nav>
-			</nav>
-		</aside>
+        <nav id="icon-with-text-demo" class="mdc-temporary-drawer__content mdc-list">
+            <a class="mdc-list-item mdc-temporary-drawer--selected" href="#" id="open-checkin">
+                <i class="material-icons mdc-list-item__start-detail" aria-hidden="true">format_list_bulleted</i>
+                Check in
+            </a>
+            <a class="mdc-list-item" href="#">
+                <i class="material-icons mdc-list-item__start-detail" aria-hidden="true">assignment</i>
+                <select class="mdc-list-item tags" id="tag-choose">
+                    {{#each tags}}
+                    <option>{{this}}</option>
+                    {{/each}}
+                </select>
+            </a>
+            <a class="mdc-list-item" href="#tags" id="open-tags">
+                <i class="material-icons mdc-list-item__start-detail" aria-hidden="true">mode_edit</i>
+                Create tag
+            </a>
+            <a class="mdc-list-item" href="#users" id="open-users">
+                <i class="material-icons mdc-list-item__start-detail" aria-hidden="true">account_box</i>
+                Configure users
+            </a>
+            <a class="mdc-list-item" href="/login">
+                <i class="material-icons mdc-list-item__start-detail" aria-hidden="true">exit_to_app</i>
+                Log out
+            </a>
+        </nav>
+    </nav>
+</aside>
 
-		<main>
-			<section id="checkin">
-				<div class="card">
-					{{#if catalyst_mode}}<div id="catalyst-mode-enabled">
-						Catalyst mode is enabled.  All check in and check out actions are logged with your username,
-						and additional verification steps may be required.
-					</div>
-					{{/if}}
-					<div class="card-content">
-						<section class="center">
+<main>
+    <section id="checkin">
+        <div class="card">
+            {{#if catalyst_mode}}
+            <div id="catalyst-mode-enabled">
+            Catalyst mode is enabled.  All check in and check out actions are logged with your username,
+            and additional verification steps may be required.
+            </div>
+            {{/if}}
+            <div class="card-content">
+                <section class="center">
 
-							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="query">
-								<label class="mdc-textfield__label" for="query">Search for names and emails</label>
-							</div>
-							<select class="mdc-select" style="max-width: 300px; display: none;" id="checked-in-filter">
-								<option value="" default selected>All attendees</option>
-								<option value="true">Checked-in attendees</option>
-								<option value="false">Non checked in attendees</option>
-							</select>
-							<em id="loading-status">Loading...</em>
-							<div id="question-options-wrapper" class="collapsible">
-								<span><i class="material-icons">keyboard_arrow_down</i>Registration Questions</span>
-								<div id="question-options" style="display:none;">
-									<div id="button-row">
-										<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="update-question-options">
-											Update
-										</button>
-									</div>
-								</div>
-							</div>
-							<div id="filters-wrapper" class="collapsible">
-								<span><i class="material-icons">keyboard_arrow_down</i>Registration Filters</span>
-								<div id="filters" style="display: none;">
-									<select class="mdc-select" style="width: 300px;" id="attending-filter">
-										<option value="">All users</option>
-										<option value="applied">Applied</option>
-										<option value="accepted">Accepted</option>
-										<option value="attending" default selected>Attending</option>
-									</select>
-									<select class="mdc-select" style="width: 300px;" id="branches-filter">
-										<option value="">All application branches</option>
-									</select>
-									<select class="mdc-select" style="width: 300px;"
-                                            id="confirmation-branches-filter">
-										<option value="">All confirmation branches</option>
-									</select>
-								</div>
-							</div>
-						</section>
+                    <div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+                        <input class="mdc-textfield__input" type="text" id="query">
+                        <label class="mdc-textfield__label" for="query">Search for names and emails</label>
+                    </div>
+                    <select class="mdc-select" style="max-width: 300px; display: none;" id="checked-in-filter">
+                        <option value="" default selected>All attendees</option>
+                        <option value="true">Checked-in attendees</option>
+                        <option value="false">Non checked in attendees</option>
+                    </select>
+                    <em id="loading-status">Loading...</em>
+                    <div id="question-options-wrapper" class="collapsible">
+                        <span><i class="material-icons">keyboard_arrow_down</i>Registration Questions</span>
+                        <div id="question-options" style="display:none;">
+                            <div id="button-row">
+                                <button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="update-question-options">
+                                    Update
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="filters-wrapper" class="collapsible">
+                        <span><i class="material-icons">keyboard_arrow_down</i>Registration Filters</span>
+                        <div id="filters" style="display: none;">
+                            <select class="mdc-select" style="width: 300px;" id="attending-filter">
+                                <option value="">All users</option>
+                                <option value="applied">Applied</option>
+                                <option value="accepted">Accepted</option>
+                                <option value="attending" default selected>Attending</option>
+                            </select>
+                            <select class="mdc-select" style="width: 300px;" id="branches-filter">
+                                <option value="">All application branches</option>
+                            </select>
+                            <select class="mdc-select" style="width: 300px;"
+                                    id="confirmation-branches-filter">
+                                <option value="">All confirmation branches</option>
+                            </select>
+                        </div>
+                    </div>
+                </section>
 
-						<ul class="mdc-list mdc-list--two-line" id="attendees"></ul>
-					</div>
-				</div>
-			</section>
+                <ul class="mdc-list mdc-list--two-line" id="attendees"></ul>
+            </div>
+        </div>
+    </section>
 
-			<section id="manage-users" style="display: none;">
-				<div class="card">
-					<div class="card-content">
-						<section class="center">
-							<h1 class="mdc-typography--headline">Manage users</h1>
-							<p>Enter an existing username to update that account's password</p>
+    <section id="manage-users" style="display: none;">
+        <div class="card">
+            <div class="card-content">
+                <section class="center">
+                    <h1 class="mdc-typography--headline">Manage users</h1>
+                    <p>Enter an existing username to update that account's password</p>
 
-							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="manage-username">
-								<label class="mdc-textfield__label" for="manage-username">Username</label>
-							</div>
-							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="password" id="manage-password">
-								<label class="mdc-textfield__label" for="manage-password">Password</label>
-							</div>
-							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-update-user">
-								Add / Update user
-							</button>
-						</section>
+                    <div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+                        <input class="mdc-textfield__input" type="text" id="manage-username">
+                        <label class="mdc-textfield__label" for="manage-username">Username</label>
+                    </div>
+                    <div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+                        <input class="mdc-textfield__input" type="password" id="manage-password">
+                        <label class="mdc-textfield__label" for="manage-password">Password</label>
+                    </div>
+                    <button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-update-user">
+                        Add / Update user
+                    </button>
+                </section>
 
-						<ul class="mdc-list mdc-list mdc-list--two-line" id="users">
-							{{#each userInfo}}
-								<li class="mdc-list-item" data-username="{{this.username}}">
-									<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
-									<span class="mdc-list-item__text">
+                <ul class="mdc-list mdc-list mdc-list--two-line" id="users">
+                    {{#each userInfo}}
+                    <li class="mdc-list-item" data-username="{{this.username}}">
+                        <i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_box</i>
+                        <span class="mdc-list-item__text">
 										<span class="mdc-list-item__text__primary mdc-typography--title username">{{this.username}}</span>
 										<span class="mdc-list-item__text__primary mdc-typography--body1">{{this.activeSessions}}</span>
 									</span>
-									<div class="actions">
-										{{#if this.isActiveSession}}
-											<span class="mdc-typography--body2 status">Active session</span>
-										{{/if}}
-										<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
-											Delete
-										</button>
-									</div>
-								</li>
-							{{/each}}
-						</ul>
-					</div>
-				</div>
-			</section>
-			<section id="edit-tags" style="display: none;">
-				<div class="card">
-					<div class="card-content">
-						<section class="center">
-							<h1 class="mdc-typography--headline">Create Tag</h1>
-							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="text" id="new-tag-name">
-								<label class="mdc-textfield__label" for="new-tag-name">Tag Name</label>
-							</div>
-							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="datetime-local" id="new-tag-start-dt">
-								<label class="mdc-textfield__label mdc-textfield__label--float-above" for="new-tag-start-dt">Start Date/Time (Optional)</label>
-							</div>
-							<div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
-								<input class="mdc-textfield__input" type="datetime-local" id="new-tag-end-dt">
-								<label class="mdc-textfield__label mdc-textfield__label--float-above" for="new-tag-end-dt">End Date/Time (Optional)</label>
-							</div>
-							<div class="mdc-form-field">
-								<div class="mdc-checkbox">
-									<input type="checkbox" id="tag-warn-duplicate" class="mdc-checkbox__native-control" value="tag-warn-duplicate">
-									<div class="mdc-checkbox__background">
-										<svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
-											<path class="mdc-checkbox__checkmark__path" fill="none" stroke="white" d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
-										</svg>
-										<div class="mdc-checkbox__mixedmark"></div>
-									</div>
-								</div>
+                        <div class="actions">
+                            {{#if this.isActiveSession}}
+                            <span class="mdc-typography--body2 status">Active session</span>
+                            {{/if}}
+                            <button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised danger" data-mdc-auto-init="MDCRipple">
+                                Delete
+                            </button>
+                        </div>
+                    </li>
+                    {{/each}}
+                </ul>
+            </div>
+        </div>
+    </section>
+    <section id="edit-tags" style="display: none;">
+        <div class="card">
+            <div class="card-content">
+                <section class="center">
+                    <h1 class="mdc-typography--headline">Create Tag</h1>
+                    <div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+                        <input class="mdc-textfield__input" type="text" id="new-tag-name">
+                        <label class="mdc-textfield__label" for="new-tag-name">Tag Name</label>
+                    </div>
+                    <div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+                        <input class="mdc-textfield__input" type="datetime-local" id="new-tag-start-dt">
+                        <label class="mdc-textfield__label mdc-textfield__label--float-above" for="new-tag-start-dt">Start Date/Time (Optional)</label>
+                    </div>
+                    <div class="mdc-textfield" data-mdc-auto-init="MDCTextfield">
+                        <input class="mdc-textfield__input" type="datetime-local" id="new-tag-end-dt">
+                        <label class="mdc-textfield__label mdc-textfield__label--float-above" for="new-tag-end-dt">End Date/Time (Optional)</label>
+                    </div>
+                    <div class="mdc-form-field">
+                        <div class="mdc-checkbox">
+                            <input type="checkbox" id="tag-warn-duplicate" class="mdc-checkbox__native-control" value="tag-warn-duplicate">
+                            <div class="mdc-checkbox__background">
+                                <svg class="mdc-checkbox__checkmark" viewBox="0 0 24 24">
+                                    <path class="mdc-checkbox__checkmark__path" fill="none" stroke="white" d="M1.73,12.91 8.1,19.28 22.79,4.59"></path>
+                                </svg>
+                                <div class="mdc-checkbox__mixedmark"></div>
+                            </div>
+                        </div>
 
-								<label for="tag-warn-duplicate">Prevent duplicate check in/outs</label>
-							</div>
-							<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-new-tag">Add</button>
-						</section>
-					</div>
-				</div>
-			</section>
-		</main>
-		<template id="attendee-item">
-			<li class="mdc-list-item">
-				<i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_circle</i>
-				<span class="mdc-list-item__text">
+                        <label for="tag-warn-duplicate">Prevent duplicate check in/outs</label>
+                    </div>
+                    <button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple" id="add-new-tag">Add</button>
+                </section>
+            </div>
+        </div>
+    </section>
+</main>
+<template id="attendee-item">
+    <li class="mdc-list-item">
+        <i class="mdc-list-item__start-detail material-icons" aria-hidden="true">account_circle</i>
+        <span class="mdc-list-item__text">
 					<span id="name" class="mdc-list-item__text__primary mdc-typography--title">Name</span>
 					<span id="emails" class="mdc-list-item__text__primary mdc-typography--body1">Emails</span>
 				</span>
-				<div class="actions">
-					<span id="status" class="mdc-typography--body2 status"></span>
-					<button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple">
-						Check in
-					</button>
-				</div>
-				<div id="additional-info"></div>
-			</li>
-		</template>
-		<template id="checkbox-item">
-			<div class="mdc-form-field">
-			  <div class="mdc-checkbox">
-			    <input type="checkbox"
-			           id="my-checkbox"
-			           class="mdc-checkbox__native-control"/>
-			    <div class="mdc-checkbox__background">
-			      <svg class="mdc-checkbox__checkmark"
-			           viewBox="0 0 24 24">
-			        <path class="mdc-checkbox__checkmark__path"
-			              fill="none"
-			              stroke="white"
-			              d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
-			      </svg>
-			      <div class="mdc-checkbox__mixedmark"></div>
-			    </div>
-			  </div>
+        <div class="actions">
+            <span id="status" class="mdc-typography--body2 status"></span>
+            <button class="mdc-button mdc-button--primary mdc-ripple-surface mdc-button--raised" data-mdc-auto-init="MDCRipple">
+                Check in
+            </button>
+        </div>
+        <div id="additional-info"></div>
+    </li>
+</template>
+<template id="checkbox-item">
+    <div class="mdc-form-field">
+        <div class="mdc-checkbox">
+            <input type="checkbox"
+                   id="my-checkbox"
+                   class="mdc-checkbox__native-control"/>
+            <div class="mdc-checkbox__background">
+                <svg class="mdc-checkbox__checkmark"
+                     viewBox="0 0 24 24">
+                    <path class="mdc-checkbox__checkmark__path"
+                          fill="none"
+                          stroke="white"
+                          d="M1.73,12.91 8.1,19.28 22.79,4.59"/>
+                </svg>
+                <div class="mdc-checkbox__mixedmark"></div>
+            </div>
+        </div>
 
-			  <label for="my-checkbox">Label</label>
-			</div>
-		</template>
-		<script src="/node_modules/material-components-web/dist/material-components-web.js"></script>
-		<script src="/js/bundle.js"></script>
-	</body>
+        <label for="my-checkbox">Label</label>
+    </div>
+</template>
+<script src="/node_modules/material-components-web/dist/material-components-web.js"></script>
+<script src="/js/bundle.js"></script>
+</body>
 </html>

@@ -128,6 +128,34 @@ function statusFormatter(time: string, by: string): string {
     return `Checked in <abbr title="${moment(date).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
 }
 
+function catalystCheckIn(name: string, is18: Boolean) {
+    const over18Icon = '<i class="material-icons catalyst-age-icon green" aria-hidden="true">check_circle</i>';
+    const under18Icon = '<i class="material-icons catalyst-age-icon red" aria-hidden="true">warning</i>';
+    const over18: string = is18 ? `${over18Icon} ${name} is <strong>over 18</strong>`
+        : `${under18Icon} ${name} is a <strong>minor</strong>`;
+
+    return swal({
+        title: 'Enter check-in data',
+        type: "question",
+        showCancelButton: true,
+        html:
+            over18 +
+            '<input id="swal-input1" class="swal2-input">' +
+            '<input id="swal-input2" class="swal2-input">',
+        preConfirm: function () {
+            return new Promise(function (resolve) {
+                resolve({
+                    'input1': (<HTMLInputElement>document.getElementById("swal-input1")!).value,
+                    'input2':(<HTMLInputElement>document.getElementById("swal-input2")!).value
+                })
+            })
+        },
+        onOpen: function () {
+            document.getElementById("swal-input1")!.focus()
+        }
+    });
+}
+
 function checkIn(e: Event) {
     let button = (<HTMLButtonElement>e.target)!;
     let isCheckedIn: boolean = button.classList.contains("checked-in");
@@ -148,41 +176,98 @@ function checkIn(e: Event) {
         }
     }`;
 
-    client.mutate<GQL.IMutation>({
-        mutation: mutation,
-        variables: {
-            user: id,
-            tag,
-            checkin: checkingIn
-        }
-    }).then(response => {
-        button.disabled = false;
-
-        if (response && response.data) {
-            let checkin_success = null;
-            for (let i = 0; i < response.data.check_in.tags.length; i++) {
-                let tagData = response.data.check_in.tags[i];
-
-                if (tagData.tag.name === tag) {
-                    checkin_success = tagData.checkin_success;
-                    break;
+    if (checkingIn) {
+        catalystCheckIn("James Lu", Math.random() > .5)
+            .then(function (result) {
+                if (result.dismiss === swal.DismissReason.cancel) {
+                    button.disabled = false;
+                    return Promise.reject("Check in cancelled");
                 }
-            }
-            if (!checkin_success) {
-                swal({ title: "Glitch in the matrix",
-                    text: "Your local check-in data is out-of-date.  Please refresh the page to continue",
-                    type: "error",
-                    confirmButtonText: "Refresh" }).then(() => window.location.reload());
-            }
-        } else {
-            swal("Empty server response", "The server didn't respond with the expected data", "error");
-        }
+                return swal(JSON.stringify(result));
+            })
+            .then(() => {
+                return client.mutate<GQL.IMutation>({
+                    mutation: mutation,
+                    variables: {
+                        user: id,
+                        tag,
+                        checkin: checkingIn
+                    }
+                });
+            }).then(response => {
+            button.disabled = false;
 
-    }).catch(error => {
-        console.error(error);
-        swal("Nah fam ✋", "An error is preventing us from checking in this user", "error");
-        button.disabled = false;
-    });
+            if (response && response.data) {
+                let checkin_success = null;
+                for (let i = 0; i < response.data.check_in.tags.length; i++) {
+                    let tagData = response.data.check_in.tags[i];
+
+                    if (tagData.tag.name === tag) {
+                        checkin_success = tagData.checkin_success;
+                        break;
+                    }
+                }
+                if (!checkin_success) {
+                    swal({ title: "Glitch in the matrix",
+                        text: "Your local check-in data is out-of-date.  Please refresh the page to continue",
+                        type: "error",
+                        confirmButtonText: "Refresh" }).then(() => window.location.reload());
+                }
+            } else {
+                swal("Empty server response", "The server didn't respond with the expected data", "error");
+            }
+        }).catch(error => {
+            if (error !== "Check in cancelled") {
+                console.error(error);
+                swal("Nah fam ✋", "An error is preventing us from checking in this user", "error");
+                button.disabled = false;
+            }
+        });
+    //}
+    // else if (!checkingIn) {
+    //     swal("checking out").then(() => {
+    //         button.disabled = false;
+    //     })
+    } else {
+        client.mutate<GQL.IMutation>({
+            mutation: mutation,
+            variables: {
+                user: id,
+                tag,
+                checkin: checkingIn
+            }
+        }).then(response => {
+            button.disabled = false;
+
+            if (response && response.data) {
+                let checkin_success = null;
+                for (let i = 0; i < response.data.check_in.tags.length; i++) {
+                    let tagData = response.data.check_in.tags[i];
+
+                    if (tagData.tag.name === tag) {
+                        checkin_success = tagData.checkin_success;
+                        break;
+                    }
+                }
+                if (!checkin_success) {
+                    swal({ title: "Glitch in the matrix",
+                        text: "Your local check-in data is out-of-date.  Please refresh the page to continue",
+                        type: "error",
+                        confirmButtonText: "Refresh" }).then(() => window.location.reload());
+                }
+            } else {
+                swal("Empty server response", "The server didn't respond with the expected data", "error");
+            }
+        }).catch(error => {
+            if (error !== "Check in cancelled") {
+                console.error(error);
+                swal("Nah fam ✋", "An error is preventing us from checking in this user", "error");
+                button.disabled = false;
+            }
+        });
+    }
+
+
 }
 
 function attachUserDeleteHandlers() {

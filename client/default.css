@@ -213,3 +213,15 @@ div#button-row {
 	color: white;
 	padding: 5px;
 }
+
+.catalyst-age-icon {
+	vertical-align: bottom;
+}
+
+.catalyst-age-icon.green {
+	color: #4CAF50
+}
+
+.catalyst-age-icon.red {
+	color: #B00020;
+}
