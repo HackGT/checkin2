@@ -1,227 +1,248 @@
 html, body {
-	width: 100%;
-	margin: 0;
-	background: #f1f1f1;
+    width: 100%;
+    margin: 0;
+    background: #f1f1f1;
 }
 
 body.login {
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
 }
 body.login .mdc-card {
-	background-color: white;
-	max-width: 450px;
-	width: 100%;
-	margin: 10px;
+    background-color: white;
+    max-width: 450px;
+    width: 100%;
+    margin: 10px;
 }
 body.login .mdc-textfield, input {
-	width: 100%;
+    width: 100%;
 }
 body.login .mdc-card__actions {
-	justify-content: center;
+    justify-content: center;
 }
 
 :root {
-	--mdc-theme-primary: #ecb72d;
+    --mdc-theme-primary: #ecb72d;
 }
 
 nav.toolbar {
-	z-index: 9;
-	background: #242424;
-	color: white;
-	text-align: center;
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
-	height: 64px;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	user-select: none;
+    z-index: 9;
+    background: #242424;
+    color: white;
+    text-align: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
 }
 nav.toolbar > h1 {
-	margin: 0;
+    margin: 0;
 }
 nav.toolbar > img {
-	height: 75%;
-	margin-right: 10px;
+    height: 75%;
+    margin-right: 10px;
 }
 nav.toolbar > i:first-of-type {
-	position: fixed;
-	top: 14px;
-	left: 16px;
-	padding: 6px;
-	border-radius: 32px;
-	cursor: pointer;
+    position: fixed;
+    top: 14px;
+    left: 16px;
+    padding: 6px;
+    border-radius: 32px;
+    cursor: pointer;
 }
 nav.toolbar .mdc-ripple-surface.mdc-ripple-upgraded::before {
-	background-color: rgba(255, 255, 255, 0.15);
+    background-color: rgba(255, 255, 255, 0.15);
 }
 #username {
-	font-size: 120%;
+    font-size: 120%;
 }
 #version {
-	position: absolute;
-	top: 16px;
-	left: 16px;
-	font-size: 75%;
-	opacity: 0.7;
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    font-size: 75%;
+    opacity: 0.7;
 }
 aside.mdc-temporary-drawer {
-	z-index: 10;
+    z-index: 10;
 }
 aside.mdc-temporary-drawer select {
-	height: 40px;
-	width: 100%;
+    height: 40px;
+    width: 100%;
 }
 .mdc-temporary-drawer__header-content {
-	background-color: var(--mdc-theme-primary);
-	color: white;
+    background-color: var(--mdc-theme-primary);
+    color: white;
 }
 
 main {
-	margin-top: 100px;
+    margin-top: 100px;
 }
 li.mdc-list-item > .actions > button {
-	width: initial;
-	height: initial;
-	margin-left: 16px;
-	margin-right: 16px;
-	-webkit-transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
-	transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
+    width: initial;
+    height: initial;
+    margin-left: 16px;
+    margin-right: 16px;
+    -webkit-transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
+    transition: box-shadow 280ms cubic-bezier(0.4, 0, 0.2, 1), background-color 0.7s !important;
 }
 li.mdc-list-item > .actions > button.checked-in, li.mdc-list-item > .actions > button.danger {
-	background-color: #ff4136;
+    background-color: #ff4136;
 }
 li.mdc-list-item .actions {
-	margin-left: auto;
+    margin-left: auto;
 }
 .card {
-	margin-right: auto;
-	margin-left: auto;
-	margin-top: 40px;
-	margin-bottom: 40px;
-	max-width: 1200px;
-	box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
-	border-radius: 2px;
-	background-color: white;
-	box-sizing: border-box;
+    margin-right: auto;
+    margin-left: auto;
+    margin-top: 40px;
+    margin-bottom: 40px;
+    max-width: 1200px;
+    box-shadow: 0 2px 5px 0 rgba(0, 0, 0, 0.26);
+    border-radius: 2px;
+    background-color: white;
+    box-sizing: border-box;
 }
 .card > .card-content {
-	padding: 20px 16px;
+    padding: 20px 16px;
 }
 .card > .card-content > .center {
-	display: flex;
-	align-items: center;
-	flex-direction: column;
-	max-width: 600px;
-	margin: 0 auto;
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    max-width: 600px;
+    margin: 0 auto;
 }
 .card > .card-content > .center > * {
-	width: 100%;
-	margin-bottom: 10px;
+    width: 100%;
+    margin-bottom: 10px;
 }
 .card > .card-content > .center > em {
-	text-align: center;
+    text-align: center;
 }
 #import .center > button, #manage-users .center > button {
-	width: initial;
-	margin-top: 10px;
+    width: initial;
+    margin-top: 10px;
 }
 input[type="file"] {
-	margin-bottom: 0 !important;
+    margin-bottom: 0 !important;
 }
 abbr {
-	border-bottom: 1px dashed rgba(0,0,0,0.3);
+    border-bottom: 1px dashed rgba(0,0,0,0.3);
 }
 @media screen and (max-width: 58em) {
-	.mdc-list--two-line .mdc-list-item {
-		height: initial;
-	}
-	li.mdc-list-item {
-		flex-direction: column;
-		justify-content: center;
-		border-bottom: 1px solid rgba(0,0,0,0.3);
-		text-align: center;
-	}
-	li.mdc-list-item:last-of-type {
-		border-bottom: none;
-	}
-	li.mdc-list-item > .mdc-list-item__start-detail {
-		display: none;
-	}
-	li.mdc-list-item > .actions {
-		margin: 15px;
-	}
-	li.mdc-list-item > .actions > span {
-		display: block;
-		margin-bottom: 10px;
-	}
-	li.mdc-list-item > .actions > span:empty {
-		display: none;
-	}
-	#question-options .mdc-form-field {
-		width: 100% !important;
-	}
+    .mdc-list--two-line .mdc-list-item {
+        height: initial;
+    }
+    li.mdc-list-item {
+        flex-direction: column;
+        justify-content: center;
+        border-bottom: 1px solid rgba(0,0,0,0.3);
+        text-align: center;
+    }
+    li.mdc-list-item:last-of-type {
+        border-bottom: none;
+    }
+    li.mdc-list-item > .mdc-list-item__start-detail {
+        display: none;
+    }
+    li.mdc-list-item > .actions {
+        margin: 15px;
+    }
+    li.mdc-list-item > .actions > span {
+        display: block;
+        margin-bottom: 10px;
+    }
+    li.mdc-list-item > .actions > span:empty {
+        display: none;
+    }
+    #question-options .mdc-form-field {
+        width: 100% !important;
+    }
 }
 button#add-new-tag {
-	width: initial;
-	margin-top: 10px;
+    width: initial;
+    margin-top: 10px;
 }
 .collapsible span i {
-	vertical-align: middle;
+    vertical-align: middle;
 }
 .collapsible span  {
-	cursor: pointer;
+    cursor: pointer;
 }
 div#additional-info {
-	font-style: italic;
-	font-size: .875em;
-	line-height: 1.2em;
-	flex: 0 1 100%;
-	margin-left: 4em;
-	margin-bottom: .5em;
+    font-style: italic;
+    font-size: .875em;
+    line-height: 1.2em;
+    flex: 0 1 100%;
+    margin-left: 4em;
+    margin-bottom: .5em;
 }
 #question-options {
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 #question-options .mdc-form-field {
-	width: 33%;
-	box-sizing: border-box;
+    width: 33%;
+    box-sizing: border-box;
 }
 #attendees > .mdc-list-item {
-	flex-wrap: wrap;
-	min-height: 72px;
-	height: auto;
+    flex-wrap: wrap;
+    min-height: 72px;
+    height: auto;
 }
 div#filters {
-	text-align: center;
+    text-align: center;
 }
 div#button-row {
-	flex: 0 1 100%;
-	text-align: center;
+    flex: 0 1 100%;
+    text-align: center;
 }
 
 #catalyst-mode-enabled {
-	text-align: center;
-	background: #ffc107;
-	color: white;
-	padding: 5px;
+    text-align: center;
+    background: #ffc107;
+    color: white;
+    padding: 5px;
 }
 
 .catalyst-age-icon {
-	vertical-align: bottom;
+    vertical-align: bottom;
 }
 
-.catalyst-age-icon.green {
-	color: #4CAF50
+.green {
+    color: #4CAF50
 }
 
-.catalyst-age-icon.red {
-	color: #B00020;
+.red {
+    color: #B00020;
+}
+
+.catalyst-data {
+    font-family: Roboto, sans-serif !important;
+    margin-bottom: 0 !important;
+    padding: 8px !important;
+    font-size: 1rem !important;
+    height: 32px !important;
+}
+
+textarea#authorized-adults {
+    height: 113px !important;
+}
+
+textarea#form-id {
+    height: 75px !important;
+    text-transform: uppercase;
+}
+
+.hidden {
+    display: none;
 }

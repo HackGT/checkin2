@@ -13,6 +13,7 @@ import {getOperationAST} from "graphql";
 import gql from "graphql-tag";
 import swal from "sweetalert2";
 
+const autosize = require("autosize");
 const httpLink = createHttpLink({
     uri: "/graphql",
     credentials: "same-origin"
@@ -128,30 +129,43 @@ function statusFormatter(time: string, by: string): string {
     return `Checked in <abbr title="${moment(date).format("dddd, MMMM Do YYYY, h:mm:ss A")}">${moment(time).fromNow()}</abbr> by <code>${by}</code>`;
 }
 
-function catalystCheckIn(name: string, is18: Boolean) {
-    const over18Icon = '<i class="material-icons catalyst-age-icon green" aria-hidden="true">check_circle</i>';
-    const under18Icon = '<i class="material-icons catalyst-age-icon red" aria-hidden="true">warning</i>';
-    const over18: string = is18 ? `${over18Icon} ${name} is <strong>over 18</strong>`
-        : `${under18Icon} ${name} is a <strong>minor</strong>`;
+function catalystCalculateAge(dob: Date): number {
+    return moment().diff(dob, 'years')
+}
+
+function catalystCheckIn(name: string, dob: Date) {
+    const over18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">check_circle</i>';
+    const under18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">warning</i>';
+    const age = catalystCalculateAge(dob);
+    const isOver18 = age >= 18;
+    const over18: string = isOver18 ? `<span class="green">${over18Icon} ${name} is 18+ (${age} years old)</span>`
+        : `<span class="red">${under18Icon} ${name} is a <strong>minor</strong> (${age} years old)</span>`;
+    const hideAuthorizedAdults = isOver18 ? "hidden" : "";
 
     return swal({
         title: 'Enter check-in data',
         type: "question",
         showCancelButton: true,
+        allowOutsideClick: false,
+        onBeforeOpen: () => {
+            autosize.update(document.querySelectorAll('textarea'));
+        },
         html:
-            over18 +
-            '<input id="swal-input1" class="swal2-input">' +
-            '<input id="swal-input2" class="swal2-input">',
+            `${over18}
+            <textarea id="authorized-adults" class="swal2-input catalyst-data ${hideAuthorizedAdults}" placeholder="Authorized pickup persons" rows="5"></textarea>
+            <input type="text" placeholder="Form ID" id="form-id" class="swal2-input catalyst-data" />
+            <textarea placeholder="Notes" id="notes" class="swal2-input catalyst-data" rows="3"></textarea>`,
         preConfirm: function () {
             return new Promise(function (resolve) {
                 resolve({
-                    'input1': (<HTMLInputElement>document.getElementById("swal-input1")!).value,
-                    'input2':(<HTMLInputElement>document.getElementById("swal-input2")!).value
-                })
+                    "authorizedAdults": (<HTMLInputElement>document.getElementById("authorized-adults")!).value,
+                    "formId": (<HTMLInputElement>document.getElementById("form-id")!).value,
+                    "notes": (<HTMLInputElement>document.getElementById("notes")!).value
+                });
             })
         },
         onOpen: function () {
-            document.getElementById("swal-input1")!.focus()
+            document.getElementById("authorized-adults")!.focus()
         }
     });
 }
@@ -177,7 +191,7 @@ function checkIn(e: Event) {
     }`;
 
     if (checkingIn) {
-        catalystCheckIn("James Lu", Math.random() > .5)
+        catalystCheckIn("James Lu", moment([2000,10,18]))
             .then(function (result) {
                 if (result.dismiss === swal.DismissReason.cancel) {
                     button.disabled = false;
