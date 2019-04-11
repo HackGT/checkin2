@@ -137,13 +137,13 @@ function resolver(registration: Registration): IResolver {
              */
             attendee: async (prev, args, ctx) => {
                 if (!args.id) {
-                    return null;
+                    return undefined;
                 }
                 const attendee = await Attendee.findOne({
                     id: args.id
                 });
                 if (!attendee) {
-                    return null;
+                    return undefined;
                 }
                 return attendee;
             },

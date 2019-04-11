@@ -214,5 +214,5 @@ type TagData {
 }
 
 type AttendeeData {
-  authorizedPickupPersons: [String]
+  authorizedPickupPersons: [String!]
 }

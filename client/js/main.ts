@@ -133,40 +133,71 @@ function catalystCalculateAge(dob: Date): number {
     return moment().diff(dob, 'years')
 }
 
-function catalystCheckIn(name: string, dob: Date) {
-    const over18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">check_circle</i>';
-    const under18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">warning</i>';
-    const age = catalystCalculateAge(dob);
-    const isOver18 = age >= 18;
-    const over18: string = isOver18 ? `<span class="green">${over18Icon} ${name} is 18+ (${age} years old)</span>`
-        : `<span class="red">${under18Icon} ${name} is a <strong>minor</strong> (${age} years old)</span>`;
-    const hideAuthorizedAdults = isOver18 ? "hidden" : "";
+function catalystCheckIn(id: string) {
+    const query = gql`
+        query BirthdayAndAPPs($user: ID!) {
+            user(id: $user) {
+                user {
+                    name
+                    question(name:"birthday") {
+                        value
+                    }
+                }
+            }
+            attendee(id: $user) {
+                authorizedPickupPersons
+            }
+        }
+    `;
 
-    return swal({
-        title: 'Enter check-in data',
-        type: "question",
-        showCancelButton: true,
-        allowOutsideClick: false,
-        onBeforeOpen: () => {
-            autosize.update(document.querySelectorAll('textarea'));
-        },
-        html:
-            `${over18}
+    return client.query<GQL.IQuery>({
+        query: query,
+        variables: {
+            user: id
+        }
+    }).then(response => {
+        console.log(response);
+        if (!response || !response.data || !response.data.user || !response.data.user.user
+            || !response.data.user.user.question || !response.data.user.user.question.value) {
+            return Promise.reject("Data that was expected from the server was not provided");
+        }
+
+        const over18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">check_circle</i>';
+        const under18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">warning</i>';
+        const dob = moment(response.data.user.user.question.value, "YYYY-MM-DD"); // fuckin...
+        const age = catalystCalculateAge(dob);
+        const isOver18 = age >= 18;
+        const name = response.data.user.user.name;
+        const hideAuthorizedAdults = isOver18 ? "hidden" : "";
+        const over18: string = isOver18 ? `<span class="green">${over18Icon} ${name} is 18+ (${age} years old)</span>`
+            : `<span class="red">${under18Icon} ${name} is a <strong>minor</strong> (${age} years old)</span>`;
+
+        return swal({
+            title: 'Enter check-in data',
+            type: "question",
+            showCancelButton: true,
+            allowOutsideClick: false,
+            onBeforeOpen: () => {
+                autosize.update(document.querySelectorAll('textarea'));
+            },
+            html:
+                `${over18}
             <textarea id="authorized-adults" class="swal2-input catalyst-data ${hideAuthorizedAdults}" placeholder="Authorized pickup persons" rows="5"></textarea>
             <input type="text" placeholder="Form ID" id="form-id" class="swal2-input catalyst-data" />
             <textarea placeholder="Notes" id="notes" class="swal2-input catalyst-data" rows="3"></textarea>`,
-        preConfirm: function () {
-            return new Promise(function (resolve) {
-                resolve({
-                    "authorizedAdults": (<HTMLInputElement>document.getElementById("authorized-adults")!).value,
-                    "formId": (<HTMLInputElement>document.getElementById("form-id")!).value,
-                    "notes": (<HTMLInputElement>document.getElementById("notes")!).value
-                });
-            })
-        },
-        onOpen: function () {
-            document.getElementById("authorized-adults")!.focus()
-        }
+            preConfirm: function () {
+                return new Promise(function (resolve) {
+                    resolve({
+                        "authorizedAdults": (<HTMLInputElement>document.getElementById("authorized-adults")!).value,
+                        "formId": (<HTMLInputElement>document.getElementById("form-id")!).value,
+                        "notes": (<HTMLInputElement>document.getElementById("notes")!).value
+                    });
+                })
+            },
+            onOpen: function () {
+                document.getElementById("authorized-adults")!.focus()
+            }
+        })
     });
 }
 
@@ -191,7 +222,7 @@ function checkIn(e: Event) {
     }`;
 
     if (checkingIn) {
-        catalystCheckIn("James Lu", moment([2000,10,18]))
+        catalystCheckIn(id)
             .then(function (result) {
                 if (result.dismiss === swal.DismissReason.cancel) {
                     button.disabled = false;
@@ -235,6 +266,8 @@ function checkIn(e: Event) {
                 console.error(error);
                 swal("Nah fam ✋", "An error is preventing us from checking in this user", "error");
                 button.disabled = false;
+            } else {
+                swal("Check-in cancelled", "The check-in operation was cancelled because you clicked the Cancel button.  No data has changed.", "info");
             }
         });
     //}
@@ -275,9 +308,9 @@ function checkIn(e: Event) {
         }).catch(error => {
             if (error !== "Check in cancelled") {
                 console.error(error);
-                swal("Nah fam ✋", "An error is preventing us from checking in this user", "error");
-                button.disabled = false;
+                swal("Nah fam ✋", `An error is preventing us from checking in this user: ${error}`, "error");
             }
+            button.disabled = false;
         });
     }
 
