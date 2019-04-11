@@ -37,7 +37,9 @@ type Query {
   question_names(branch: String): [String!]
   # Counts of checked in users per tag.
   # Only includes tags that have at least one user checked in.
-  tag_counts(tags: [String!]): [TagData]!
+  tag_counts(tags: [String!]): [TagData]!,
+  # Returns check-in specific attendee data, currently just the authorized pickup persons list for Catalyst
+  attendee(id: ID!): AttendeeData
 }
 
 # The root subscription type, all subscribes go through here
@@ -139,7 +141,7 @@ type User {
   
   # ID used for pagination
   pagination_token: ID!
-}
+  }
 
 # Filter users by this criterea.
 # A value means to filter by that value, no value
@@ -209,4 +211,8 @@ type TagData {
   name: String!
   # Count of checked in users
   count: Int!
+}
+
+type AttendeeData {
+  authorizedPickupPersons: [String]
 }

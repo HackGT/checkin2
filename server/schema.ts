@@ -54,6 +54,7 @@ export interface IAttendee {
 	name?: string;
 	emails: string[];
 	tags: ITags;
+	authorizedPickupPersons?: string[];
 }
 export type IAttendeeMongoose = IAttendee & mongoose.Document;
 
@@ -73,6 +74,9 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 	tags: {
 		type: mongoose.Schema.Types.Mixed,
 		required: true
+	},
+	authorizedPickupPersons: {
+		type: [String]
 	}
 }));
 

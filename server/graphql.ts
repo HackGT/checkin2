@@ -135,6 +135,18 @@ function resolver(registration: Registration): IResolver {
             /**
              * All possible question names, or names of question in a branch
              */
+            attendee: async (prev, args, ctx) => {
+                if (!args.id) {
+                    return null;
+                }
+                const attendee = await Attendee.findOne({
+                    id: args.id
+                });
+                if (!attendee) {
+                    return null;
+                }
+                return attendee;
+            },
             question_names: registration.forward({}),
             /**
              * Counts of checked in users per tag
