@@ -234,15 +234,35 @@ div#button-row {
     height: 32px !important;
 }
 
-textarea#authorized-adults {
+textarea#authorized-adults, textarea#notes {
     height: 113px !important;
 }
 
-textarea#form-id {
-    height: 75px !important;
+
+input#form-id {
     text-transform: uppercase;
 }
 
 .hidden {
     display: none;
 }
+
+
+/* Below text-transform stuff is so that placeholder value in Form ID input is not also capitalized.
+   Based on https://stackoverflow.com/a/25180193/5434744 */
+input#form-id::-webkit-input-placeholder { /* WebKit browsers */
+    text-transform: none;
+}
+input#form-id:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+    text-transform: none;
+}
+input#form-id::-moz-placeholder { /* Mozilla Firefox 19+ */
+    text-transform: none;
+}
+input#form-id:-ms-input-placeholder { /* Internet Explorer 10+ */
+    text-transform: none;
+}
+input#form-id::placeholder { /* Recent browsers */
+    text-transform: none;
+}
+
