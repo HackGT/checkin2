@@ -55,6 +55,9 @@ export interface IAttendee {
 	emails: string[];
 	tags: ITags;
 	authorizedPickupPersons?: string[];
+	formID?: string;
+	checkedOutBy?: string,
+	notes?: string;
 }
 export type IAttendeeMongoose = IAttendee & mongoose.Document;
 
@@ -77,6 +80,15 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 	},
 	authorizedPickupPersons: {
 		type: [String]
+	},
+	formID: {
+		type: String
+	},
+	checkedOutBy: {
+		type: String
+	},
+	notes: {
+		type: String
 	}
 }));
 

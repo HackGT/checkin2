@@ -13,6 +13,7 @@ import {printHackGTMetricsEvent} from "./app";
 import {createLink} from "./util";
 import {PubSub} from 'graphql-subscriptions';
 import {GraphQLError} from "graphql";
+import {config} from "./config";
 
 const typeDefs = fs.readFileSync(path.resolve(__dirname, "../api.graphql"), "utf8");
 
@@ -133,7 +134,7 @@ function resolver(registration: Registration): IResolver {
              */
             question_branches: registration.forward({}),
             /**
-             * All possible question names, or names of question in a branch
+             * Attendee details (primarily for Catalyst) that don't fit in UserAndTags type
              */
             attendee: async (prev, args, ctx) => {
                 if (!args.id) {
@@ -147,6 +148,9 @@ function resolver(registration: Registration): IResolver {
                 }
                 return attendee;
             },
+            /**
+             * All possible question names, or names of question in a branch
+             */
             question_names: registration.forward({}),
             /**
              * Counts of checked in users per tag
@@ -268,6 +272,7 @@ function resolver(registration: Registration): IResolver {
                     id: args.user
                 });
 
+
                 const forwarder = registration.forward({
                     path: `check_in.user`,
                     include: [
@@ -291,6 +296,46 @@ function resolver(registration: Registration): IResolver {
                         tags: {}
                     });
                 }
+
+                // TODO: figure out how to grab user's birthday from registration to verify their age
+                if (config.app.catalyst_mode && args.checkin) {
+                    if (!args.formID) {
+                        throw new GraphQLError("Missing required form ID for Catalyst");
+                    }
+                    attendee.formID = args.formID.toUpperCase().trim();
+                    attendee.checkedOutBy = "";
+
+                    if (args.APPs) {
+                        for (let i = 0; i < args.APPs.length; i++) {
+                            if (!attendee.authorizedPickupPersons) {
+                                attendee.authorizedPickupPersons = [];
+                            }
+                            console.log("current APP:", args.APPs[i]);
+                            console.log("find result: ", attendee.authorizedPickupPersons.findIndex(item => args.APPs[i].trim().toLowerCase() === item.toLowerCase()));
+                            if (args.APPs[i] && args.APPs[i].trim().length > 0) {
+                                if (attendee.authorizedPickupPersons.findIndex(item => args.APPs[i].trim().toLowerCase() === item.toLowerCase()) === -1) {
+                                    console.log("inside");
+                                    attendee.authorizedPickupPersons.push(args.APPs[i].trim());
+                                }
+                            }
+
+                        }
+                    }
+                } else if (config.app.catalyst_mode && !args.checkin) {
+                    if (!args.checkedOutBy) {
+                        throw new GraphQLError("Check out authorized pick up person is required when Catalyst mode is enabled");
+                    }
+                    attendee.checkedOutBy = args.checkedOutBy.trim();
+                }
+
+                if (config.app.catalyst_mode && args.notes) {
+                    if (!attendee.notes) {
+                        attendee.notes = "";
+                    }
+                    attendee.notes = args.notes.trim();
+                }
+
+
                 const loggedInUser = await getLoggedInUser(ctx);
                 const date = new Date();
                 const username = loggedInUser.user ? loggedInUser.user.username : "";
