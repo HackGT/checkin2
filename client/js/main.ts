@@ -212,6 +212,7 @@ function catalystCheckIn(id: string, isCheckIn: boolean = true) {
 
 		const disableAPPSelect = isCheckIn || isOver18 ? "disabled" : "";
 		const APPSelectChoice = isOver18 ? "" : `<option style="display: none"">Select authorized pickup person</option>`;
+		const APPSelfChoice = isOver18 ? `<option value="Self">Self</option>` : "";
 		const APPOtherChoice = isOver18 ? "" : `<option>Not on this list</option>`;
 		const hideIfNot16Or17 = age === 16 || age === 17 ? "" : "hidden";
 
@@ -228,6 +229,7 @@ function catalystCheckIn(id: string, isCheckIn: boolean = true) {
 			</select>
 			<select id="checkout-adult-dropdown" class="swal2-input catalyst-data ${hideCheckoutFields}" ${disableAPPSelect}>
 				${APPSelectChoice}
+				${APPSelfChoice}
 			 	${checkoutAdultOptions}
 			 	${APPOtherChoice}
 			</select>

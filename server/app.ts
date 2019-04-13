@@ -343,8 +343,6 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 			let notes = "";
 			let hackgt_staff_member = "";
 			if (config.app.catalyst_mode) {
-				console.log(attendee);
-				console.log("apps", attendee.authorizedPickupPersons);
 				if (attendee.authorizedPickupPersons) {
 					authorized_pickup_persons = attendee.authorizedPickupPersons.toString();
 				}
