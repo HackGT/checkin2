@@ -331,6 +331,7 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 			formID: string;
 			notes: string;
 			checked_out_by: string;
+			hackgt_staff_member: string;
 		 }[] = [];
 		for (let attendee of attendees.map(simplifyAttendee)) {
 			let id = attendee.id;
@@ -340,6 +341,7 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 			let checked_out_by = "";
 			let formID = "";
 			let notes = "";
+			let hackgt_staff_member = "";
 			if (config.app.catalyst_mode) {
 				console.log(attendee);
 				console.log("apps", attendee.authorizedPickupPersons);
@@ -363,6 +365,10 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 					checked_out_by = attendee.tags[tag].catalyst_checked_out_by || "";
 				}
 
+				if (attendee.tags[tag].checked_in_by) {
+					hackgt_staff_member = attendee.tags[tag].checked_in_by || "";
+				}
+
 				attendeesSimplified.push({
 					id: id,
 					name: name || "",
@@ -373,7 +379,8 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 					authorized_pickup_persons,
 					checked_out_by,
 					formID,
-					notes
+					notes,
+					hackgt_staff_member
 				});
 			});
 		}
