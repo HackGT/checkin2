@@ -34,6 +34,7 @@ export interface ITagDetailItem {
 	checked_in_date: Date;
 	checked_in_by: string;
 	checkin_success: boolean;
+	catalyst_checked_out_by: string | null;
 }
 
 export interface ITagItem {
@@ -41,6 +42,7 @@ export interface ITagItem {
 	checked_in: boolean;
 	checked_in_date: Date;
 	checked_in_by: string;
+	catalyst_checked_out_by: string | null;
 	last_successful_checkin: ITagDetailItem | null;
 	details: ITagDetailItem[];
 }
@@ -52,11 +54,11 @@ export interface ITags {
 export interface IAttendee {
 	id: string;
 	name?: string;
+	birthday?: string;
 	emails: string[];
 	tags: ITags;
 	authorizedPickupPersons?: string[];
 	formID?: string;
-	checkedOutBy?: string,
 	notes?: string;
 }
 export type IAttendeeMongoose = IAttendee & mongoose.Document;
@@ -81,10 +83,10 @@ export const Attendee = mongoose.model<IAttendeeMongoose>("Attendee", new mongoo
 	authorizedPickupPersons: {
 		type: [String]
 	},
-	formID: {
+	birthday: {
 		type: String
 	},
-	checkedOutBy: {
+	formID: {
 		type: String
 	},
 	notes: {

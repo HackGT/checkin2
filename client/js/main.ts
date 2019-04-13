@@ -132,13 +132,13 @@ function catalystCalculateAge(dob: Date): number {
 	return moment().diff(dob, 'years')
 }
 
-function catalystCheckIn(id: string) {
+function catalystGetYPData(id: string) {
     const query = gql`
-		query BirthdayAndAPPs($user: ID!) {
+		query ($user: ID!) {
 			user(id: $user) {
 				user {
 					name
-					question(name:"birthday") {
+					question(name: "birthday") {
 						value
 					}
 				}
@@ -156,29 +156,49 @@ function catalystCheckIn(id: string) {
 		variables: {
 			user: id
 		}
-	}).then(response => {
-		console.log(response);
+	});
+}
+
+function getAgeElement(isOver18: boolean, name: string, age: number): string {
+	const over18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">check_circle</i>';
+	const under18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">warning</i>';
+	return isOver18 ? `<span class="green">${over18Icon} ${name} is 18+ (${age} years old)</span>`
+		: `<span class="red">${under18Icon} ${name} is a <strong>minor</strong> (${age} years old)</span>`;
+}
+
+function catalystCheckIn(id: string, isCheckIn: boolean = true) {
+	return catalystGetYPData(id).then((response:any) => {
+		console.log("catalystcheckin", response);
 		if (!response || !response.data || !response.data.user || !response.data.user.user
-			|| !response.data.user.user.question || !response.data.user.user.question.value) {
+			|| !response.data.user.user.name || !response.data.user.user.question || !response.data.user.user.question.value) {
 			return Promise.reject("Data that was expected from the server was not provided");
 		}
 
-		const over18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">check_circle</i>';
-		const under18Icon = '<i class="material-icons catalyst-age-icon" aria-hidden="true">warning</i>';
-		const dob = moment(response.data.user.user.question.value, "YYYY-MM-DD"); // fuckin...
+		const dob = moment(response.data.user.user.question.value, "YYYY-MM-DD");
 		const age = catalystCalculateAge(dob);
-		const isOver18 = age >= 18;
 		const name = response.data.user.user.name;
-		const hideAuthorizedAdults = isOver18 ? "hidden" : "";
-		const over18: string = isOver18 ? `<span class="green">${over18Icon} ${name} is 18+ (${age} years old)</span>`
-			: `<span class="red">${under18Icon} ${name} is a <strong>minor</strong> (${age} years old)</span>`;
+		if (isNaN(age)) {
+			Promise.reject(`${name}'s date of birth was most likely entered into registration incorrectly.  Have them complete
+			a walk-up registration application on your laptop to rectify the problem.`);
+		}
+		const isOver18 = age >= 18;
+		const hideAuthorizedAdults = isOver18 || !isCheckIn ? "hidden" : "";
+		const hideCheckoutFields = isCheckIn ? "hidden" : "";
+		const over18 = getAgeElement(isOver18, name, age);
 
 		let APPsList = "";
 		let notes = "";
 		let formID = "";
+		let checkoutAdultOptions = "";
 		if (response.data.attendee) {
 			if (response.data.attendee.authorizedPickupPersons && response.data.attendee.authorizedPickupPersons.length > 0) {
-				APPsList = response.data.attendee.authorizedPickupPersons.reduce((a, b) => `${a}\n${b}`);
+				APPsList = response.data.attendee.authorizedPickupPersons.reduce((a: string, b: string) => `${a}\n${b}`);
+				if (isOver18) {
+					checkoutAdultOptions = `<option value="Self">Self</option>`;
+				} else {
+					checkoutAdultOptions = response.data.attendee.authorizedPickupPersons
+						.map((p: string) => `<option value="${p}">${p}</option>`).join('');
+				}
 			}
 
 			if (response.data.attendee.formID) {
@@ -190,32 +210,87 @@ function catalystCheckIn(id: string) {
 			}
 		}
 
+		const disableAPPSelect = isCheckIn || isOver18 ? "disabled" : "";
+		const APPSelectChoice = isOver18 ? "" : `<option style="display: none"">Select authorized pickup person</option>`;
+		const APPOtherChoice = isOver18 ? "" : `<option>Not on this list</option>`;
+		const hideIfNot16Or17 = age === 16 || age === 17 ? "" : "hidden";
+
 		return swal({
-			title: 'Enter check-in data',
+			title: `Enter ${isCheckIn ? "check-in" : "check-out"} data`,
 			type: "question",
 			showCancelButton: true,
 			allowOutsideClick: false,
 			html:
 				`${over18}
+			<select id="authorized-dismissal" class="swal2-input catalyst-data ${hideIfNot16Or17} ${!isCheckIn ? "hidden" : ""}">
+				<option value="ad-false">No authorized dismissal</option>
+				<option value="ad-true">Authorized dismissal signed by parent/guardian</option>
+			</select>
+			<select id="checkout-adult-dropdown" class="swal2-input catalyst-data ${hideCheckoutFields}" ${disableAPPSelect}>
+				${APPSelectChoice}
+			 	${checkoutAdultOptions}
+			 	${APPOtherChoice}
+			</select>
+			<input type="text" id="checkout-adult-other" class="swal2-input catalyst-data ${isOver18 ? "hidden" : ""} ${hideCheckoutFields}" placeholder="Name of other authorized pickup person"/>
             <textarea id="authorized-adults" class="swal2-input catalyst-data ${hideAuthorizedAdults}" placeholder="Authorized pickup persons" rows="5">${APPsList}</textarea>
-            <input type="text" id="form-id" class="swal2-input catalyst-data" value="${formID}" placeholder="Form ID"/>
+            <input type="text" id="form-id" class="swal2-input catalyst-data" value="${formID}" placeholder="Form ID" ${!isCheckIn ? "readonly": ""}/>
             <textarea placeholder="Notes" id="notes" class="swal2-input catalyst-data" rows="3">${notes}</textarea>`,
 			preConfirm: function (value) {
 				const authorizedAdults = (<HTMLInputElement>document.getElementById("authorized-adults")!).value;
+				const authorizedDismissal = (<HTMLInputElement>document.getElementById("authorized-dismissal")!).value;
+
 				const formID = (<HTMLInputElement>document.getElementById("form-id")!).value;
 				const notes = (<HTMLInputElement>document.getElementById("notes")!).value;
 
-				const authorizedAdultsBlank = "You must provide at least one authorized adult for pickup because this participant is a minor.";
-				const formIDBlank = "Form ID is required.";
+				const checkoutPersonDropdown: string = (<HTMLInputElement>document.getElementById("checkout-adult-dropdown")!).value;
+				const checkoutPersonOther: string = (<HTMLInputElement>document.getElementById("checkout-adult-other")!).value;
+
+				const authorizedAdultsBlank = "  You must provide at least one authorized adult for pickup because this participant is a minor. ";
+				const formIDBlank = " Form ID is required. ";
+				//const noCheckoutPerson = "You must indicate a checkout person for this participant.";
 				let validationMessage = "";
-				if (!isOver18 && authorizedAdults.trim().length === 0) {
-					validationMessage += authorizedAdultsBlank;
+				let checkoutPerson: string|null = null;
+				if (isCheckIn) {
+					if (!isOver18 && authorizedAdults.trim().length === 0 && authorizedDismissal === "ad-false") {
+						validationMessage += authorizedAdultsBlank;
+					}
+				}
+				const invalidCheckoutPerson = ` To specify an authorized adult for pickup that is not listed, select
+				 "Not on this list" in the dropdown and then enter the name of the new authorized pickup person in the text box below. 
+				 If you aren't trying to specify a new authorized adult for checkout, then make sure the text box directly underneath
+				 the dropdown menu is empty. `;
+				const nonSelfOver18Checkout = ` Participant is over 18 and can check themselves out.  Please leave authorized pickup person value
+				set to "Self". `;
+				const noCheckoutPersonSelected = ` You must specify an authorized pickup person. `;
+				console.log(checkoutPersonDropdown, checkoutPersonOther);
+
+				if (!isCheckIn) {
+					if (!isOver18) {
+						if (checkoutPersonDropdown === "Select authorized pickup person") {
+							validationMessage += noCheckoutPersonSelected;
+						}
+
+						if (checkoutPersonOther.trim().length > 0 && checkoutPersonDropdown !== "Not on this list") {
+							validationMessage += invalidCheckoutPerson;
+						}
+					}
+					if (isOver18 && checkoutPersonDropdown !== "Self") {
+						validationMessage += nonSelfOver18Checkout;
+					}
+
+					if ((checkoutPersonDropdown !== "Select authorized pickup person" && checkoutPersonDropdown !== "Not on this list")
+						&& checkoutPersonOther.trim().length === 0) {
+						checkoutPerson = checkoutPersonDropdown;
+					} else if (checkoutPersonDropdown === "Not on this list" && checkoutPersonOther.trim().length > 0) {
+						checkoutPerson = checkoutPersonOther.trim();
+					}
 				}
 
 				if (formID.trim().length === 0) {
-					validationMessage += " " + formIDBlank;
-					validationMessage = validationMessage.trim();
+					validationMessage += formIDBlank;
 				}
+
+				validationMessage = validationMessage.trim();
 
 				if (validationMessage.length > 0) {
 					swal.showValidationMessage(validationMessage);
@@ -225,13 +300,19 @@ function catalystCheckIn(id: string) {
 				return new Promise(function (resolve) {
 					resolve({
 						authorizedAdults,
+						authorizedDismissal,
 						formID,
-						notes
+						notes,
+						checkoutPerson
 					});
 				})
 			},
 			onOpen: function () {
-				document.getElementById("authorized-adults")!.focus()
+				if (isCheckIn) {
+					document.getElementById("authorized-adults")!.focus();
+				} else {
+					document.getElementById("checkout-adult-dropdown")!.focus();
+				}
 			}
 		})
 	});
@@ -257,19 +338,23 @@ function checkIn(e: Event) {
 		}
 	}`;
 
-	if (checkingIn) {
-		catalystCheckIn(id)
-		.then((result) => {
+		catalystCheckIn(id, checkingIn)
+		.then((result:any) => {
 			if (result.dismiss === swal.DismissReason.cancel) {
 				button.disabled = false;
 				return Promise.reject("Check in cancelled");
 			}
 
-
 			let authorizedAdults = null;
 			if (result.value.authorizedAdults) {
 				authorizedAdults = result.value.authorizedAdults.split("\n");
 			}
+			if (result.value.authorizedDismissal === "ad-true" && authorizedAdults) {
+				authorizedAdults.push("Self (authorized dismissal)");
+			} else if (result.value.authorizedDismissal === "ad-true" && !result.value.authorizedAdults) {
+				authorizedAdults = ["Self (authorized dismissal)"];
+			}
+
 			console.log("Authorized adults", authorizedAdults);
 			return client.mutate<GQL.IMutation>({
 				mutation: mutation,
@@ -279,11 +364,11 @@ function checkIn(e: Event) {
 					checkin: checkingIn,
 					APPs: authorizedAdults,
 					formID: result.value.formID,
-					checkedOutBy: "",
+					checkedOutBy: checkingIn ? "" : result.value.checkoutPerson,
 					notes: result.value.notes
 				}
 			});
-		}).then(response => {
+		}).then((response:any) => {
 			button.disabled = false;
 
 			if (response && response.data) {
@@ -307,13 +392,14 @@ function checkIn(e: Event) {
 			} else {
 				swal("Empty server response", "The server didn't respond with the expected data", "error");
 			}
-		}).catch(error => {
+		}).catch((error:any) => {
 			if (error !== "Check in cancelled") {
 				console.error(error);
 				swal("Nah fam ✋", "An error is preventing us from checking in this user", "error");
 				button.disabled = false;
 			} else {
-				swal("Check-in cancelled", "The check-in operation was cancelled because you clicked the Cancel button.  No data has changed.", "info");
+				const checkInPhrase = checkingIn ? "Check-in" : "Check-out";
+				swal(`${checkInPhrase} cancelled`, `The ${checkInPhrase.toLowerCase()} operation was cancelled because you clicked the Cancel button.  No data has changed.`, "info");
 			}
 		});
 		//}
@@ -321,46 +407,46 @@ function checkIn(e: Event) {
 		//     swal("checking out").then(() => {
 		//         button.disabled = false;
 		//     })
-	} else {
-		client.mutate<GQL.IMutation>({
-			mutation: mutation,
-			variables: {
-				user: id,
-				tag,
-				checkin: checkingIn
-			}
-		}).then(response => {
-			button.disabled = false;
-
-			if (response && response.data) {
-				let checkin_success = null;
-				for (let i = 0; i < response.data.check_in.tags.length; i++) {
-					let tagData = response.data.check_in.tags[i];
-
-					if (tagData.tag.name === tag) {
-						checkin_success = tagData.checkin_success;
-						break;
-					}
-				}
-				if (!checkin_success) {
-					swal({
-						title: "Glitch in the matrix",
-						text: "Your local check-in data is out-of-date.  Please refresh the page to continue",
-						type: "error",
-						confirmButtonText: "Refresh"
-					}).then(() => window.location.reload());
-				}
-			} else {
-				swal("Empty server response", "The server didn't respond with the expected data", "error");
-			}
-		}).catch(error => {
-			if (error !== "Check in cancelled") {
-				console.error(error);
-				swal("Nah fam ✋", `An error is preventing us from checking in this user: ${error}`, "error");
-			}
-			button.disabled = false;
-		});
-	}
+	// } else {
+	// 	client.mutate<GQL.IMutation>({
+	// 		mutation: mutation,
+	// 		variables: {
+	// 			user: id,
+	// 			tag,
+	// 			checkin: checkingIn
+	// 		}
+	// 	}).then(response => {
+	// 		button.disabled = false;
+	//
+	// 		if (response && response.data) {
+	// 			let checkin_success = null;
+	// 			for (let i = 0; i < response.data.check_in.tags.length; i++) {
+	// 				let tagData = response.data.check_in.tags[i];
+	//
+	// 				if (tagData.tag.name === tag) {
+	// 					checkin_success = tagData.checkin_success;
+	// 					break;
+	// 				}
+	// 			}
+	// 			if (!checkin_success) {
+	// 				swal({
+	// 					title: "Glitch in the matrix",
+	// 					text: "Your local check-in data is out-of-date.  Please refresh the page to continue",
+	// 					type: "error",
+	// 					confirmButtonText: "Refresh"
+	// 				}).then(() => window.location.reload());
+	// 			}
+	// 		} else {
+	// 			swal("Empty server response", "The server didn't respond with the expected data", "error");
+	// 		}
+	// 	}).catch(error => {
+	// 		if (error !== "Check in cancelled") {
+	// 			console.error(error);
+	// 			swal("Nah fam ✋", `An error is preventing us from checking in this user: ${error}`, "error");
+	// 		}
+	// 		button.disabled = false;
+	// 	});
+	// }
 
 
 }

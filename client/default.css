@@ -234,6 +234,10 @@ div#button-row {
     height: 32px !important;
 }
 
+select.catalyst-data {
+    height: 40px !important;
+}
+
 textarea#authorized-adults, textarea#notes {
     height: 113px !important;
 }
@@ -241,6 +245,11 @@ textarea#authorized-adults, textarea#notes {
 
 input#form-id {
     text-transform: uppercase;
+}
+
+input[type="checkbox"]#authorized-dismissal {
+    margin: 0 !important;
+    width: 42px !important;
 }
 
 .hidden {

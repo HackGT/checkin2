@@ -171,6 +171,17 @@ export function printHackGTMetricsEvent(args: {user: string, tag: string}, userI
 })();
 
 function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
+	if (config.app.catalyst_mode) {
+		return  {
+			name: attendee.name,
+			emails: attendee.emails,
+			id: attendee.id,
+			tags: attendee.tags,
+			authorizedPickupPersons: attendee.authorizedPickupPersons,
+			formID: attendee.formID,
+			notes: attendee.notes,
+		}
+	}
 	return {
 		name: attendee.name,
 		emails: attendee.emails,
@@ -178,6 +189,8 @@ function simplifyAttendee(attendee: IAttendeeMongoose): IAttendee {
 		tags: attendee.tags
 	};
 }
+
+
 
 let apiRouter = express.Router();
 // User routes
@@ -314,23 +327,57 @@ apiRouter.route("/data/export").get(authenticateWithReject, async (request, resp
 			tag: string;
 			checked_in: string;
 			checked_in_date: string;
+			authorized_pickup_persons: string;
+			formID: string;
+			notes: string;
+			checked_out_by: string;
 		 }[] = [];
 		for (let attendee of attendees.map(simplifyAttendee)) {
 			let id = attendee.id;
 			let emails = attendee.emails.join(", ");
 			let name = attendee.name;
+			let authorized_pickup_persons = "";
+			let checked_out_by = "";
+			let formID = "";
+			let notes = "";
+			if (config.app.catalyst_mode) {
+				console.log(attendee);
+				console.log("apps", attendee.authorizedPickupPersons);
+				if (attendee.authorizedPickupPersons) {
+					authorized_pickup_persons = attendee.authorizedPickupPersons.toString();
+				}
+
+				if (attendee.formID) {
+					formID = attendee.formID;
+				}
+
+				if (attendee.notes) {
+					notes = attendee.notes
+				}
+			}
+
 			Object.keys(attendee.tags).forEach(tag => {
 				let checkedInDate = attendee.tags[tag].checked_in_date;
+
+				if (attendee.tags[tag].catalyst_checked_out_by) {
+					checked_out_by = attendee.tags[tag].catalyst_checked_out_by || "";
+				}
+
 				attendeesSimplified.push({
 					id: id,
 					name: name || "",
 					emails: emails,
 					tag: tag,
-					checked_in: attendee.tags[tag].checked_in ? "Checked in" : "",
-					checked_in_date: checkedInDate ? checkedInDate.toISOString() : ""
+					checked_in: attendee.tags[tag].checked_in ? "Checked in" : "Checked out",
+					checked_in_date: checkedInDate ? checkedInDate.toISOString() : "",
+					authorized_pickup_persons,
+					checked_out_by,
+					formID,
+					notes
 				});
 			});
 		}
+
 		if (attendeesSimplified.length === 0) {
 			response.status(400).type("text/plain").end("No data to export");
 			return;

@@ -215,6 +215,7 @@ type TagData {
 
 type AttendeeData {
   authorizedPickupPersons: [String!]
+  birthday: String
   formID: String
   checkedOutBy: String
   notes: String

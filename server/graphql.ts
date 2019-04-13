@@ -218,6 +218,7 @@ function resolver(registration: Registration): IResolver {
                 if (!attendee) {
                     return [];
                 }
+
                 return Object.keys(attendee.tags).map(tag => {
                     const date = attendee.tags[tag].checked_in_date;
                     const lastSuccess = attendee.tags[tag].last_successful_checkin;
@@ -303,7 +304,6 @@ function resolver(registration: Registration): IResolver {
                         throw new GraphQLError("Missing required form ID for Catalyst");
                     }
                     attendee.formID = args.formID.toUpperCase().trim();
-                    attendee.checkedOutBy = "";
 
                     if (args.APPs) {
                         for (let i = 0; i < args.APPs.length; i++) {
@@ -314,18 +314,14 @@ function resolver(registration: Registration): IResolver {
                             console.log("find result: ", attendee.authorizedPickupPersons.findIndex(item => args.APPs[i].trim().toLowerCase() === item.toLowerCase()));
                             if (args.APPs[i] && args.APPs[i].trim().length > 0) {
                                 if (attendee.authorizedPickupPersons.findIndex(item => args.APPs[i].trim().toLowerCase() === item.toLowerCase()) === -1) {
-                                    console.log("inside");
                                     attendee.authorizedPickupPersons.push(args.APPs[i].trim());
                                 }
                             }
 
                         }
                     }
-                } else if (config.app.catalyst_mode && !args.checkin) {
-                    if (!args.checkedOutBy) {
-                        throw new GraphQLError("Check out authorized pick up person is required when Catalyst mode is enabled");
-                    }
-                    attendee.checkedOutBy = args.checkedOutBy.trim();
+                } else if (config.app.catalyst_mode && !args.checkin && !args.checkedOutBy) {
+	                throw new GraphQLError("Check out authorized pick up person is required when Catalyst mode is enabled");
                 }
 
                 if (config.app.catalyst_mode && args.notes) {
@@ -345,12 +341,17 @@ function resolver(registration: Registration): IResolver {
 
                 const validCheckin = validateCheckin(pastCheckins, args.checkin);
                 let success = !tagDetails.warnOnDuplicates ? true : validCheckin;
-
+				let catalyst_checked_out_by: string|null = null;
+                // Set checked out by to null if this is a checkin or Catalyst mode is disabled
+				if (config.app.catalyst_mode && !args.checkin) {
+					catalyst_checked_out_by = args.checkedOutBy.trim();
+                }
                 attendee.tags[args.tag] = {
                     checkin_success: success,
                     checked_in: args.checkin,
                     checked_in_date: date,
                     checked_in_by: username,
+	                catalyst_checked_out_by,
                     last_successful_checkin: null,
                     details: attendee.tags[args.tag] ? attendee.tags[args.tag].details : []
                 };
@@ -359,7 +360,8 @@ function resolver(registration: Registration): IResolver {
                     checked_in: args.checkin,
                     checked_in_date: date,
                     checked_in_by: username,
-                    checkin_success: success
+                    checkin_success: success,
+	                catalyst_checked_out_by
                 });
 
                 // Make sure we include the latest details element for last_successful_checkin
