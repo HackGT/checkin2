@@ -232,7 +232,7 @@ function catalystCheckIn(id: string, isCheckIn: boolean = true) {
 			 	${APPOtherChoice}
 			</select>
 			<input type="text" id="checkout-adult-other" class="swal2-input catalyst-data ${isOver18 ? "hidden" : ""} ${hideCheckoutFields}" placeholder="Name of other authorized pickup person"/>
-            <textarea id="authorized-adults" class="swal2-input catalyst-data ${hideAuthorizedAdults}" placeholder="Authorized pickup persons" rows="5">${APPsList}</textarea>
+            <textarea id="authorized-adults" class="swal2-input catalyst-data ${hideAuthorizedAdults}" placeholder="Authorized pickup persons (one per line)" rows="5">${APPsList}</textarea>
             <input type="text" id="form-id" class="swal2-input catalyst-data" value="${formID}" placeholder="Form ID" ${!isCheckIn ? "readonly": ""}/>
             <textarea placeholder="Notes" id="notes" class="swal2-input catalyst-data" rows="3">${notes}</textarea>`,
 			preConfirm: function (value) {
