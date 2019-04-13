@@ -264,7 +264,6 @@ function catalystCheckIn(id: string, isCheckIn: boolean = true) {
 				const nonSelfOver18Checkout = ` Participant is over 18 and can check themselves out.  Please leave authorized pickup person value
 				set to "Self". `;
 				const noCheckoutPersonSelected = ` You must specify an authorized pickup person. `;
-				console.log(checkoutPersonDropdown, checkoutPersonOther);
 
 				if (!isCheckIn) {
 					if (!isOver18) {
