@@ -136,7 +136,7 @@ type User {
 
   # What team, if any, is the user a part of?
   team: Team
-  
+
   # ID used for pagination
   pagination_token: ID!
 }
@@ -185,7 +185,7 @@ type FormItem {
   # Value (if just one string)
   value: String
   # Values (if many selections are applicable, like checkbox)
-  values: [String!]
+  values: [String]
   # File if type contains a file
   file: File
 }
