@@ -1,6 +1,7 @@
 git:
     branch: master
-
+health:
+  path: /
 secrets:
   - ADMIN_KEY_SECRET
   - DEFAULT_ADMIN_USER
