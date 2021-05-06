@@ -34,7 +34,7 @@
     "graphql-subscriptions": "^0.5.8",
     "graphql-tag": "^2.4.2",
     "graphql-tools": "^2.21.0",
-    "handlebars": "^4.3.0",
+    "handlebars": "^4.7.7",
     "json2csv": "^3.7.3",
     "material-components-web": "^0.13.0",
     "mongoose": "^5.7.5",
