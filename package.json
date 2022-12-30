@@ -35,7 +35,7 @@
     "graphql-tag": "^2.4.2",
     "graphql-tools": "^2.21.0",
     "handlebars": "^4.3.0",
-    "json2csv": "^3.7.3",
+    "json2csv": "^5.0.7",
     "material-components-web": "^0.13.0",
     "mongoose": "^5.7.5",
     "morgan": "^1.9.0",
